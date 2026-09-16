@@ -1,8 +1,8 @@
-# Folio — v1.1.1
+# Folio — v1.2.0
 
 A local-first personal productivity application with an editorial, low-noise interface.
 
-**Release:** `1.1.1`  
+**Release:** `1.2.0`  
 **Repository:** `thiepn/folio`  
 **IndexedDB schema:** `v12`  
 **Status:** release-hardened · GitHub Pages ready
@@ -48,6 +48,11 @@ The v1 release includes:
 - accessibility and recovery safeguards;
 - customizable Folio appearance.
 
+## v1.2 — Daily Workflow
+
+Today is now Folio's daily operating surface: explicit carryover resolution, a protected Top 3, Today/Next/Later triage, current Focus context, habits and capacity in one hierarchy, plus an end-of-day wrap-up with undoable roll-forward. The release intentionally reuses the v12 planning model rather than introducing duplicate priority or triage state.
+
+See `docs/DAILY_WORKFLOW_V1_2.md`.
 ## Data and privacy
 
 Planner data is local-first in IndexedDB. The current database schema is **v12**. Full backups export schema v12 and direct restore supports compatible backups from **v8 through v12**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.

@@ -4,8 +4,8 @@
   "version": "1.1.1",
   "databaseSchema": 12,
   "releaseType": "release-hardening",
-  "generatedAt": "2026-09-16T12:47:40.139Z",
-  "sourceTreeSha256": "982c28e458d00034b48430ef960c4f1eb411a868b861d9fb429fe5cbe8567965",
+  "generatedAt": "2026-09-16T13:24:08.708Z",
+  "sourceTreeSha256": "fab76a493be1e439fcb8991a838d28e63b370dffe56e525220f16c0486054457",
   "validation": {
     "finalReleaseContract": "53/53 PASS",
     "releaseHardeningContract": "38/38 PASS",
@@ -49,8 +49,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 3904,
-      "sha256": "d1efe07359fba5677427c3a3fbb81b2d74ada1381b9a9fb3aafd4a3788b57c4c"
+      "bytes": 4321,
+      "sha256": "87670936ecf2366b0f279c481eb9d5b77943e8054b5e05c38744688185587218"
     },
     {
       "path": "docs/ACCESSIBILITY_PERFORMANCE_RELIABILITY.md",
@@ -66,6 +66,11 @@
       "path": "docs/BROWSER_CERTIFICATION_MATRIX.md",
       "bytes": 2023,
       "sha256": "9a1195098e629e17e7e9a33e0796bc6099bf68afbbbdc83ce2ad97cc612b4cb1"
+    },
+    {
+      "path": "docs/BUILD_FIXES_V1_1_1.md",
+      "bytes": 1075,
+      "sha256": "9eed2ba0b6321011663c601dc2597695bb3bf4f6ac16e84e33a8b48c3289c02d"
     },
     {
       "path": "docs/CALENDAR_ENGINE.md",
@@ -86,6 +91,11 @@
       "path": "docs/DAILY_PLANNING_ENGINE.md",
       "bytes": 1454,
       "sha256": "2e9cb2ab2b01c440e5c748fbfeccac7126de04076c158b71c6814de047aa701d"
+    },
+    {
+      "path": "docs/DAILY_WORKFLOW_V1_2.md",
+      "bytes": 1699,
+      "sha256": "027caaddcccde506d5424c98e32f4bdf9e7c57eef14b5fe0b4657ff4fc039de6"
     },
     {
       "path": "docs/DATA_MODEL.md",
@@ -203,9 +213,14 @@
       "sha256": "439efa4264b638725f87aac5e6791b1a0fbcd2a8158a97bfaf906e2656bd1cd0"
     },
     {
+      "path": "package-lock.json",
+      "bytes": 62456,
+      "sha256": "6131b3bf1bcba971040d654e32cef10a57753ea39f31f0638e5248b88779117c"
+    },
+    {
       "path": "package.json",
-      "bytes": 1317,
-      "sha256": "1ef30c415fbf1d849987327e7bc718bc317f02d868a2a6ba41945bc481c4435a"
+      "bytes": 1409,
+      "sha256": "3694a51cfcc9f04d3e866de11fe20b4a56544963b2dcc9cdbff57cf8599ed49f"
     },
     {
       "path": "public/.nojekyll",
@@ -273,19 +288,24 @@
       "sha256": "f2c5fb7da68a359ad9799417502e807ebb07b25daee1fbae1e332bd99df4fe52"
     },
     {
+      "path": "scripts/validate-daily-workflow.mjs",
+      "bytes": 2361,
+      "sha256": "5d664e571b5ca61ab40c0adfd149678d3acc01e3eb3a51870dec14ff9d7f2e0f"
+    },
+    {
       "path": "scripts/validate-dist.mjs",
       "bytes": 2952,
       "sha256": "c9584b1d35befd43047da4c8ef37c7c599bf6286aa8ce93ee4d83c47d1e86189"
     },
     {
       "path": "scripts/validate-final.mjs",
-      "bytes": 7165,
-      "sha256": "b37af903297e25d435785d3ebf2199aa2d75a4894f49af3b8d6fd37cc7993271"
+      "bytes": 7595,
+      "sha256": "6374929f0572c337dee5d4c72e8d075f1d20052962971e86cbaf8450c96f2b76"
     },
     {
       "path": "scripts/validate-release.mjs",
-      "bytes": 4210,
-      "sha256": "97810ccebb86d3a2d7966406bd685ba77f294decb4f2e633f5e52cab56ba9475"
+      "bytes": 4204,
+      "sha256": "6da9a664485fb63a962d41ac6d6edb4238d6fcc94031ffe939caf4fd23952e76"
     },
     {
       "path": "src/adapters/uiAdapters.ts",
@@ -294,8 +314,8 @@
     },
     {
       "path": "src/app/App.tsx",
-      "bytes": 51861,
-      "sha256": "a0ec9dc3023836e53c77e180284036f86a37a56b0725fb42aedc3b235f6b9cf5"
+      "bytes": 53481,
+      "sha256": "47f0918a42f037489649f40d9330f2f0e77a6de368b476679157be8f8b4ff644"
     },
     {
       "path": "src/components/layout/AppearanceDrawer.tsx",
@@ -424,8 +444,8 @@
     },
     {
       "path": "src/db/seed.ts",
-      "bytes": 6927,
-      "sha256": "e31b908088d2db6d3ac19a5076af03ae8d7f4ab8136a2cedf62dc9679d2eb874"
+      "bytes": 6929,
+      "sha256": "b9a6c27eae4e7884de3795a8573caa2ec9da7c9017641aa958f3a78ea0b167fd"
     },
     {
       "path": "src/domain/date.ts",
@@ -554,8 +574,8 @@
     },
     {
       "path": "src/features/patch/patchLogic.ts",
-      "bytes": 27579,
-      "sha256": "679c9a7224bc521ac389768ac8bf722ae379cf3a349ff54ed6177cb654e59467"
+      "bytes": 27618,
+      "sha256": "685a66f01e288c11f4d02156c87270c16cf57fd5930fa67743c7650fa97f82ce"
     },
     {
       "path": "src/features/patch/patchSchema.ts",
@@ -729,8 +749,8 @@
     },
     {
       "path": "src/features/today/TodayView.tsx",
-      "bytes": 10071,
-      "sha256": "66452894b238c88aabcb1064cfe9ae378fa4fdc39d34e4743706d9c64168eb8e"
+      "bytes": 19200,
+      "sha256": "0f4d9609fedb27105513f62fe6cb8ee0fd4f4c1ad4b8d8c53fe64d05a4d1a2cf"
     },
     {
       "path": "src/features/today/planningLogic.ts",
@@ -744,8 +764,8 @@
     },
     {
       "path": "src/hooks/useAppData.ts",
-      "bytes": 5382,
-      "sha256": "72247b8ab5532cd62155b443cf1280940ef333f95357ffb924c04d202b91139b"
+      "bytes": 5685,
+      "sha256": "7527aec54029837f036394bd014d62a63e02aef806055bd69888a4cbd5ccd6a6"
     },
     {
       "path": "src/hooks/useCalendarData.ts",
@@ -924,8 +944,8 @@
     },
     {
       "path": "src/services/backupService.ts",
-      "bytes": 11655,
-      "sha256": "0ad9eec4a42521c15a3b00d9468705365ecc1e04a0414b695b2f54705c9a0854"
+      "bytes": 11658,
+      "sha256": "56e40a68ddf37f47ef6839a4b590b4249409040ccd62ab5d2d9f35390822d0ae"
     },
     {
       "path": "src/services/calendarInteropService.ts",
@@ -939,8 +959,8 @@
     },
     {
       "path": "src/services/databaseService.ts",
-      "bytes": 6339,
-      "sha256": "4936c98870d6cf5b5005ab5248e5658cd93c6ea770bad9e82861865c314cbc4f"
+      "bytes": 6342,
+      "sha256": "b2d2757faf1614ff7b4b57faa6f640cc4eec3bc1f843137a5732ffb9270ea1b1"
     },
     {
       "path": "src/services/dependencyService.ts",
@@ -949,8 +969,8 @@
     },
     {
       "path": "src/services/entityFactory.ts",
-      "bytes": 3713,
-      "sha256": "2acde4ecdbc6d0393c41b37f53589caf751fb76d24c6a0bc37b9d8bec39bc14b"
+      "bytes": 3753,
+      "sha256": "33b80d35fefabcbaa60ccaaf30f3ead349c955fd7eec7af252d76d6dde2a43f9"
     },
     {
       "path": "src/services/focusService.ts",
@@ -964,13 +984,13 @@
     },
     {
       "path": "src/services/importService.ts",
-      "bytes": 14907,
-      "sha256": "1e702a7d0849c0bc71a29073ec0da62bf5ccc28e3cd4b2e9f7687b29de6771d5"
+      "bytes": 14911,
+      "sha256": "b1d789d081acc63301eaf6951398fb018ddd2858f846564845f44b9b25f721f2"
     },
     {
       "path": "src/services/patchService.ts",
-      "bytes": 38527,
-      "sha256": "ba604f90c01ede62a6c009e5ba90b1388b27cd5b99eabfae4e136661e7685155"
+      "bytes": 38531,
+      "sha256": "81086ee943add147ff725bead9615e9c8cb0bf09348870ace1d986e9a49bee7e"
     },
     {
       "path": "src/services/platformCompatibility.ts",
@@ -1004,8 +1024,8 @@
     },
     {
       "path": "src/services/runtimeIssueService.ts",
-      "bytes": 1666,
-      "sha256": "3d228b8e7698120cc1221377f90746ec2dec3bc3345dfe0a74ae73c119614b34"
+      "bytes": 1670,
+      "sha256": "4b0db2f9d420da829a5a9ce70750c8d8697d77df37e229af44c6076c3e580cea"
     },
     {
       "path": "src/services/savedViewService.ts",
@@ -1048,9 +1068,14 @@
       "sha256": "c15348a9553af354befdb58e48925556abaf84f70741eca3fc989298bf247d35"
     },
     {
+      "path": "src/styles/daily-workflow.css",
+      "bytes": 7548,
+      "sha256": "883908d1c7fd35ba8d9d8de5c084d06b22f8345000e0c15af167546effd46b7f"
+    },
+    {
       "path": "src/styles/index.css",
-      "bytes": 180,
-      "sha256": "0d18e27cc3b77da5a33f5e5e414a92fe23fa898c29af954b43ab1697487d2fdd"
+      "bytes": 212,
+      "sha256": "341d478cffa136031c980ea513432a4267fceaf6edef522ebbf6e211d08535eb"
     },
     {
       "path": "src/styles/layout.css",
@@ -1088,14 +1113,34 @@
       "sha256": "ea9d4684756f5a2ed22eae6e947aede2d9aed2fd97f837454ac6e6474aebad3a"
     },
     {
+      "path": "tsconfig.app.tsbuildinfo",
+      "bytes": 5784,
+      "sha256": "d754c9c2640ff1e248e572aa478c7337d6f4a98bc0bb4d2c7140bb1c462a1f4f"
+    },
+    {
       "path": "tsconfig.json",
       "bytes": 119,
       "sha256": "770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808"
     },
     {
       "path": "tsconfig.node.json",
-      "bytes": 212,
-      "sha256": "5d827862c0f20e408efee67d0fb4c224ab3360b166e38a11ff93cbd8296c8b12"
+      "bytes": 259,
+      "sha256": "bf93d42c09cf0a6175865e404faa93870c81aaf4edeb1c107e147ee46303750b"
+    },
+    {
+      "path": "tsconfig.node.tsbuildinfo",
+      "bytes": 17733,
+      "sha256": "29b6b59baac3987d2fd5cb40cbdf37deb58489b46fca2c6d697416761aadae7c"
+    },
+    {
+      "path": "vite.config.d.ts",
+      "bytes": 76,
+      "sha256": "4b96dd19fd2949d28ce80e913412b0026dc421e5bf6c31d87c7b5eb11b5753b4"
+    },
+    {
+      "path": "vite.config.js",
+      "bytes": 4309,
+      "sha256": "bf7e34c9c9a29f0d876f5126b745a7cca71f99d55622ef0a95412e997a0c6e66"
     },
     {
       "path": "vite.config.ts",

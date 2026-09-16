@@ -132,6 +132,8 @@ function AppContent() {
   useMobileViewport()
   const appearance = useLiveQuery(() => settingsRepository.getAppearance(), [], DEFAULT_APPEARANCE) ?? DEFAULT_APPEARANCE
   const storedShortcuts = useLiveQuery(() => settingsRepository.get<unknown>('power.shortcuts', DEFAULT_SHORTCUTS), [], DEFAULT_SHORTCUTS)
+  const dailyWrapUpKey = `daily.wrapup.${data?.today ?? localDateKey()}`
+  const dailyWrapUp = useLiveQuery(() => settingsRepository.get<string>(dailyWrapUpKey, ''), [dailyWrapUpKey], '') ?? ''
   const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])
   const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', planner: 'Planner', projects: 'Projects', habits: 'Habits', review: 'Review' }[view]), [view])
 
@@ -428,6 +430,18 @@ function AppContent() {
     registerUndo(await dailyPlanningService.commit(data?.today ?? localDateKey()))
   }
 
+  async function saveDailyWrapUp(note: string) {
+    await settingsRepository.set(dailyWrapUpKey, note.trim())
+  }
+
+  async function rollForwardToday() {
+    const actions: UndoableMutation[] = []
+    for (const task of data?.todayTasks ?? []) {
+      if (!task.completed) actions.push(await dailyPlanningService.moveToDate(task.id, 'tomorrow', data?.today ?? localDateKey()))
+    }
+    if (actions.length) registerUndo(combineUndo(actions.length + ' unfinished task' + (actions.length === 1 ? '' : 's') + ' moved to tomorrow', actions))
+  }
+
   function navigate(next: NavView) {
     rememberView(next)
     setView(next)
@@ -592,7 +606,39 @@ function AppContent() {
         </div>
         <Topbar title={topbarTitle} meta={topbarMeta} onSearch={() => setPaletteOpen(true)} onAppearance={() => setAppearanceOpen(true)} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo')} onFocus={() => openFocus()} focusActive={Boolean(focusData?.activeSession)} />
         <main className="main-content" id="main-content" ref={mainRef} tabIndex={-1}>
-          {view === 'today' ? <TodayView tasks={data.todayTasks} habits={habitData.todayHabits} schedule={data.timeBlocks} capacity={data.capacity} planStatus={data.dailyPlanStatus} carryoverCount={data.carryoverTasks.length} deadlineCount={data.upcomingDeadlineTasks.length} onAdd={() => openAdd('todo')} onToggle={(id) => void toggleTask(id)} onToggleHabit={(id) => void toggleHabit(id)} onHabitIncrement={(id, minutes) => void incrementHabit(id, minutes)} onOpenHabit={setSelectedHabitId} onSkipHabit={(id) => void toggleHabitSkip(id)} onOpen={setSelectedTaskId} onPlan={() => setPlanDayOpen(true)} onBucket={(id, bucket) => void setTodayBucket(id, bucket)} onMoveOrder={(id, direction) => void moveTodayOrder(id, direction)} onMoveDate={(id, target) => void moveTaskDate(id, target)} onFocus={(id) => openFocus(id)} /> : null}
+          {view === 'today' ? <TodayView
+            tasks={data.todayTasks}
+            carryover={data.carryoverTasks}
+            nextTasks={data.nextTasks}
+            laterTasks={data.laterTasks}
+            habits={habitData.todayHabits}
+            schedule={data.timeBlocks}
+            capacity={data.capacity}
+            planStatus={data.dailyPlanStatus}
+            deadlineCount={data.upcomingDeadlineTasks.length}
+            activeFocus={focusData?.activeSession ? {
+              taskId: focusData.activeSession.taskId,
+              title: focusData.activeSession.taskTitleSnapshot ?? 'Focus session',
+              status: focusData.activeSession.status === 'paused' ? 'paused' : 'running',
+            } : undefined}
+            todayFocusSeconds={focusData?.todaySeconds ?? 0}
+            wrapUpNote={dailyWrapUp}
+            onAdd={() => openAdd('todo', '', data.today)}
+            onToggle={(id) => void toggleTask(id)}
+            onToggleHabit={(id) => void toggleHabit(id)}
+            onHabitIncrement={(id, minutes) => void incrementHabit(id, minutes)}
+            onOpenHabit={setSelectedHabitId}
+            onSkipHabit={(id) => void toggleHabitSkip(id)}
+            onOpen={setSelectedTaskId}
+            onPlan={() => setPlanDayOpen(true)}
+            onBucket={(id, bucket) => void setTodayBucket(id, bucket)}
+            onMoveOrder={(id, direction) => void moveTodayOrder(id, direction)}
+            onMoveDate={(id, target) => void moveTaskDate(id, target)}
+            onFocus={(id) => openFocus(id)}
+            onOpenPlanner={() => navigate('planner')}
+            onSaveWrapUp={saveDailyWrapUp}
+            onRollForward={() => void rollForwardToday()}
+          /> : null}
           {view === 'inbox' ? <InboxView tasks={data.inboxTasks} projects={data.projects} onAdd={() => openAdd('inbox')} onTrash={() => setTrashOpen(true)} onToggle={(id) => void toggleTask(id)} onOpen={setSelectedTaskId} onProcess={(id, options) => void taskService.processInbox(id, options).then(async (undo) => { if (options?.plannedDate) await dailyPlanningService.markDraft(options.plannedDate); registerUndo(undo) })} /> : null}
           {view === 'planner' ? <PlannerView
             today={data.today}

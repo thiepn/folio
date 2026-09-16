@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Panel } from '../../components/ui/Panel'
@@ -292,7 +292,7 @@ function TodayTask({ task, first, last, onToggle, onOpen, onBucket, onMoveOrder,
   return <TaskRow task={task} onToggle={onToggle} onOpen={onOpen} actions={actions} />
 }
 
-function TriageTask({ task, onOpen, actions }: { task: TaskPreview; onOpen: (id: string) => void; actions: React.ReactNode }) {
+function TriageTask({ task, onOpen, actions }: { task: TaskPreview; onOpen: (id: string) => void; actions: ReactNode }) {
   return <div className="triage-task">
     <button className="triage-task__title" onClick={() => onOpen(task.id)}><span>{task.title}</span><small>{task.project ?? (task.durationMinutes ? formatMinutes(task.durationMinutes) : 'No project')}</small></button>
     <div className="triage-task__actions">{actions}</div>
