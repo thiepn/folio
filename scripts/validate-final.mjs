@@ -18,14 +18,14 @@ const hasTrackedFiles = (pathspec) => {
 }
 
 const pkg = JSON.parse(read('package.json'))
-check('stable package version', pkg.version === '1.5.0', pkg.version)
+check('stable package version', pkg.version === '1.6.0', pkg.version)
 check('package renamed to Folio', pkg.name === 'folio', pkg.name)
 check('repository points to thiepn/folio', pkg.repository?.url === 'https://github.com/thiepn/folio.git', pkg.repository?.url)
 check('final validator registered', pkg.scripts?.['validate:final'] === 'node scripts/validate-final.mjs')
 
 const database = read('src/db/database.ts')
-check('database schema v14', /DATABASE_SCHEMA_VERSION\s*=\s*14\b/.test(database))
-check('v13→v14 migration registered', database.includes('migrateV13ToV14'))
+check('database schema v15', /DATABASE_SCHEMA_VERSION\s*=\s*15\b/.test(database))
+check('v14→v15 migration registered', database.includes('migrateV14ToV15'))
 
 const backup = read('src/services/backupService.ts')
 check('restore floor remains v8', /MIN_RESTORABLE_BACKUP_VERSION\s*=\s*8\b/.test(backup))
@@ -34,15 +34,15 @@ check('backup export follows current schema', backup.includes('version: DATABASE
 check('backup validates dependency cycles', backup.includes('Backup contains a task dependency cycle.'))
 
 const interop = read('src/features/interop/InteroperabilityModal.tsx')
-check('visible backup copy says v14', interop.includes('Schema v14 · complete planner state'))
-check('visible restore range says v8–v14', interop.includes('schema v8–v14'))
-check('runtime UI has no stale backup schema copy', !/Schema v1[1-3] · complete planner state|schema v8–v1[1-3]/.test(interop))
+check('visible backup copy says v15', interop.includes('Schema v15 · complete planner state'))
+check('visible restore range says v8–v15', interop.includes('schema v8–v15'))
+check('runtime UI has no stale backup schema copy', !/Schema v1[1-4] · complete planner state|schema v8–v1[1-4]/.test(interop))
 
-check('public v14 backup schema exists', exists('public/schema/folio-backup-v14.schema.json'))
+check('public v15 backup schema exists', exists('public/schema/folio-backup-v15.schema.json'))
 for (const p of [
   'public/schema/folio-import-v1.schema.json',
   'public/schema/folio-patch-v1.schema.json',
-  'public/schema/folio-backup-v14.schema.json',
+  'public/schema/folio-backup-v15.schema.json',
   'public/schema/folio-selection-v1.schema.json',
   'public/manifest.webmanifest',
 ]) {
