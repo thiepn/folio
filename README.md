@@ -1,8 +1,8 @@
-# Folio — v1.6.0
+# Folio — v1.7.0
 
 A local-first personal productivity application with an editorial, low-noise interface.
 
-**Release:** `1.6.0`  
+**Release:** `1.7.0`  
 **Repository:** `thiepn/folio`  
 **IndexedDB schema:** `v15`  
 **Status:** release-hardened · GitHub Pages ready
@@ -76,6 +76,12 @@ See `docs/REVIEWS_HISTORY_V1_5.md`.
 Habits now support durable pause periods that remain neutral in streaks, adherence, weekly targets, capacity, and history. Habit detail adds an eight-week trend and pause lifecycle controls. Focus now ranks ready work, explains the suggestion, supports a session intention, optional planned duration for open stopwatch sessions, finish notes, and richer recent-session context. Schema v15 backfills Habit pause histories while keeping the existing task/project/planner model intact.
 
 See `docs/HABITS_FOCUS_V1_6.md`.
+
+## v1.7 — Command-first UX
+
+The Command Palette is now an execution surface rather than only a search box: nested task/project/habit actions, fuzzy and token-aware matching, direct deep matches, recent commands, and scoped keyboard navigation. Fixed aliases add `/` for command/search, `N` for a contextual new task, `P` for a new project, and `T` for Today while preserving configurable shortcuts and `G` navigation chords. Mobile now has direct Search access. Schema v15 is retained.
+
+See `docs/COMMAND_FIRST_UX_V1_7.md`.
 
 ## Data and privacy
 

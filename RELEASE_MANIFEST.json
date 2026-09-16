@@ -1,19 +1,20 @@
 {
   "product": "Folio",
   "repository": "thiepn/folio",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "databaseSchema": 15,
-  "releaseType": "habits-focus-refinement",
-  "generatedAt": "2026-09-16T15:16:27.871Z",
-  "sourceTreeSha256": "8dadb92890e827924c7e643f249cfdf70b388efa1ff31196cfdad0bd501c6334",
+  "releaseType": "command-first-ux",
+  "generatedAt": "2026-09-16T16:07:48.124Z",
+  "sourceTreeSha256": "14238029d7386ec01218f5671852341987353b5eabd00fbbec5a72bccafef7b4",
   "validation": {
-    "finalReleaseContract": "58/58 PASS",
+    "finalReleaseContract": "59/59 PASS",
     "releaseHardeningContract": "38/38 PASS",
     "dailyWorkflowContract": "16/16 PASS",
     "taskProjectWorkflowContract": "19/19 PASS",
     "plannerOverhaulContract": "21/21 PASS",
     "reviewsHistoryContract": "26/26 PASS",
     "habitsFocusContract": "35/35 PASS",
+    "commandFirstContract": "36/36 PASS",
     "dependencyBackedProductionBuild": "PASS — GitHub Actions",
     "githubPagesDeployment": "PASS — GitHub Actions"
   },
@@ -29,16 +30,15 @@
     "legacyBackupImportPatchAcceptance": true
   },
   "highlights": [
-    "Durable habit pause intervals stay neutral in streaks, adherence, capacity, and historical evaluation",
-    "Habit detail now includes an eight-week trend, pause lifecycle, and expanded daily history",
-    "Habit weekly review surfaces rhythms still in motion without penalizing planned pauses",
-    "Focus ranks ready work and explains why the suggested task is relevant",
-    "Focus sessions preserve intention, optional planned duration, and finish notes",
-    "Open stopwatch plans guide without automatically stopping the session",
-    "Focus launcher exposes today/week totals, prior task focus, estimate remaining, and recent sessions",
-    "Schema v15 backfills Habit pause history while leaving existing task/project/planner structures intact",
-    "Full backups preserve v15 Habit pauses and Focus context with v8–v15 direct restore",
-    "Full final, release-hardening, daily-workflow, task-project, planner-overhaul, reviews-history, habits-focus, typecheck, production-build, and dist validation gate",
+    "Command Palette now supports nested action pickers, fuzzy token matching, and direct deep matches",
+    "Recent commands stay locally available without entering planner data or backups",
+    "Task commands cover open, complete, reopen, Today, Tomorrow, Later, and Focus workflows",
+    "Project and Habit creation/opening plus Habit completion/skip are available from the command surface",
+    "Fixed /, N, P, and T aliases accelerate search, task capture, project creation, and Today navigation",
+    "Existing configurable shortcuts and G navigation chords remain intact and take precedence correctly",
+    "Mobile gains direct Search access to the same command surface",
+    "Schema v15 retained with no v1.7 migration and v8–v15 backup compatibility unchanged",
+    "Full final, release-hardening, daily-workflow, task-project, planner-overhaul, reviews-history, habits-focus, command-first, typecheck, production-build, and dist validation gate",
     "GitHub Pages deployment verified from main"
   ],
   "files": [
@@ -59,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 6397,
-      "sha256": "c7b206af3f7f2b588fea848cf169a0c42dd1decf978480bf30e1d528e548b2e1"
+      "bytes": 6924,
+      "sha256": "d2a169c86a0fc5c1299681e29911de988856947a2f37444861bfdecc6fb8591f"
     },
     {
       "path": "docs/ACCESSIBILITY_PERFORMANCE_RELIABILITY.md",
@@ -96,6 +96,11 @@
       "path": "docs/CAPTURE_SYNTAX.md",
       "bytes": 1705,
       "sha256": "2dab060ba4ae96994c618ae6acf84363c912f164eba3b61ee5e53fd12502fc98"
+    },
+    {
+      "path": "docs/COMMAND_FIRST_UX_V1_7.md",
+      "bytes": 3243,
+      "sha256": "16d0c8a84b7b312e689d4f4d29538c2b5635d11ac7df1ca84e2a83af3e8577ce"
     },
     {
       "path": "docs/DAILY_PLANNING_ENGINE.md",
@@ -245,12 +250,12 @@
     {
       "path": "package-lock.json",
       "bytes": 62456,
-      "sha256": "da6f36e0bb3b6efd061e9a65f21eaa305f7a4904e03da3f2efd3e712ad6e34be"
+      "sha256": "714b4714bc390cccb4606661229daf83653eb13ad43883be72515c1ee948a0a7"
     },
     {
       "path": "package.json",
-      "bytes": 1928,
-      "sha256": "eaf5e7028918842297bd068e104f0bc8db61a2b522cc26ab4da1226deb6538b9"
+      "bytes": 2035,
+      "sha256": "cccaf47d5e1c7a87ebaedd3f8d335283663dbde47465f231bd7adb6114ce156c"
     },
     {
       "path": "public/.nojekyll",
@@ -329,8 +334,13 @@
     },
     {
       "path": "scripts/generate-release-manifest.mjs",
-      "bytes": 3357,
-      "sha256": "f4ab020db5e7ace0641100b102a6a85e9935bbc5e86df894df07e0448a6b9ee4"
+      "bytes": 3326,
+      "sha256": "3c40051d3ba3e3ba66eb6c27362cdc65666b211a3f891cc9d089e98960d4801b"
+    },
+    {
+      "path": "scripts/validate-command-first.mjs",
+      "bytes": 5507,
+      "sha256": "4b75e0ed60a8d812f1c64b976301eb9c7596c56485000bbf17a3bf77a394c776"
     },
     {
       "path": "scripts/validate-daily-workflow.mjs",
@@ -345,12 +355,12 @@
     {
       "path": "scripts/validate-final.mjs",
       "bytes": 7632,
-      "sha256": "c91f63b6d8d7b6b2515885a346628d15e37265c0f9c232dfc4d208ef4b12f012"
+      "sha256": "82452720b2e486ce03b4ad27d8d2b1afd37e4d75693ead081abe7ef16439c2d2"
     },
     {
       "path": "scripts/validate-habits-focus.mjs",
-      "bytes": 6276,
-      "sha256": "4b9915c331134590b7045346c07a7a1a965d6d852d9fa031b449fb3525ee7b78"
+      "bytes": 6297,
+      "sha256": "db188c2ae0cba4c1f261a9d8869c7be5a62a489c604fb52bb02f2215fafe428d"
     },
     {
       "path": "scripts/validate-planner-overhaul.mjs",
@@ -360,7 +370,7 @@
     {
       "path": "scripts/validate-release.mjs",
       "bytes": 4204,
-      "sha256": "c65919daadfbee41b28678cfd4a2daa63959533b526694b04df849a836f7c74c"
+      "sha256": "0e0388c5726c82fba45299f8e5f1857b19831d688278b95994020ec0a0a7eb42"
     },
     {
       "path": "scripts/validate-reviews-history.mjs",
@@ -379,8 +389,8 @@
     },
     {
       "path": "src/app/App.tsx",
-      "bytes": 57307,
-      "sha256": "5ed6e58d1f61e62ead7ac5e835a9f2a71a5e5f9f04c9a49a7f59f88b6ea1f97e"
+      "bytes": 62445,
+      "sha256": "988f05abf3a87a775ef841a79b48656bd5be7d75d29d4a67c53e75945491fd47"
     },
     {
       "path": "src/components/layout/AppearanceDrawer.tsx",
@@ -434,8 +444,8 @@
     },
     {
       "path": "src/components/layout/Topbar.tsx",
-      "bytes": 1156,
-      "sha256": "f7c40939e86bc9857da6282104fd6bab314005ecabd9455d3db636e3295df067"
+      "bytes": 1157,
+      "sha256": "b3861ec373b90b1b3ebaacbbdbb88a061a441a72d6717ae5a899777609c4eb85"
     },
     {
       "path": "src/components/system/AppErrorBoundary.tsx",
@@ -719,8 +729,8 @@
     },
     {
       "path": "src/features/power/CommandPalette.tsx",
-      "bytes": 4780,
-      "sha256": "11ff42d6b8100f98ac877985e3a0de9718d204a9fdda1dad38acd80e32b2fd10"
+      "bytes": 11502,
+      "sha256": "74c0f0a254606938f0558ff919e58f657a5fca2219853051a4a7f6ed903a167e"
     },
     {
       "path": "src/features/power/KeyboardSettingsDrawer.tsx",
@@ -729,8 +739,8 @@
     },
     {
       "path": "src/features/power/ShortcutHelpModal.tsx",
-      "bytes": 1889,
-      "sha256": "ff9b3fc4ff7ef5635e6885a68ec8e93dee188b433ce6ffcfee8133b19a9ac15c"
+      "bytes": 2031,
+      "sha256": "894cd06a19c003339a531e1a8a48090d8ea5f23415bc6bcdec2e90b82312a61c"
     },
     {
       "path": "src/features/power/TaskSelectionContext.tsx",
@@ -738,9 +748,14 @@
       "sha256": "a6b1db24d868b6b596588bc66528435f69a4fdef688d20e226ca2e1816918153"
     },
     {
+      "path": "src/features/power/commandBuilders.ts",
+      "bytes": 2080,
+      "sha256": "aa6db288c2d27aec20a1ddcfd287b593394d4d1edf74d3abb573b8aad428f70c"
+    },
+    {
       "path": "src/features/power/shortcuts.ts",
-      "bytes": 4252,
-      "sha256": "b54a1b237fba32ddb6890348727bae723c09b44d55fa5a064c6c7f6488714f03"
+      "bytes": 4368,
+      "sha256": "d40ba98c3c28064b99449b45ea386054870e4830259e6a072a6372543bc61bd1"
     },
     {
       "path": "src/features/power/taskKeyboard.ts",
@@ -1178,6 +1193,11 @@
       "sha256": "55e9ec87448ab2fb9c0f3ace48d764d911bef063c7894c53ec123352ae44efe4"
     },
     {
+      "path": "src/styles/command-first.css",
+      "bytes": 2879,
+      "sha256": "7affc04ac25815fac0af39c17f1a67890a7f42799802ea9602ec847d9c208e5b"
+    },
+    {
       "path": "src/styles/components.css",
       "bytes": 39382,
       "sha256": "c15348a9553af354befdb58e48925556abaf84f70741eca3fc989298bf247d35"
@@ -1194,8 +1214,8 @@
     },
     {
       "path": "src/styles/index.css",
-      "bytes": 348,
-      "sha256": "b6f69304a86f4a1a497ad1151e15bdd0290026c0523663ff6cfcf5552d0a226d"
+      "bytes": 379,
+      "sha256": "e8856ad6ca7e2d37713054b54b534798ff19a17db2a361f86fc0385708f9326b"
     },
     {
       "path": "src/styles/layout.css",
