@@ -1,0 +1,35 @@
+name: Bootstrap Folio source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.folio-bootstrap.tar.gz'
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Unpack release source
+        run: |
+          test -f .folio-bootstrap.tar.gz
+          tar -xzf .folio-bootstrap.tar.gz
+          rm -f .folio-bootstrap.tar.gz
+          rm -f .github/workflows/bootstrap.yml
+
+      - name: Commit source tree
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: Folio v1.1.1 hardening"
+          git push origin HEAD:main
