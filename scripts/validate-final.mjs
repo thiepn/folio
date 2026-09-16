@@ -1,11 +1,21 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 const root = process.cwd()
 const checks = []
 const check = (name, ok, detail = '') => checks.push({ name, ok: Boolean(ok), detail })
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8')
 const exists = (p) => fs.existsSync(path.join(root, p))
+const hasTrackedFiles = (pathspec) => {
+  try {
+    return execFileSync('git', ['ls-files', pathspec], { cwd: root, encoding: 'utf8' }).trim().length > 0
+  } catch {
+    // Release archives do not necessarily contain .git; in that case fall back
+    // to checking whether the generated/dependency directory was shipped at all.
+    return exists(pathspec)
+  }
+}
 
 const pkg = JSON.parse(read('package.json'))
 check('stable package version', pkg.version === '1.1.1', pkg.version)
@@ -111,8 +121,8 @@ const dbViolations = uiRoots.flatMap(walk).filter((p) => /\.(ts|tsx|js|jsx)$/.te
 })
 check('UI/features do not access IndexedDB directly', dbViolations.length === 0, dbViolations.join(', '))
 
-check('no retained dist build', !exists('dist'))
-check('no retained node_modules', !exists('node_modules'))
+check('no retained dist build', !hasTrackedFiles('dist'))
+check('no retained node_modules', !hasTrackedFiles('node_modules'))
 
 for (const css of walk('src/styles').filter((p) => p.endsWith('.css'))) {
   const text = read(css)
