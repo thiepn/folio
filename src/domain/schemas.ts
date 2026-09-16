@@ -9,6 +9,7 @@ export const taskStatusSchema = z.enum(['inbox', 'todo', 'completed', 'cancelled
 
 export const projectTypeSchema = z.enum(['standard', 'academic'])
 export const projectStatusSchema = z.enum(['active', 'on-hold', 'completed'])
+export const reviewKindSchema = z.enum(['daily', 'weekly', 'monthly'])
 
 export const habitKindSchema = z.enum(['check', 'duration'])
 export const habitEntryStatusSchema = z.enum(['open', 'completed', 'skipped'])
@@ -143,6 +144,35 @@ export const appearanceSchema = z.object({
   density: z.enum(['comfortable', 'compact']),
 })
 
+export const reviewRecordMetricsSchema = z.object({
+  plannedTasks: z.number().int().nonnegative(),
+  completedPlannedTasks: z.number().int().nonnegative(),
+  completedTasks: z.number().int().nonnegative(),
+  focusSeconds: z.number().nonnegative(),
+  focusSessions: z.number().int().nonnegative(),
+  habitCompletions: z.number().int().nonnegative(),
+  scheduledMinutes: z.number().int().nonnegative(),
+  completedMilestones: z.number().int().nonnegative(),
+  activeProjects: z.number().int().nonnegative(),
+})
+
+export const reviewRecordSchema = z.object({
+  id: z.string().min(1),
+  kind: reviewKindSchema,
+  periodStart: localDate,
+  periodEnd: localDate,
+  title: z.string().max(240),
+  summary: z.string().max(20_000),
+  wins: z.string().max(20_000),
+  friction: z.string().max(20_000),
+  lessons: z.string().max(20_000),
+  nextFocus: z.string().max(20_000),
+  metrics: reviewRecordMetricsSchema,
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+  completedAt: isoDateTime,
+})
+
 export const backupEnvelopeSchema = z.object({
   format: z.union([z.literal('folio-backup'), z.literal(LEGACY_BACKUP_FORMAT)]),
   version: z.number().int().positive(),
@@ -161,6 +191,7 @@ export const backupEnvelopeSchema = z.object({
     importBatches: z.array(z.unknown()),
     patchBatches: z.array(z.unknown()).default([]),
     calendarImportBatches: z.array(z.unknown()).default([]),
+    reviewRecords: z.array(z.unknown()).default([]),
   }),
 }).transform((value) => ({ ...value, format: 'folio-backup' as const }))
 

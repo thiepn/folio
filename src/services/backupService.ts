@@ -1,6 +1,6 @@
 import { db, DATABASE_SCHEMA_VERSION } from '../db/database'
 import { backupEnvelopeSchema } from '../domain/schemas'
-import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema } from './backupSchemas'
+import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema, backupReviewRecordSchema } from './backupSchemas'
 import type {
   CalendarImportBatchEntity,
   DailyPlanEntity,
@@ -12,6 +12,7 @@ import type {
   PatchBatchEntity,
   ProjectEntity,
   RecurringSeriesEntity,
+  ReviewRecordEntity,
   SettingEntity,
   TaskEntity,
   TimeBlockEntity,
@@ -37,6 +38,7 @@ export interface BackupEnvelope {
     importBatches: ImportBatchEntity[]
     patchBatches: PatchBatchEntity[]
     calendarImportBatches: CalendarImportBatchEntity[]
+    reviewRecords: ReviewRecordEntity[]
   }
 }
 
@@ -48,7 +50,7 @@ export interface BackupPreview {
 
 const TABLE_KEYS = [
   'tasks', 'projects', 'habits', 'habitEntries', 'timeBlocks', 'dailyPlans', 'dailyPlanItems',
-  'focusSessions', 'recurringSeries', 'settings', 'importBatches', 'patchBatches', 'calendarImportBatches',
+  'focusSessions', 'recurringSeries', 'settings', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords',
 ] as const
 
 function objectRow(value: unknown, label: string): Record<string, unknown> {
@@ -111,6 +113,7 @@ function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): Ba
       importBatches: raw.data.importBatches.map(normalizeImportBatch).map((row) => backupImportBatchSchema.parse(row)) as ImportBatchEntity[],
       patchBatches: (raw.data.patchBatches ?? []).map((row) => backupPatchBatchSchema.parse(row)) as PatchBatchEntity[],
       calendarImportBatches: (raw.data.calendarImportBatches ?? []).map((row) => backupCalendarBatchSchema.parse(row)) as CalendarImportBatchEntity[],
+      reviewRecords: (raw.data.reviewRecords ?? []).map((row) => backupReviewRecordSchema.parse(row)) as ReviewRecordEntity[],
     },
   }
 }
@@ -130,6 +133,7 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
   uniqueIds(data.importBatches, 'importBatches')
   uniqueIds(data.patchBatches, 'patchBatches')
   uniqueIds(data.calendarImportBatches, 'calendarImportBatches')
+  uniqueIds(data.reviewRecords, 'reviewRecords')
 
   const warnings: string[] = []
   for (const task of data.tasks) {
@@ -170,16 +174,16 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
 }
 
 export async function createBackup(): Promise<BackupEnvelope> {
-  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches] = await Promise.all([
+  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords] = await Promise.all([
     db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(),
     db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(),
-    db.settings.toArray(), db.importBatches.toArray(), db.patchBatches.toArray(), db.calendarImportBatches.toArray(),
+    db.settings.toArray(), db.importBatches.toArray(), db.patchBatches.toArray(), db.calendarImportBatches.toArray(), db.reviewRecords.toArray(),
   ])
   return {
     format: 'folio-backup',
     version: DATABASE_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches },
+    data: { tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords },
   }
 }
 
@@ -202,7 +206,7 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
   const d = verified.backup.data
   await db.transaction('rw', [
     db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
-    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches,
+    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords,
   ], async () => {
       await Promise.all(TABLE_KEYS.map((key) => (db[key] as any).clear()))
       await db.projects.bulkPut(d.projects)
@@ -218,6 +222,7 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
       await db.importBatches.bulkPut(d.importBatches)
       await db.patchBatches.bulkPut(d.patchBatches)
       await db.calendarImportBatches.bulkPut(d.calendarImportBatches)
+      await db.reviewRecords.bulkPut(d.reviewRecords)
     },
   )
 }

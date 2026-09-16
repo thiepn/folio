@@ -23,6 +23,7 @@ import { HabitDetailDrawer } from '../features/habits/HabitDetailDrawer'
 import { ArchivedHabitsDrawer } from '../features/habits/ArchivedHabitsDrawer'
 import { ReviewView } from '../features/review/ReviewView'
 import { ReviewWorkflowModal } from '../features/review/ReviewWorkflowModal'
+import { ReviewRecordModal } from '../features/review/ReviewRecordModal'
 import { QuickAddModal } from '../features/capture/QuickAddModal'
 import { ImportPlanModal } from '../features/import/ImportPlanModal'
 import { PatchPlanModal } from '../features/patch/PatchPlanModal'
@@ -38,6 +39,7 @@ import { useAppData } from '../hooks/useAppData'
 import { useFocusData } from '../hooks/useFocusData'
 import { useHabitData } from '../hooks/useHabitData'
 import { useReviewData } from '../hooks/useReviewData'
+import { useHistoryData } from '../hooks/useHistoryData'
 import { useMobileViewport } from '../hooks/useMobileViewport'
 import { DEFAULT_APPEARANCE, settingsRepository } from '../repositories/settingsRepository'
 import { addLocalDays, localDateKey } from '../domain/date'
@@ -50,13 +52,14 @@ import { focusService } from '../services/focusService'
 import { habitService } from '../services/habitService'
 import { dependencyService } from '../services/dependencyService'
 import { savedViewService } from '../services/savedViewService'
+import { reviewRecordService } from '../services/reviewRecordService'
 import type { UndoableMutation } from '../services/undo'
 import type { TaskCreateInput, TaskUpdateInput } from '../repositories/taskRepository'
 import type { ProjectCreateInput, ProjectUpdateInput } from '../repositories/projectRepository'
 import type { RecurringSeriesUpdateInput } from '../repositories/recurrenceRepository'
 import type { HabitCreateInput, HabitUpdateInput } from '../repositories/habitRepository'
 import type { NavView } from '../types/ui'
-import type { DailyPlanBucket } from '../domain/models'
+import type { DailyPlanBucket, ReviewKind } from '../domain/models'
 import { CommandPalette, type PowerCommand } from '../features/power/CommandPalette'
 import { ShortcutHelpModal } from '../features/power/ShortcutHelpModal'
 import { KeyboardSettingsDrawer } from '../features/power/KeyboardSettingsDrawer'
@@ -115,6 +118,9 @@ function AppContent() {
   const [archivedHabitsOpen, setArchivedHabitsOpen] = useState(false)
   const [recurrenceEditorOpen, setRecurrenceEditorOpen] = useState(false)
   const [reviewWorkflowOpen, setReviewWorkflowOpen] = useState(false)
+  const [reviewRecordOpen, setReviewRecordOpen] = useState(false)
+  const [reviewRecordKind, setReviewRecordKind] = useState<ReviewKind>('daily')
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [undoAction, setUndoAction] = useState<UndoableMutation | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -129,6 +135,7 @@ function AppContent() {
   const focusData = useFocusData()
   const habitData = useHabitData()
   const reviewData = useReviewData(undefined, habitData?.weeklyAdherence ?? 100)
+  const historyData = useHistoryData()
   useMobileViewport()
   const appearance = useLiveQuery(() => settingsRepository.getAppearance(), [], DEFAULT_APPEARANCE) ?? DEFAULT_APPEARANCE
   const storedShortcuts = useLiveQuery(() => settingsRepository.get<unknown>('power.shortcuts', DEFAULT_SHORTCUTS), [], DEFAULT_SHORTCUTS)
@@ -145,6 +152,8 @@ function AppContent() {
   const selectedHabit = useMemo(() => habitData?.habitEntities.find((habit) => habit.id === selectedHabitId) ?? null, [habitData?.habitEntities, selectedHabitId])
   const selectedHabitPreview = useMemo(() => habitData?.todayHabits.find((habit) => habit.id === selectedHabitId) ?? habitData?.habits.find((habit) => habit.id === selectedHabitId) ?? null, [habitData?.todayHabits, habitData?.habits, selectedHabitId])
   const editingHabit = useMemo(() => habitData?.habitEntities.find((habit) => habit.id === editingHabitId) ?? null, [habitData?.habitEntities, editingHabitId])
+  const editingReview = useMemo(() => historyData?.reviewRecords.find((record) => record.id === editingReviewId) ?? null, [historyData?.reviewRecords, editingReviewId])
+  const currentWeeklyReview = useMemo(() => reviewData ? historyData?.reviewRecords.find((record) => record.kind === 'weekly' && record.periodStart === reviewData.weekStart) ?? null : null, [historyData?.reviewRecords, reviewData])
 
   useEffect(() => applyAppearance(appearance), [appearance])
 
@@ -169,6 +178,8 @@ function AppContent() {
       setSelectedHabitId(null)
       setRecurrenceEditorOpen(false)
       setReviewWorkflowOpen(false)
+      setReviewRecordOpen(false)
+      setEditingReviewId(null)
       setSelectedTaskId(null)
       setShortcutHelpOpen(false)
       setKeyboardSettingsOpen(false)
@@ -431,7 +442,9 @@ function AppContent() {
   }
 
   async function saveDailyWrapUp(note: string) {
-    await settingsRepository.set(dailyWrapUpKey, note.trim())
+    const summary = note.trim()
+    await settingsRepository.set(dailyWrapUpKey, summary)
+    await reviewRecordService.saveDailySummary(data?.today ?? localDateKey(), summary)
   }
 
   async function rollForwardToday() {
@@ -677,7 +690,18 @@ function AppContent() {
             onRemoveMilestone={selectedProject ? (milestoneId) => void projectService.removeMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
           /> : <ProjectsView projects={data.projects} unassignedCount={data.unassignedCount} onCreate={() => { setEditingProjectId(null); setProjectEditorOpen(true) }} onOpen={setSelectedProjectId} onArchived={() => setArchivedProjectsOpen(true)} />) : null}
           {view === 'habits' ? <HabitsView habits={habitData.habits} weeklyAdherence={habitData.weeklyAdherence} dueToday={habitData.dueToday} longestStreak={habitData.longestStreak} onCreate={() => { setEditingHabitId(null); setHabitEditorOpen(true) }} onArchived={() => setArchivedHabitsOpen(true)} onOpen={setSelectedHabitId} onToggle={(id) => void toggleHabit(id)} onIncrement={(id, minutes) => void incrementHabit(id, minutes)} /> : null}
-          {view === 'review' ? <ReviewView snapshot={reviewData} recentCompleted={data.allTasks.filter((task) => task.completed).sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))} recentFocus={focusData?.recentSessions ?? []} onOpenTask={setSelectedTaskId} onStartReview={() => setReviewWorkflowOpen(true)} /> : null}
+          {view === 'review' ? <ReviewView
+            snapshot={reviewData}
+            recentCompleted={data.allTasks.filter((task) => task.completed).sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))}
+            recentFocus={focusData?.recentSessions ?? []}
+            historyEvents={historyData?.events ?? []}
+            reviewRecords={historyData?.reviewRecords ?? []}
+            onOpenTask={setSelectedTaskId}
+            onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }}
+            onStartReview={() => setReviewWorkflowOpen(true)}
+            onNewReview={(kind) => { setReviewRecordKind(kind); setEditingReviewId(null); setReviewRecordOpen(true) }}
+            onEditReview={(record) => { setReviewRecordKind(record.kind); setEditingReviewId(record.id); setReviewRecordOpen(true) }}
+          /> : null}
         </main>
       </div>
       <PwaStatusBanner />
@@ -804,11 +828,27 @@ function AppContent() {
       <ReviewWorkflowModal
         open={reviewWorkflowOpen}
         snapshot={reviewData}
+        existingRecord={currentWeeklyReview}
         onClose={() => setReviewWorkflowOpen(false)}
         onMoveTask={(id, target) => void moveTaskDate(id, target)}
         onTrashTask={(id) => void taskService.softDelete(id).then(registerUndo)}
         onOpenTask={(id) => { setReviewWorkflowOpen(false); setSelectedTaskId(id) }}
+        onSaveReview={async (reflection) => {
+          if (!reviewData) return
+          const saved = await reviewRecordService.save({ kind: 'weekly', anchorDate: reviewData.today, ...reflection })
+          registerUndo(saved.undo)
+        }}
         onOpenPlanner={() => navigate('planner')}
+      />
+
+      <ReviewRecordModal
+        open={reviewRecordOpen}
+        today={data.today}
+        initialKind={reviewRecordKind}
+        record={editingReview}
+        onClose={() => { setReviewRecordOpen(false); setEditingReviewId(null) }}
+        onSave={async (draft) => { const saved = await reviewRecordService.save(draft); registerUndo(saved.undo) }}
+        onDelete={async (id) => { registerUndo(await reviewRecordService.remove(id)) }}
       />
 
       <TaskInspector
