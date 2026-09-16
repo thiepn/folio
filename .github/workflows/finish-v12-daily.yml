@@ -1,0 +1,244 @@
+name: Finish Folio v1.2 Daily Workflow
+
+on:
+  push:
+    branches: [v1.2-daily-workflow]
+    paths:
+      - '.github/workflows/finish-v12-daily.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Integrate Daily Workflow
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected 1 exact match, found {count}')
+              p.write_text(text.replace(old, new, 1))
+
+          # Today view type cleanup.
+          replace_once(
+              'src/features/today/TodayView.tsx',
+              "import { useEffect, useMemo, useState } from 'react'",
+              "import { useEffect, useMemo, useState, type ReactNode } from 'react'",
+          )
+          replace_once(
+              'src/features/today/TodayView.tsx',
+              'actions: React.ReactNode',
+              'actions: ReactNode',
+          )
+
+          # Load v1.2 workflow styles after the established view layer.
+          replace_once(
+              'src/styles/index.css',
+              "@import './views.css';\n\n@import './mobile.css';",
+              "@import './views.css';\n@import './daily-workflow.css';\n\n@import './mobile.css';",
+          )
+
+          # Persist the end-of-day note through the generic settings repository.
+          app = Path('src/app/App.tsx')
+          text = app.read_text()
+          old = "  const storedShortcuts = useLiveQuery(() => settingsRepository.get<unknown>('power.shortcuts', DEFAULT_SHORTCUTS), [], DEFAULT_SHORTCUTS)\n  const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])"
+          new = "  const storedShortcuts = useLiveQuery(() => settingsRepository.get<unknown>('power.shortcuts', DEFAULT_SHORTCUTS), [], DEFAULT_SHORTCUTS)\n  const dailyWrapUpKey = `daily.wrapup.${data?.today ?? localDateKey()}`\n  const dailyWrapUp = useLiveQuery(() => settingsRepository.get<string>(dailyWrapUpKey, ''), [dailyWrapUpKey], '') ?? ''\n  const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])"
+          if text.count(old) != 1: raise SystemExit('App: wrap-up hook anchor mismatch')
+          text = text.replace(old, new, 1)
+
+          old = """  async function commitTodayPlan() {
+    registerUndo(await dailyPlanningService.commit(data?.today ?? localDateKey()))
+  }
+
+  function navigate(next: NavView) {"""
+          new = """  async function commitTodayPlan() {
+    registerUndo(await dailyPlanningService.commit(data?.today ?? localDateKey()))
+  }
+
+  async function saveDailyWrapUp(note: string) {
+    await settingsRepository.set(dailyWrapUpKey, note.trim())
+  }
+
+  async function rollForwardToday() {
+    const actions: UndoableMutation[] = []
+    for (const task of data?.todayTasks ?? []) {
+      if (!task.completed) actions.push(await dailyPlanningService.moveToDate(task.id, 'tomorrow', data?.today ?? localDateKey()))
+    }
+    if (actions.length) registerUndo(combineUndo(`${actions.length} unfinished task${actions.length === 1 ? '' : 's'} moved to tomorrow`, actions))
+  }
+
+  function navigate(next: NavView) {"""
+          if text.count(old) != 1: raise SystemExit('App: daily action anchor mismatch')
+          text = text.replace(old, new, 1)
+
+          pattern = re.compile(r"          \{view === 'today' \? <TodayView[^\n]+/> : null\}")
+          replacement = """          {view === 'today' ? <TodayView
+            tasks={data.todayTasks}
+            carryover={data.carryoverTasks}
+            nextTasks={data.nextTasks}
+            laterTasks={data.laterTasks}
+            habits={habitData.todayHabits}
+            schedule={data.timeBlocks}
+            capacity={data.capacity}
+            planStatus={data.dailyPlanStatus}
+            deadlineCount={data.upcomingDeadlineTasks.length}
+            activeFocus={focusData?.activeSession ? {
+              taskId: focusData.activeSession.taskId,
+              title: focusData.activeSession.taskTitleSnapshot ?? 'Focus session',
+              status: focusData.activeSession.status === 'paused' ? 'paused' : 'running',
+            } : undefined}
+            todayFocusSeconds={focusData?.todaySeconds ?? 0}
+            wrapUpNote={dailyWrapUp}
+            onAdd={() => openAdd('todo', '', data.today)}
+            onToggle={(id) => void toggleTask(id)}
+            onToggleHabit={(id) => void toggleHabit(id)}
+            onHabitIncrement={(id, minutes) => void incrementHabit(id, minutes)}
+            onOpenHabit={setSelectedHabitId}
+            onSkipHabit={(id) => void toggleHabitSkip(id)}
+            onOpen={setSelectedTaskId}
+            onPlan={() => setPlanDayOpen(true)}
+            onBucket={(id, bucket) => void setTodayBucket(id, bucket)}
+            onMoveOrder={(id, direction) => void moveTodayOrder(id, direction)}
+            onMoveDate={(id, target) => void moveTaskDate(id, target)}
+            onFocus={(id) => openFocus(id)}
+            onOpenPlanner={() => navigate('planner')}
+            onSaveWrapUp={saveDailyWrapUp}
+            onRollForward={() => void rollForwardToday()}
+          /> : null}"""
+          text, n = pattern.subn(replacement, text, count=1)
+          if n != 1: raise SystemExit(f'App: TodayView render replacement matched {n}')
+          app.write_text(text)
+
+          # Version + validation chain.
+          pkg_path = Path('package.json')
+          pkg = json.loads(pkg_path.read_text())
+          pkg['version'] = '1.2.0'
+          pkg['scripts']['validate:daily'] = 'node scripts/validate-daily-workflow.mjs'
+          pkg['scripts']['release:verify'] = 'npm run validate:final && npm run validate:release && npm run validate:daily && npm run typecheck && npm run build && npm run validate:dist'
+          pkg_path.write_text(json.dumps(pkg, indent=2) + '\n')
+
+          replace_once('scripts/validate-final.mjs', "pkg.version === '1.1.1'", "pkg.version === '1.2.0'")
+          release = Path('scripts/validate-release.mjs')
+          release_text = release.read_text()
+          release_text = release_text.replace("check('patch release version is 1.1.1', pkg.version === '1.1.1', pkg.version)", "check('release version is 1.2.0', pkg.version === '1.2.0', pkg.version)")
+          release.write_text(release_text)
+
+          Path('scripts/validate-daily-workflow.mjs').write_text(r'''import fs from 'node:fs'
+import path from 'node:path'
+
+const root = process.cwd()
+const read = (p) => fs.readFileSync(path.join(root, p), 'utf8')
+const checks = []
+const check = (name, ok) => checks.push({ name, ok: Boolean(ok) })
+
+const pkg = JSON.parse(read('package.json'))
+const app = read('src/app/App.tsx')
+const data = read('src/hooks/useAppData.ts')
+const today = read('src/features/today/TodayView.tsx')
+const cssIndex = read('src/styles/index.css')
+const database = read('src/db/database.ts')
+
+check('v1.2 package version', pkg.version === '1.2.0')
+check('daily workflow validator registered', pkg.scripts?.['validate:daily'] === 'node scripts/validate-daily-workflow.mjs')
+check('release gate runs daily workflow validation', pkg.scripts?.['release:verify']?.includes('validate:daily'))
+check('v12 data model retained', /DATABASE_SCHEMA_VERSION\s*=\s*12\b/.test(database))
+check('Next horizon exposed', data.includes('nextTasks: nextTasks.map(preview)'))
+check('Later horizon exposed', data.includes('laterTasks: laterTasks.map(preview)'))
+check('Top 3 workflow rendered', today.includes('title="Top 3"') && today.includes('Daily priorities'))
+check('carryover resolution rendered', today.includes('carryover-resolver') && today.includes('Resolve before adding more'))
+check('Today Next Later triage rendered', today.includes('title="Next / Later"') && today.includes('Triage horizon'))
+check('focus-now surface rendered', today.includes('title="Focus now"') && today.includes('Suggested next action'))
+check('end-of-day wrap-up rendered', today.includes('title="End-of-day wrap-up"') && today.includes('Move unfinished to tomorrow'))
+check('per-day wrap-up persistence wired', app.includes('daily.wrapup.${data?.today ?? localDateKey()}') && app.includes('saveDailyWrapUp'))
+check('roll-forward is undoable', app.includes('rollForwardToday') && app.includes('combineUndo'))
+check('Daily Workflow stylesheet loaded', cssIndex.includes("@import './daily-workflow.css';"))
+check('daily workflow release doc exists', fs.existsSync(path.join(root, 'docs/DAILY_WORKFLOW_V1_2.md')))
+
+const failures = checks.filter((item) => !item.ok)
+for (const item of checks) console.log(`${item.ok ? 'PASS' : 'FAIL'}  ${item.name}`)
+console.log(`\n${checks.length - failures.length}/${checks.length} daily-workflow checks passed.`)
+if (failures.length) process.exit(1)
+''')
+
+          Path('docs/DAILY_WORKFLOW_V1_2.md').write_text('''# Folio v1.2 — Daily Workflow
+
+Folio v1.2 makes **Today** the primary operating surface rather than another list view.
+
+## Product contract
+
+The daily page answers four questions in order:
+
+1. **What carried over?** Resolve overdue work explicitly instead of silently accumulating it.
+2. **What matters today?** The first three `Must` tasks form a visible Top 3; other work remains secondary.
+3. **What should I do now?** Active Focus is surfaced first, otherwise Folio suggests the next unblocked priority.
+4. **How do I close the day?** A small wrap-up records what moved forward and can roll unfinished work to tomorrow.
+
+## Workflow surfaces
+
+- **Carryover resolver:** Today / Tomorrow / Later / Done actions for overdue tasks.
+- **Top 3:** derived from the ordered `Must` bucket; no duplicate priority model is introduced.
+- **Today:** the remaining planned work, with existing planning roles and task controls intact.
+- **Next:** tomorrow's tasks.
+- **Later:** unscheduled open tasks.
+- **Focus now:** resumes an active session or suggests the next unblocked priority.
+- **Habits:** remains part of the daily operating loop.
+- **Capacity + schedule:** retains the existing planning/capacity engine.
+- **End-of-day wrap-up:** task/habit/focus summary, per-day note, and undoable roll-forward.
+
+## Persistence and compatibility
+
+No IndexedDB migration is required. Folio remains on schema **v12**. Top 3 reuses `DailyPlanItem.bucket = must`; Next/Later reuse task planning dates; wrap-up notes use the existing settings table under `daily.wrapup.<YYYY-MM-DD>`.
+
+This avoids parallel representations of the same planning concepts and preserves all v1.1.1 backups and legacy migration behavior.
+''')
+
+          # README release identity and v1.2 summary.
+          readme = Path('README.md')
+          r = readme.read_text()
+          r = r.replace('# Folio — v1.1.1', '# Folio — v1.2.0', 1)
+          r = r.replace('**Release:** `1.1.1`', '**Release:** `1.2.0`', 1)
+          marker = '## Data and privacy\n'
+          section = '''## v1.2 — Daily Workflow\n\nToday is now Folio's daily operating surface: explicit carryover resolution, a protected Top 3, Today/Next/Later triage, current Focus context, habits and capacity in one hierarchy, plus an end-of-day wrap-up with undoable roll-forward. The release intentionally reuses the v12 planning model rather than introducing duplicate priority or triage state.\n\nSee `docs/DAILY_WORKFLOW_V1_2.md`.\n\n'''
+          if section not in r:
+              if marker not in r: raise SystemExit('README data marker missing')
+              r = r.replace(marker, section + marker, 1)
+          readme.write_text(r)
+
+          # Remove the staging workflow before release manifest generation/commit.
+          Path('.github/workflows/finish-v12-daily.yml').unlink()
+          PY
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Verify v1.2 release
+        run: npm run release:verify
+
+      - name: Refresh release manifest
+        run: npm run manifest:release
+
+      - name: Commit verified v1.2
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: Folio v1.2 daily workflow"
+          git push origin HEAD:v1.2-daily-workflow
