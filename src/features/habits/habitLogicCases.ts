@@ -3,7 +3,7 @@ import { habitAdherence, habitCurrentStreak, habitWeekProgress } from '../../dom
 
 const now = '2026-08-20T10:00:00.000Z'
 function habit(partial: Partial<HabitEntity>): HabitEntity {
-  return { id: 'h', title: 'Habit', description: '', kind: 'check', target: 1, schedule: { type: 'daily' }, countsTowardCapacity: false, pauses: [], archived: false, sortOrder: 1, createdAt: '2026-08-01T10:00:00.000Z', updatedAt: now, ...partial, pauses: partial.pauses ?? [] }
+  return { id: 'h', title: 'Habit', description: '', kind: 'check', target: 1, schedule: { type: 'daily' }, countsTowardCapacity: false, archived: false, sortOrder: 1, createdAt: '2026-08-01T10:00:00.000Z', updatedAt: now, ...partial, pauses: partial.pauses ?? [] }
 }
 function entry(date: string, status: 'open' | 'completed' | 'skipped', value = status === 'completed' ? 1 : 0): HabitEntryEntity {
   return { id: `h:${date}`, habitId: 'h', date, value, status, completedAt: status === 'completed' ? now : undefined, skippedAt: status === 'skipped' ? now : undefined, updatedAt: now }
