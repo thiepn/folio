@@ -4,20 +4,13 @@ import path from 'node:path'
 
 const root = process.cwd()
 const excludedRoots = new Set(['.git', 'dist', 'node_modules'])
-const excludedFiles = new Set([
-  'RELEASE_MANIFEST.json',
-  'vite.config.js',
-  'vite.config.d.ts',
-])
-const excludedSuffixes = ['.tsbuildinfo']
-const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+const excludedFiles = new Set(['RELEASE_MANIFEST.json'])
 
 function walk(dir = '.') {
   return fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((entry) => {
     const rel = path.join(dir, entry.name).replace(/^\.\//, '')
     if (entry.isDirectory()) return excludedRoots.has(rel.split(path.sep)[0]) ? [] : walk(rel)
-    if (excludedFiles.has(rel) || excludedSuffixes.some((suffix) => rel.endsWith(suffix))) return []
-    return [rel]
+    return excludedFiles.has(rel) ? [] : [rel]
   })
 }
 
@@ -33,6 +26,8 @@ const sourceTreeSha256 = crypto.createHash('sha256')
   .update(files.map((file) => `${file.path}:${file.sha256}`).join('\n'))
   .digest('hex')
 
+const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+
 const manifest = {
   product: 'Folio',
   repository: 'thiepn/folio',
@@ -42,7 +37,7 @@ const manifest = {
   generatedAt: new Date().toISOString(),
   sourceTreeSha256,
   validation: {
-    finalReleaseContract: '54/54 PASS',
+    finalReleaseContract: '55/55 PASS',
     releaseHardeningContract: '38/38 PASS',
     dailyWorkflowContract: '16/16 PASS',
     taskProjectWorkflowContract: '19/19 PASS',
