@@ -30,7 +30,7 @@ export function validateAdvancedPlanningCases() {
   if (forecast.days[0].totalMinutes !== 120 || forecast.days[0].remainingMinutes !== -20) failures.push('Forecast must include duration-habit capacity')
   if (forecast.weeks[0].overloadedDays < 1) failures.push('Forecast overloaded-day regression')
 
-  const project: ProjectEntity = { id: 'p', name: 'Course', description: '', type: 'academic', archived: false, favorite: false, examDate: '2026-09-18', weeklyTargetMinutes: 300, createdAt: now, updatedAt: now }
+  const project: ProjectEntity = { id: 'p', name: 'Course', description: '', notes: '', type: 'academic', status: 'active', milestones: [], activity: [], archived: false, favorite: false, examDate: '2026-09-18', weeklyTargetMinutes: 300, createdAt: now, updatedAt: now }
   void project
   return failures
 }

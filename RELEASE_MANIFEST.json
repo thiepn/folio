@@ -1,15 +1,16 @@
 {
   "product": "Folio",
   "repository": "thiepn/folio",
-  "version": "1.2.0",
-  "databaseSchema": 12,
-  "releaseType": "daily-workflow",
-  "generatedAt": "2026-09-16T13:31:04.717Z",
-  "sourceTreeSha256": "7deab32e23501a8666f5570f4d6b6e5a22f1a9065f68484be642dc4b2517b0a5",
+  "version": "1.3.0",
+  "databaseSchema": 13,
+  "releaseType": "task-project-workflow",
+  "generatedAt": "2026-09-16T13:56:41.018Z",
+  "sourceTreeSha256": "f7ab93a5b6358503db92647383342c8c5e136d20c4acf62894c6b33c24b3bb48",
   "validation": {
     "finalReleaseContract": "54/54 PASS",
     "releaseHardeningContract": "38/38 PASS",
     "dailyWorkflowContract": "16/16 PASS",
+    "taskProjectWorkflowContract": "19/19 PASS",
     "dependencyBackedProductionBuild": "PASS — GitHub Actions",
     "githubPagesDeployment": "PASS — GitHub Actions"
   },
@@ -20,18 +21,17 @@
   },
   "compatibility": {
     "databaseName": "folio",
-    "databaseSchema": 12,
+    "databaseSchema": 13,
     "legacyDatabaseMigration": true,
     "legacyBackupImportPatchAcceptance": true
   },
   "highlights": [
-    "Daily Top 3 derived from the existing Must planning bucket",
-    "Explicit carryover resolution before adding more work",
-    "Today, Next, and Later triage on one operating surface",
-    "Current Focus context and suggested next unblocked action",
-    "Per-day end-of-day wrap-up with undoable unfinished-task roll-forward",
-    "Schema v12 retained with no migration required for v1.2",
-    "Full final, release-hardening, daily-workflow, typecheck, production-build, and dist validation gate",
+    "Project status, deadline, notes, next action, milestones, and activity history",
+    "Derived task completion progress rather than manually maintained project percentages",
+    "Project task filters for Open, Ready, Blocked, Completed, and All",
+    "Direct Today, Tomorrow, Later, Focus, and next-action task controls",
+    "Schema v13 migration that leaves task storage unchanged",
+    "Full final, release-hardening, daily-workflow, task-project, typecheck, production-build, and dist validation gate",
     "GitHub Pages deployment verified from main"
   ],
   "files": [
@@ -52,8 +52,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 4321,
-      "sha256": "87670936ecf2366b0f279c481eb9d5b77943e8054b5e05c38744688185587218"
+      "bytes": 4856,
+      "sha256": "3c849a0aa98d4b201f686c9abce2ea402eb91e5182c14d99f1cd2fc447b53e23"
     },
     {
       "path": "docs/ACCESSIBILITY_PERFORMANCE_RELIABILITY.md",
@@ -201,6 +201,11 @@
       "sha256": "6384f07abadbf622a1c596259f4270a081cd46fe1e31639d7011c781a671fa03"
     },
     {
+      "path": "docs/TASK_PROJECT_WORKFLOW_V1_3.md",
+      "bytes": 2027,
+      "sha256": "03cf4dad53d69bb793c7984242723df5f3003e122bdd6e8edf546fa7c570353d"
+    },
+    {
       "path": "docs/V1_1_REFINEMENT.md",
       "bytes": 1769,
       "sha256": "e6dbfca4c80e22f7be299c99e2393964b804b99dc6eb6e53bde3dbaaa6be70d5"
@@ -218,12 +223,12 @@
     {
       "path": "package-lock.json",
       "bytes": 62456,
-      "sha256": "6131b3bf1bcba971040d654e32cef10a57753ea39f31f0638e5248b88779117c"
+      "sha256": "d17939b588ee6279d64964a66f6545a6014673b2098459c96dca92cdd1f4d441"
     },
     {
       "path": "package.json",
-      "bytes": 1500,
-      "sha256": "bbff6aa9e358ab8ac4978fe75443b2dcc4c35eb2d7b4a4ff4caa6f9c6c3e2c72"
+      "bytes": 1613,
+      "sha256": "a5eacc4a45e69a243c5db126d818d22ec38d4476848cb5edbdff9725fc97bb7c"
     },
     {
       "path": "public/.nojekyll",
@@ -271,6 +276,11 @@
       "sha256": "d05eba99eb5ba805e84c03ce74e3ea431fedc6273503405a4435551cdf9995c0"
     },
     {
+      "path": "public/schema/folio-backup-v13.schema.json",
+      "bytes": 1741,
+      "sha256": "5e8e3e5affe0d656034016d4d25f57afb5235532c66388696c4b153ba4d4add4"
+    },
+    {
       "path": "public/schema/folio-import-v1.schema.json",
       "bytes": 10026,
       "sha256": "198e8535b85cc734edaf580d6fb6e8f7b0c6adc5b4e9ca662547e40a56100afb"
@@ -287,13 +297,13 @@
     },
     {
       "path": "scripts/generate-release-manifest.mjs",
-      "bytes": 2815,
-      "sha256": "5cc122f0f3dfc6fefbc4bf3ce4f4c12c88eefd2875742de2b1ab442464d268c4"
+      "bytes": 2878,
+      "sha256": "fac3b8aff81ba8ddaf9470338c805361e5054c544fbf1a2faa50ad1dfd0197fa"
     },
     {
       "path": "scripts/validate-daily-workflow.mjs",
-      "bytes": 2569,
-      "sha256": "7071bef77d61c7995546c139f53cfa82cad5c4ed8f366a24f843dadc603ddadb"
+      "bytes": 2625,
+      "sha256": "1ee89d527c36e52662634090df1d144e778d5af66c91e2766614c2845d52899a"
     },
     {
       "path": "scripts/validate-dist.mjs",
@@ -302,13 +312,18 @@
     },
     {
       "path": "scripts/validate-final.mjs",
-      "bytes": 7595,
-      "sha256": "6374929f0572c337dee5d4c72e8d075f1d20052962971e86cbaf8450c96f2b76"
+      "bytes": 7630,
+      "sha256": "cd305c62637649975cc451b14780ebd1f73ea6878836c8100ca84b485a957d11"
     },
     {
       "path": "scripts/validate-release.mjs",
       "bytes": 4204,
-      "sha256": "6da9a664485fb63a962d41ac6d6edb4238d6fcc94031ffe939caf4fd23952e76"
+      "sha256": "d38ff310289b89bd469ff5d4aa9b34059878cb4d39afa31a43fc903767891385"
+    },
+    {
+      "path": "scripts/validate-task-project-workflow.mjs",
+      "bytes": 3849,
+      "sha256": "ecdd5e14a31c04d356cef1c6820c6f13e1adf677c3c0eb55f79023d0adc3dca0"
     },
     {
       "path": "src/adapters/uiAdapters.ts",
@@ -317,8 +332,8 @@
     },
     {
       "path": "src/app/App.tsx",
-      "bytes": 53481,
-      "sha256": "47f0918a42f037489649f40d9330f2f0e77a6de368b476679157be8f8b4ff644"
+      "bytes": 54254,
+      "sha256": "62350db98af543c2b0d82588047684608ab016d65999c1eaa28a6c7a38bfb33f"
     },
     {
       "path": "src/components/layout/AppearanceDrawer.tsx",
@@ -442,13 +457,13 @@
     },
     {
       "path": "src/db/database.ts",
-      "bytes": 10844,
-      "sha256": "cb01e169569f3dc84abdfb5dc4969802b00d3d536c49e50172f7489ad9549d9f"
+      "bytes": 11937,
+      "sha256": "8b910aaf53ee55601a00ec0f6b268d719fef147b7db8ca44bdd5ed127a99228d"
     },
     {
       "path": "src/db/seed.ts",
-      "bytes": 6929,
-      "sha256": "b9a6c27eae4e7884de3795a8573caa2ec9da7c9017641aa958f3a78ea0b167fd"
+      "bytes": 7165,
+      "sha256": "e0025d8eb6340698c2eac77e6313221c857c939fee45dfa946bc4ba718bdad8a"
     },
     {
       "path": "src/domain/date.ts",
@@ -462,13 +477,13 @@
     },
     {
       "path": "src/domain/models.ts",
-      "bytes": 6694,
-      "sha256": "ed20e82019affc1d464aa64ce1469a181101c77743af3eb125f004b03395a13a"
+      "bytes": 7260,
+      "sha256": "1ca718ace09671a61a6cfbd1a7164396d0098419efbbf015d6ee34d6b3f8fb60"
     },
     {
       "path": "src/domain/schemas.ts",
-      "bytes": 8700,
-      "sha256": "1805f9bcf20c9ceeae3d098f75cd4cb9a1f138046a4c25ace5e3a4bee70b9878"
+      "bytes": 9005,
+      "sha256": "42987d04f1a649fe136d156fefde90c9f490843b8b6b65ca36bc0bcc36b1a2b8"
     },
     {
       "path": "src/features/capture/QuickAddModal.tsx",
@@ -558,7 +573,7 @@
     {
       "path": "src/features/interop/InteroperabilityModal.tsx",
       "bytes": 16565,
-      "sha256": "28eb151b15d9ee589ec96d6ac882091b50122f4beb9cc5efbeb713be43c4dc2a"
+      "sha256": "1f6a66df04c0c385334cbe830c6a819d888692d17d1d25de0d6316d276c3aa5e"
     },
     {
       "path": "src/features/interop/icsLogic.ts",
@@ -617,8 +632,8 @@
     },
     {
       "path": "src/features/planner/advancedPlanningCases.ts",
-      "bytes": 3015,
-      "sha256": "71f456faf0e56dd2077b354074bf6eca7fe939d385ae51913d79e4603fde5a38"
+      "bytes": 3074,
+      "sha256": "307943c34d72a50153829f2bf62ef41d66afb40172bd1c4e71225a478776d88c"
     },
     {
       "path": "src/features/planner/calendarLogic.ts",
@@ -682,18 +697,18 @@
     },
     {
       "path": "src/features/projects/ProjectDetailView.tsx",
-      "bytes": 6256,
-      "sha256": "0921c134b170943485d2efa4800dedcd5ee490511d50fe46a3278b1d4f554596"
+      "bytes": 15052,
+      "sha256": "c09d0aa612e49f8e87681b219e04d7c16417bf97f921e02a37172a4b0cabb42a"
     },
     {
       "path": "src/features/projects/ProjectEditorModal.tsx",
-      "bytes": 5304,
-      "sha256": "cffb6afa9f79ba1415b95a532b33a0ddd6401939afff567372a1160cc14ce871"
+      "bytes": 6494,
+      "sha256": "642ac305a8ee7828f192d7b60ee20a03a3049f01b4e6454a6e7f18d93129e89e"
     },
     {
       "path": "src/features/projects/ProjectsView.tsx",
-      "bytes": 3613,
-      "sha256": "f0d2b22ee5e2b8e4ab2a75f8944b287accd7ec87c9dc3bd2ead2cd994805c12f"
+      "bytes": 5186,
+      "sha256": "c05b84ad558845397569f5e41e5b39821635b97f6261f37e4bda25fd6fd7e82c"
     },
     {
       "path": "src/features/recurrence/RecurrenceEditorModal.tsx",
@@ -727,8 +742,8 @@
     },
     {
       "path": "src/features/review/reviewLogicCases.ts",
-      "bytes": 2136,
-      "sha256": "781a11f77b4453e45a2c911703ca58ed258a7353d420a31e44100920be20652f"
+      "bytes": 2195,
+      "sha256": "8373efe80a201b4f7b241aa120519784864bf1528a8e0a1096e44e2bf06e3ab3"
     },
     {
       "path": "src/features/tasks/TaskInspector.tsx",
@@ -846,6 +861,11 @@
       "sha256": "d68822a0f230de76030ceea34176b3056569b9f6eab7ef337c41596616303799"
     },
     {
+      "path": "src/migrations/v12ToV13.ts",
+      "bytes": 593,
+      "sha256": "0eda3a8722bda5c4ca1290587f5a73daab20a09082cbafb6bee524f2032c7e86"
+    },
+    {
       "path": "src/migrations/v1ToV2.ts",
       "bytes": 1091,
       "sha256": "e7a61acd22cc68e64ed0af6145b073aa2ca702eb472c78a8efefe335b3cdc46f"
@@ -917,8 +937,8 @@
     },
     {
       "path": "src/repositories/projectRepository.ts",
-      "bytes": 4695,
-      "sha256": "9b233dcb57eeb348e730b0673b291aefaa9e2eeb4833855661d5d95c3ba87f9c"
+      "bytes": 9278,
+      "sha256": "39a905da32c158b110d76132d9629308781153ea9259a097352cfa6c2cff0746"
     },
     {
       "path": "src/repositories/recurrenceRepository.ts",
@@ -972,8 +992,8 @@
     },
     {
       "path": "src/services/entityFactory.ts",
-      "bytes": 3753,
-      "sha256": "33b80d35fefabcbaa60ccaaf30f3ead349c955fd7eec7af252d76d6dde2a43f9"
+      "bytes": 4019,
+      "sha256": "a97cb21ffc547653a8f6b4a43bb9c40c3f1c5600845828d02f72594a97190111"
     },
     {
       "path": "src/services/focusService.ts",
@@ -1002,8 +1022,8 @@
     },
     {
       "path": "src/services/projectService.ts",
-      "bytes": 2479,
-      "sha256": "eaffbc4ff51d49dca4b2e602db86f636882433343bd33bfd8c98f475272a177b"
+      "bytes": 5859,
+      "sha256": "23845647c2c442dc21cacc27110197d383f11c2047e4151f2e6d3646a604b04b"
     },
     {
       "path": "src/services/pwaService.ts",
@@ -1077,8 +1097,8 @@
     },
     {
       "path": "src/styles/index.css",
-      "bytes": 212,
-      "sha256": "341d478cffa136031c980ea513432a4267fceaf6edef522ebbf6e211d08535eb"
+      "bytes": 251,
+      "sha256": "e4cf23119573b2a9eb57ee9035b3d93b502345ca24da5eeeb9f2156ea9ef135c"
     },
     {
       "path": "src/styles/layout.css",
@@ -1094,6 +1114,11 @@
       "path": "src/styles/polish.css",
       "bytes": 11060,
       "sha256": "3ab42d17d867ae3c865d39eb9144623fa1632eb8c66da94bb2458306749d66d4"
+    },
+    {
+      "path": "src/styles/task-project-workflow.css",
+      "bytes": 5498,
+      "sha256": "292b0157520e13caee4116377e2d440bd039361113bff6ca49d8f0928c85ee5e"
     },
     {
       "path": "src/styles/tokens.css",

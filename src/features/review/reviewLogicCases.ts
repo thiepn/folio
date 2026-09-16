@@ -12,7 +12,7 @@ export function validateReviewLogicCases() {
   if (projectPaceStatus(60 * 60, 5 * 60, '2026-08-20') !== 'behind') failures.push('1h of 5h target by Thursday should be behind pace')
   if (projectPaceStatus(3 * 60 * 60, 5 * 60, '2026-08-20') === 'behind') failures.push('3h of 5h target by Thursday should not be behind pace')
 
-  const project: ProjectEntity = { id: 'p1', name: 'Analysis', description: '', type: 'academic', archived: false, favorite: false, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }
+  const project: ProjectEntity = { id: 'p1', name: 'Analysis', description: '', notes: '', type: 'academic', status: 'active', milestones: [], activity: [], archived: false, favorite: false, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' }
   const projects = new Map([[project.id, project]])
   const stale = staleTaskIssues([baseTask({ id: 'old', projectId: 'p1' }), baseTask({ id: 'series', seriesId: 's1' })], projects, '2026-08-20')
   if (stale.length !== 1 || stale[0].id !== 'old') failures.push('Stale review must ignore generated recurring occurrences')

@@ -168,10 +168,10 @@ export function InteroperabilityModal({ open, projects, onClose, onUndo }: {
       {tab === 'backup' ? <div className="protocol-stack">
         <div className="protocol-intro"><div className="eyebrow">Native data</div><h3>Recover the planner exactly.</h3><p>Full backups preserve canonical entities and provenance. Restore is replace-only, validated, and automatically downloads a safety backup of the current database before replacement.</p></div>
         <section className="interop-section">
-          <header><div><b>Export full backup</b><span>Schema v12 · complete planner state</span></div><Button variant="primary" onClick={() => void exportFullBackup()} disabled={busy}>Export JSON</Button></header>
+          <header><div><b>Export full backup</b><span>Schema v13 · complete planner state</span></div><Button variant="primary" onClick={() => void exportFullBackup()} disabled={busy}>Export JSON</Button></header>
         </section>
         <section className="interop-section">
-          <header><div><b>Restore backup</b><span>Supported direct-restore range: schema v8–v12</span></div><input type="file" accept="application/json,.json" onChange={(event) => void loadBackupFile(event.target.files?.[0])} /></header>
+          <header><div><b>Restore backup</b><span>Supported direct-restore range: schema v8–v13</span></div><input type="file" accept="application/json,.json" onChange={(event) => void loadBackupFile(event.target.files?.[0])} /></header>
           {restorePreview ? <>
             <div className="protocol-counts">
               <div><b>{restorePreview.counts.tasks}</b><span>Tasks</span></div><div><b>{restorePreview.counts.projects}</b><span>Projects</span></div><div><b>{restorePreview.counts.habits}</b><span>Habits</span></div><div><b>{restorePreview.counts.timeBlocks}</b><span>Time blocks</span></div><div><b>{restorePreview.counts.focusSessions}</b><span>Focus sessions</span></div><div><b>v{restorePreview.backup.version}</b><span>Backup schema</span></div>

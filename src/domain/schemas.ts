@@ -8,6 +8,7 @@ export const taskPrioritySchema = z.enum(['normal', 'high', 'critical'])
 export const taskStatusSchema = z.enum(['inbox', 'todo', 'completed', 'cancelled'])
 
 export const projectTypeSchema = z.enum(['standard', 'academic'])
+export const projectStatusSchema = z.enum(['active', 'on-hold', 'completed'])
 
 export const habitKindSchema = z.enum(['check', 'duration'])
 export const habitEntryStatusSchema = z.enum(['open', 'completed', 'skipped'])
@@ -38,9 +39,12 @@ export const habitUpdateSchema = habitCreateSchema.partial().extend({
 export const projectCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().max(10_000).default(''),
+  notes: z.string().max(20_000).default(''),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
   icon: z.string().trim().max(24).optional(),
   type: projectTypeSchema.default('standard'),
+  status: projectStatusSchema.default('active'),
+  deadline: localDate.optional(),
   favorite: z.boolean().default(false),
   examDate: localDate.optional(),
   weeklyTargetMinutes: z.number().int().positive().max(7 * 24 * 60).optional(),
@@ -48,6 +52,8 @@ export const projectCreateSchema = z.object({
 
 export const projectUpdateSchema = projectCreateSchema.partial().extend({
   archived: z.boolean().optional(),
+  deadline: localDate.nullable().optional(),
+  nextActionTaskId: z.string().nullable().optional(),
   examDate: localDate.nullable().optional(),
   weeklyTargetMinutes: z.number().int().positive().max(7 * 24 * 60).nullable().optional(),
 })

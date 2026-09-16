@@ -5,6 +5,7 @@ export type IsoDateTime = string
 export type TaskPriority = 'normal' | 'high' | 'critical'
 export type TaskStatus = 'inbox' | 'todo' | 'completed' | 'cancelled'
 export type ProjectType = 'standard' | 'academic'
+export type ProjectStatus = 'active' | 'on-hold' | 'completed'
 export type HabitKind = 'check' | 'duration'
 export type HabitEntryStatus = 'open' | 'completed' | 'skipped'
 export type TimeBlockKind = 'task' | 'event'
@@ -43,13 +44,37 @@ export interface TaskEntity {
   deletedAt?: IsoDateTime
 }
 
+export interface ProjectMilestone {
+  id: EntityId
+  title: string
+  dueDate?: LocalDate
+  completedAt?: IsoDateTime
+  sortOrder: number
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface ProjectActivityEntry {
+  id: EntityId
+  kind: 'project' | 'milestone'
+  label: string
+  at: IsoDateTime
+}
+
 export interface ProjectEntity {
   id: EntityId
   name: string
   description: string
+  notes: string
   color?: string
   icon?: string
   type: ProjectType
+  status: ProjectStatus
+  deadline?: LocalDate
+  nextActionTaskId?: EntityId
+  milestones: ProjectMilestone[]
+  activity: ProjectActivityEntry[]
+  completedAt?: IsoDateTime
   archived: boolean
   archivedAt?: IsoDateTime
   favorite: boolean

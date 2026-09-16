@@ -31,10 +31,10 @@ export async function installDemoWorkspace() {
   const later = addLocalDays(today, 4)
 
   const projects: ProjectEntity[] = [
-    { id: 'project-analysis', name: 'Analysis III', description: 'Coursework, assignments and exam preparation.', color: '#4169FF', icon: '∑', type: 'academic', archived: false, favorite: true, examDate: addLocalDays(today, 176), weeklyTargetMinutes: 300, createdAt: now, updatedAt: now },
-    { id: 'project-french', name: 'French', description: 'Language study and recurring review.', color: '#D8A54A', icon: 'FR', type: 'academic', archived: false, favorite: false, weeklyTargetMinutes: 210, createdAt: now, updatedAt: now },
-    { id: 'project-website', name: 'Website', description: 'Personal web projects and development.', color: '#7657FF', icon: '<>', type: 'standard', archived: false, favorite: true, createdAt: now, updatedAt: now },
-    { id: 'project-personal', name: 'Personal', description: 'Personal administration and daily-life tasks.', color: '#3AB58A', icon: '•', type: 'standard', archived: false, favorite: false, createdAt: now, updatedAt: now },
+    { id: 'project-analysis', name: 'Analysis III', description: 'Coursework, assignments and exam preparation.', notes: '', status: 'active', milestones: [], activity: [], color: '#4169FF', icon: '∑', type: 'academic', archived: false, favorite: true, examDate: addLocalDays(today, 176), weeklyTargetMinutes: 300, createdAt: now, updatedAt: now },
+    { id: 'project-french', name: 'French', description: 'Language study and recurring review.', notes: '', status: 'active', milestones: [], activity: [], color: '#D8A54A', icon: 'FR', type: 'academic', archived: false, favorite: false, weeklyTargetMinutes: 210, createdAt: now, updatedAt: now },
+    { id: 'project-website', name: 'Website', description: 'Personal web projects and development.', notes: '', status: 'active', milestones: [], activity: [], color: '#7657FF', icon: '<>', type: 'standard', archived: false, favorite: true, createdAt: now, updatedAt: now },
+    { id: 'project-personal', name: 'Personal', description: 'Personal administration and daily-life tasks.', notes: '', status: 'active', milestones: [], activity: [], color: '#3AB58A', icon: '•', type: 'standard', archived: false, favorite: false, createdAt: now, updatedAt: now },
   ]
 
   const task = (partial: Partial<TaskEntity> & Pick<TaskEntity, 'id' | 'title'>): TaskEntity => ({
