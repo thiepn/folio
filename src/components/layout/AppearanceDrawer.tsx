@@ -67,7 +67,7 @@ export function AppearanceDrawer({ open, appearance, onChange, onClose }: {
 
       <section className="setting-note">
         <div className="setting-label">Design system</div>
-        <p>Near-black canvas, strict geometry, editorial typography, thin structural lines, and one user-selected accent. Project colors remain independent from the UI accent.</p>
+        <p>Warm ink canvas, editorial typography, ruled sections, crisp geometry, and one user-selected accent. Project colors remain independent from the UI accent.</p>
       </section>
     </Drawer>
   )

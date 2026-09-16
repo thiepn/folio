@@ -47,7 +47,7 @@ function mix(a: number[], b: number[], amount: number) {
 
 /** Keep user hue for decorative accent while deriving a WCAG-AA text token. */
 function accessibleAccentText(rgb: number[]) {
-  const bg = [9, 11, 16]
+  const bg = [13, 13, 12]
   if (contrast(rgb, bg) >= 4.5) return rgb
   for (let step = 1; step <= 20; step += 1) {
     const candidate = mix(rgb, [255, 255, 255], step / 20)
@@ -68,7 +68,7 @@ export function applyAppearance(appearance: AppearanceState) {
 
   root.style.setProperty('--accent', appearance.accent)
   root.style.setProperty('--accent-text', rgbCss(accessibleAccentText([r, g, b])))
-  root.style.setProperty('--accent-contrast', contrast([255, 255, 255], [r, g, b]) >= contrast([9, 11, 16], [r, g, b]) ? '#ffffff' : '#090b10')
+  root.style.setProperty('--accent-contrast', contrast([255, 255, 255], [r, g, b]) >= contrast([13, 13, 12], [r, g, b]) ? '#ffffff' : '#0d0d0c')
   root.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`)
   root.style.setProperty('--accent-soft', `rgba(${r}, ${g}, ${b}, ${alpha.soft})`)
   root.style.setProperty('--accent-line', `rgba(${r}, ${g}, ${b}, ${alpha.line})`)
