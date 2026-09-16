@@ -19,6 +19,7 @@ function byOrder(a: TaskEntity, b: TaskEntity) { return a.sortOrder - b.sortOrde
 
 export function useAppData() {
   const today = localDateKey()
+  const tomorrow = addLocalDays(today, 1)
 
   return useLiveQuery(async () => {
     const deadlineHorizon = addLocalDays(today, 7)
@@ -26,8 +27,7 @@ export function useAppData() {
       taskSnapshot, projectEntities, timeBlocks, allTimeBlocks,
       defaultCapacity, dailyPlan, dailyPlanItems, recurringSeries,
     ] = await Promise.all([
-      // Phase 20: one Task table snapshot replaces seven overlapping reads that
-      // previously re-scanned the same rows for Today/Inbox/Open/Trash/etc.
+      // One Task table snapshot feeds Today, Next, Later, Inbox, projects and history.
       taskRepository.listSnapshot(),
       projectRepository.listAll(),
       timeBlockRepository.listForDate(today),
@@ -55,6 +55,8 @@ export function useAppData() {
     const preview = (task: TaskEntity) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap)
 
     const todayTasks = roots.filter((task) => task.plannedDate === today && (task.status === 'todo' || task.status === 'completed')).sort(byOrder)
+    const nextTasks = roots.filter((task) => task.status === 'todo' && task.plannedDate === tomorrow).sort(byOrder)
+    const laterTasks = roots.filter((task) => task.status === 'todo' && !task.plannedDate).sort(byOrder)
     const inboxTasks = roots.filter((task) => task.status === 'inbox').sort(byOrder)
     const openTasks = roots.filter((task) => task.status === 'todo' || task.status === 'inbox').sort(byOrder)
     const carryoverTasks = roots.filter((task) => task.status === 'todo' && task.plannedDate && task.plannedDate < today).sort((a, b) => (a.plannedDate ?? '').localeCompare(b.plannedDate ?? '') || byOrder(a, b))
@@ -76,7 +78,10 @@ export function useAppData() {
 
     return {
       today,
+      tomorrow,
       todayTasks: todayPreview,
+      nextTasks: nextTasks.map(preview),
+      laterTasks: laterTasks.map(preview),
       carryoverTasks: carryoverTasks.map(preview),
       upcomingDeadlineTasks: upcomingDeadlineTasks.map(preview),
       inboxTasks: inboxTasks.map(preview),
@@ -96,5 +101,5 @@ export function useAppData() {
       dailyPlanCommittedAt: dailyPlan?.committedAt,
       recurringSeries,
     }
-  }, [today])
+  }, [today, tomorrow])
 }
