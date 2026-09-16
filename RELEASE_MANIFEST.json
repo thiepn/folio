@@ -4,8 +4,8 @@
   "version": "1.5.0",
   "databaseSchema": 14,
   "releaseType": "reviews-history",
-  "generatedAt": "2026-09-16T14:38:15.977Z",
-  "sourceTreeSha256": "33b7bef5ea9e8fb0759aa03e0c09f648ce66fd1c1d1821874af25f2ecffcb4f3",
+  "generatedAt": "2026-09-16T14:40:19.006Z",
+  "sourceTreeSha256": "2db99c39e9d9a3c8eccb38efbc9916814f5fa39f3933d815824ec1f8657aa040",
   "validation": {
     "finalReleaseContract": "57/57 PASS",
     "releaseHardeningContract": "38/38 PASS",
@@ -761,8 +761,8 @@
     },
     {
       "path": "src/features/review/ReviewRecordModal.tsx",
-      "bytes": 5223,
-      "sha256": "09f38d7c40cb9999ac8b1be61d3653883353cc45a4b047b806b651572df2022d"
+      "bytes": 5333,
+      "sha256": "da0b0f0d94fa1d236b54ae5d740ea1edab4751be10c4f4bab7ddcd6f201e078d"
     },
     {
       "path": "src/features/review/ReviewView.tsx",
@@ -776,8 +776,8 @@
     },
     {
       "path": "src/features/review/historyLogic.ts",
-      "bytes": 5382,
-      "sha256": "0c1663336f936077a3f486d60bb11d54389fece225db73051f69413bbd2983ca"
+      "bytes": 5753,
+      "sha256": "416f9c30287847d17a075b4fb947044f17afcb7ce0823f05e7bbe3eb6fa506cd"
     },
     {
       "path": "src/features/review/reviewLogic.ts",
