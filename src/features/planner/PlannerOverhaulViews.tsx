@@ -252,7 +252,7 @@ function WeekDayV14({ day, today, weekDates, onSetCapacity, onAddForDate, onDrop
 }
 
 function WeekTask({ task, day, today, weekDates, ...actions }: { task: TaskPreview; day: LocalDate; today: LocalDate; weekDates: LocalDate[] } & TaskActions) {
-  return <div className={`week-task week-task--v14 ${task.completed ? 'is-completed' : ''}`} draggable={!task.completed} onDragStart={(event) => { event.dataTransfer.setData('text/task-id', task.id); event.dataTransfer.effectAllowed = 'move' }} onKeyDown={(event) => taskKeyboardMove(event, task, actions.onMoveDate)} tabIndex={0}>
+  return <div className={`week-task week-task--v14 ${task.completed ? 'is-completed' : ''}`} draggable={!task.completed} onDragStart={(event) => { event.dataTransfer.setData('text/task-id', task.id); event.dataTransfer.effectAllowed = 'move' }} onKeyDown={(event) => taskKeyboardMove(event, task, actions.onMoveDate, today)} tabIndex={0}>
     <button className="week-task__main" onClick={() => actions.onOpen?.(task.id)}><span className={`week-task__bucket bucket--${task.planningBucket ?? 'planned'}`} /><span>{task.title}</span><em>{task.durationMinutes ? formatMinutes(task.durationMinutes) : '—'}</em></button>
     <div className="planner-task-dates"><span>P {formatShortDate(task.plannedDate)}</span>{task.deadline ? <strong className={task.deadline < today && !task.completed ? 'is-warning' : ''}>D {formatShortDate(task.deadline)}</strong> : null}</div>
     <div className="week-task__actions"><button onClick={() => actions.onToggle?.(task.id)}>{task.completed ? '↶' : '✓'}</button>{!task.completed ? <details><summary>•••</summary><div className="week-task__menu">{weekDates.filter((date) => date !== day).map((date) => <button key={date} onClick={() => actions.onMoveDate(task.id, date)}>{weekdayShort(date)}</button>)}<button onClick={() => actions.onMoveDate(task.id, undefined)}>Later</button></div></details> : null}</div>
@@ -266,24 +266,24 @@ function BacklogSidebar({ backlog, today, targetDate, ...actions }: { backlog: T
     <header><div><span className="eyebrow">Unscheduled</span><strong>Backlog</strong></div><span>{backlog.length}</span></header>
     <p>No planned work date. Deadlines remain visible separately.</p>
     <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter backlog…" aria-label="Filter planner backlog" />
-    <div className="planner-backlog__list">{visible.length ? visible.map((task) => <div className="planner-backlog-card" key={task.id} draggable onDragStart={(event) => { event.dataTransfer.setData('text/task-id', task.id); event.dataTransfer.effectAllowed = 'move' }} tabIndex={0} onKeyDown={(event) => taskKeyboardMove(event, task, actions.onMoveDate)}><button onClick={() => actions.onOpen?.(task.id)}><strong>{task.title}</strong><span>{task.project ?? 'No project'}</span></button><div>{task.deadline ? <strong>Due {formatShortDate(task.deadline)}</strong> : <span>No deadline</span>}<button onClick={() => actions.onMoveDate(task.id, targetDate)}>Plan</button></div></div>) : <div className="empty-state">No matching unscheduled tasks.</div>}</div>
+    <div className="planner-backlog__list">{visible.length ? visible.map((task) => <div className="planner-backlog-card" key={task.id} draggable onDragStart={(event) => { event.dataTransfer.setData('text/task-id', task.id); event.dataTransfer.effectAllowed = 'move' }} tabIndex={0} onKeyDown={(event) => taskKeyboardMove(event, task, actions.onMoveDate, today)}><button onClick={() => actions.onOpen?.(task.id)}><strong>{task.title}</strong><span>{task.project ?? 'No project'}</span></button><div>{task.deadline ? <strong>Due {formatShortDate(task.deadline)}</strong> : <span>No deadline</span>}<button onClick={() => actions.onMoveDate(task.id, targetDate)}>Plan</button></div></div>) : <div className="empty-state">No matching unscheduled tasks.</div>}</div>
     <small>Drag onto a day. Keyboard: Shift+←/→ moves one day; Shift+Backspace returns a task to Later.</small>
   </aside>
 }
 
 function PlannerTaskCard({ task, today, ...actions }: { task: TaskPreview; today: LocalDate } & TaskActions) {
-  return <div className="planner-task-card" draggable={!task.completed} onDragStart={(event) => { event.dataTransfer.setData('text/task-id', task.id); event.dataTransfer.effectAllowed = 'move' }} tabIndex={0} onKeyDown={(event) => taskKeyboardMove(event, task, actions.onMoveDate)}>
+  return <div className="planner-task-card" draggable={!task.completed} onDragStart={(event) => { event.dataTransfer.setData('text/task-id', task.id); event.dataTransfer.effectAllowed = 'move' }} tabIndex={0} onKeyDown={(event) => taskKeyboardMove(event, task, actions.onMoveDate, today)}>
     <TaskRow task={task} onToggle={actions.onToggle} onOpen={actions.onOpen} />
     <div className="planner-task-semantics"><span><b>Planned</b> {task.plannedDate ? formatShortDate(task.plannedDate) : 'Later'}</span><span className={task.deadline && task.deadline < today && !task.completed ? 'is-warning' : ''}><b>Deadline</b> {task.deadline ? formatShortDate(task.deadline) : 'None'}</span>{task.activeBlockerCount ? <span className="is-warning"><b>Blocked</b> {task.activeBlockerCount}</span> : null}</div>
     {!task.completed ? <details className="planner-task-menu"><summary aria-label={`Reschedule ${task.title}`}>•••</summary><div><button onClick={() => actions.onMoveDate(task.id, today)}>Today</button><button onClick={() => actions.onMoveDate(task.id, addLocalDays(today, 1))}>Tomorrow</button><button onClick={() => actions.onMoveDate(task.id, undefined)}>Later</button></div></details> : null}
   </div>
 }
 
-function taskKeyboardMove(event: KeyboardEvent<HTMLElement>, task: TaskPreview, onMoveDate: (id: string, date?: LocalDate) => void) {
+function taskKeyboardMove(event: KeyboardEvent<HTMLElement>, task: TaskPreview, onMoveDate: (id: string, date?: LocalDate) => void, today: LocalDate) {
   if (!event.shiftKey || task.completed) return
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
     event.preventDefault()
-    const base = task.plannedDate ?? new Date().toISOString().slice(0, 10)
+    const base = task.plannedDate ?? today
     onMoveDate(task.id, addLocalDays(base, event.key === 'ArrowLeft' ? -1 : 1))
   } else if (event.key === 'Backspace') {
     event.preventDefault()

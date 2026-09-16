@@ -23,8 +23,10 @@ import { TimeBlockModal, type TimeBlockEditorPayload, type TimeBlockEditorState 
 
 type CalendarMode = 'day' | 'week'
 
-export function CalendarView({ today, onOpenTask, onCreateTaskBlock, onCreateEvent, onUpdateBlock, onUpdateEvent, onResizeBlock, onDeleteBlock }: {
+export function CalendarView({ today, anchorDate, onSelectedDateChange, onOpenTask, onCreateTaskBlock, onCreateEvent, onUpdateBlock, onUpdateEvent, onResizeBlock, onDeleteBlock }: {
   today: LocalDate
+  anchorDate?: LocalDate
+  onSelectedDateChange?: (date: LocalDate) => void
   onOpenTask?: (id: string) => void
   onCreateTaskBlock: (taskId: string, date: LocalDate, startMinute: number, durationMinutes: number) => void | Promise<void>
   onCreateEvent: (title: string, date: LocalDate, startMinute: number, durationMinutes: number, details?: { description?: string; location?: string }) => void | Promise<void>
@@ -35,11 +37,21 @@ export function CalendarView({ today, onOpenTask, onCreateTaskBlock, onCreateEve
 }) {
   const [mode, setMode] = useState<CalendarMode>('day')
   const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches)
-  const [selectedDate, setSelectedDate] = useState(today)
-  const [weekStart, setWeekStart] = useState(() => startOfLocalWeek(today))
+  const [selectedDate, setSelectedDate] = useState(anchorDate ?? today)
+  const [weekStart, setWeekStart] = useState(() => startOfLocalWeek(anchorDate ?? today))
   const [editor, setEditor] = useState<TimeBlockEditorState | null>(null)
   const weekEnd = addLocalDays(weekStart, 6)
   const data = useCalendarData(weekStart, weekEnd)
+
+  useEffect(() => {
+    if (!anchorDate) return
+    setSelectedDate(anchorDate)
+    setWeekStart(startOfLocalWeek(anchorDate))
+  }, [anchorDate])
+
+  useEffect(() => {
+    onSelectedDateChange?.(selectedDate)
+  }, [selectedDate, onSelectedDateChange])
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 700px)')
