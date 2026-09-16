@@ -24,7 +24,9 @@ jobs:
           package-manager-cache: false
 
       - name: Apply v1.6 integration
-        run: node scripts/apply-v16-integration.mjs
+        run: |
+          node scripts/fix-v16-integration.mjs
+          node scripts/apply-v16-integration.mjs
 
       - name: Refresh lockfile metadata
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
@@ -37,7 +39,7 @@ jobs:
 
       - name: Remove staging helpers and refresh manifest
         run: |
-          rm scripts/apply-v16-integration.mjs .github/workflows/apply-v16-habits-focus.yml
+          rm scripts/apply-v16-integration.mjs scripts/fix-v16-integration.mjs .github/workflows/apply-v16-habits-focus.yml
           npm run manifest:release
 
       - name: Commit verified v1.6 branch
