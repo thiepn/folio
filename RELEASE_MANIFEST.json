@@ -1,11 +1,11 @@
 {
   "product": "Folio",
   "repository": "thiepn/folio",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "databaseSchema": 15,
-  "releaseType": "command-first-ux",
-  "generatedAt": "2026-09-16T16:07:48.124Z",
-  "sourceTreeSha256": "14238029d7386ec01218f5671852341987353b5eabd00fbbec5a72bccafef7b4",
+  "releaseType": "visual-interaction-refinement",
+  "generatedAt": "2026-09-16T16:47:59.508Z",
+  "sourceTreeSha256": "0a65a35edc5f84c20320e3b17ff77408c6761940a978d5687a44d1d5cef51df3",
   "validation": {
     "finalReleaseContract": "59/59 PASS",
     "releaseHardeningContract": "38/38 PASS",
@@ -30,14 +30,14 @@
     "legacyBackupImportPatchAcceptance": true
   },
   "highlights": [
-    "Command Palette now supports nested action pickers, fuzzy token matching, and direct deep matches",
-    "Recent commands stay locally available without entering planner data or backups",
-    "Task commands cover open, complete, reopen, Today, Tomorrow, Later, and Focus workflows",
-    "Project and Habit creation/opening plus Habit completion/skip are available from the command surface",
-    "Fixed /, N, P, and T aliases accelerate search, task capture, project creation, and Today navigation",
-    "Existing configurable shortcuts and G navigation chords remain intact and take precedence correctly",
-    "Mobile gains direct Search access to the same command surface",
-    "Schema v15 retained with no v1.7 migration and v8–v15 backup compatibility unchanged",
+    "Warm ink-and-paper palette improves reading contrast without replacing the user-selected accent system",
+    "Editorial typography, ruled sections, and sharper geometry replace generic dashboard card patterns",
+    "Desktop navigation, page hierarchy, controls, overlays, and report surfaces share one coherent visual language",
+    "Mobile gains a dedicated editorial masthead, responsive gutters, full-width page actions, and distinctive bottom navigation",
+    "Hover, active, focus, loading, and overlay states are clearer and use restrained motion",
+    "Reduced-motion preferences collapse visual transition and animation duration",
+    "Existing v1.7 commands, shortcuts, features, and interaction contracts remain intact",
+    "Schema v15 retained with no v1.8 migration and v8–v15 backup compatibility unchanged",
     "Full final, release-hardening, daily-workflow, task-project, planner-overhaul, reviews-history, habits-focus, command-first, typecheck, production-build, and dist validation gate",
     "GitHub Pages deployment verified from main"
   ],
@@ -59,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 6924,
-      "sha256": "d2a169c86a0fc5c1299681e29911de988856947a2f37444861bfdecc6fb8591f"
+      "bytes": 7490,
+      "sha256": "fa0b66d8f61a00b4311288aa692297448dac40c39a26d80c9c60bcca147999c8"
     },
     {
       "path": "docs/ACCESSIBILITY_PERFORMANCE_RELIABILITY.md",
@@ -119,8 +119,8 @@
     },
     {
       "path": "docs/DESIGN_SYSTEM.md",
-      "bytes": 1720,
-      "sha256": "cac0f2f8ffd393b7530bfa5b20d9f24a65a588e3a94a466f3596ec54dcd87cfd"
+      "bytes": 1891,
+      "sha256": "54149f0cac3f9ba57d3b9596baa5a9280c566a374ba17ea3d46d7aa13eeabf1c"
     },
     {
       "path": "docs/FINAL_RELEASE.md",
@@ -238,6 +238,11 @@
       "sha256": "e6dbfca4c80e22f7be299c99e2393964b804b99dc6eb6e53bde3dbaaa6be70d5"
     },
     {
+      "path": "docs/VISUAL_INTERACTION_REFINEMENT_V1_8.md",
+      "bytes": 4160,
+      "sha256": "0973fa9ab6a95f527dbda0a7f08fbfa4107df32eaa4e893ccf899fc85460399a"
+    },
+    {
       "path": "docs/VISUAL_POLISH.md",
       "bytes": 912,
       "sha256": "930472c066ecb28db3a55cab163a1edaa83713e3f3ddea52a521738041b8e000"
@@ -245,17 +250,17 @@
     {
       "path": "index.html",
       "bytes": 1327,
-      "sha256": "439efa4264b638725f87aac5e6791b1a0fbcd2a8158a97bfaf906e2656bd1cd0"
+      "sha256": "b7c3c0da425a64a548816fc9e93e8dc22307150fbfa8e10f12071065b7c990d3"
     },
     {
       "path": "package-lock.json",
       "bytes": 62456,
-      "sha256": "714b4714bc390cccb4606661229daf83653eb13ad43883be72515c1ee948a0a7"
+      "sha256": "3b4f822eaebde0a56718cb69cec2e63aaa9b9d4910861bcb11d9e240ff177051"
     },
     {
       "path": "package.json",
       "bytes": 2035,
-      "sha256": "cccaf47d5e1c7a87ebaedd3f8d335283663dbde47465f231bd7adb6114ce156c"
+      "sha256": "111ee13b5975bc97fb1becc963da12066de4a3aec0f28fcc3599574c18fbcf21"
     },
     {
       "path": "public/.nojekyll",
@@ -334,13 +339,13 @@
     },
     {
       "path": "scripts/generate-release-manifest.mjs",
-      "bytes": 3326,
-      "sha256": "3c40051d3ba3e3ba66eb6c27362cdc65666b211a3f891cc9d089e98960d4801b"
+      "bytes": 3396,
+      "sha256": "6cb3287fa4fca5af1658294ba780d86317f1424e02df550d41bf3d686ff6e812"
     },
     {
       "path": "scripts/validate-command-first.mjs",
-      "bytes": 5507,
-      "sha256": "4b75e0ed60a8d812f1c64b976301eb9c7596c56485000bbf17a3bf77a394c776"
+      "bytes": 5524,
+      "sha256": "dc963ac0e577f6b825bf0b62d46596ef0692c67031dd49a6ba20a0bcade33feb"
     },
     {
       "path": "scripts/validate-daily-workflow.mjs",
@@ -355,7 +360,7 @@
     {
       "path": "scripts/validate-final.mjs",
       "bytes": 7632,
-      "sha256": "82452720b2e486ce03b4ad27d8d2b1afd37e4d75693ead081abe7ef16439c2d2"
+      "sha256": "4926461a5e8df49d6d73186b2e39c12aa68224ecd0966060ee7aa4a010aa6c1a"
     },
     {
       "path": "scripts/validate-habits-focus.mjs",
@@ -370,7 +375,7 @@
     {
       "path": "scripts/validate-release.mjs",
       "bytes": 4204,
-      "sha256": "0e0388c5726c82fba45299f8e5f1857b19831d688278b95994020ec0a0a7eb42"
+      "sha256": "59aa5cba05a678a38cb8f8f829a6f0e27aa5daabac5d05392f7348763e9ab3c3"
     },
     {
       "path": "scripts/validate-reviews-history.mjs",
@@ -394,8 +399,8 @@
     },
     {
       "path": "src/components/layout/AppearanceDrawer.tsx",
-      "bytes": 2908,
-      "sha256": "94877067c19c452d4891c1963983abc7c0d586d621f22d0d54f89bdd6afc04f8"
+      "bytes": 2898,
+      "sha256": "1d741a7eab8f0f7cf2183719b614200b092ea710e3688a2a4b7494b62d1ea1e2"
     },
     {
       "path": "src/components/layout/BackupReminderBanner.tsx",
@@ -929,8 +934,8 @@
     },
     {
       "path": "src/lib/theme.ts",
-      "bytes": 2916,
-      "sha256": "dd9ec7f395970d9799275e9ea00714e5d58af7471db860ec5a65156ea2a2b9dd"
+      "bytes": 2918,
+      "sha256": "1a816807af67b2e42e61816642e6b13027ccd8d481bccbbd8db241cc64f6ddab"
     },
     {
       "path": "src/main.tsx",
@@ -1208,14 +1213,19 @@
       "sha256": "883908d1c7fd35ba8d9d8de5c084d06b22f8345000e0c15af167546effd46b7f"
     },
     {
+      "path": "src/styles/editorial-refinement.css",
+      "bytes": 16526,
+      "sha256": "457d9df6e9251ed9305a660bcea978d912d90909cd6b52c8215a952b4ac415cb"
+    },
+    {
       "path": "src/styles/habits-focus.css",
       "bytes": 7679,
       "sha256": "34e519bb543bc0acd6049f1ceb41bb1d11d92dc2eba36a26936dc92a9371631a"
     },
     {
       "path": "src/styles/index.css",
-      "bytes": 379,
-      "sha256": "e8856ad6ca7e2d37713054b54b534798ff19a17db2a361f86fc0385708f9326b"
+      "bytes": 417,
+      "sha256": "b470a217124c5e59e122572a23e09fbc96aebf77aabefeea9ce94ff88e74f76f"
     },
     {
       "path": "src/styles/layout.css",

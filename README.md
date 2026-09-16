@@ -1,10 +1,13 @@
-# Folio — v1.7.0
+# Folio — v1.8.0
 
 A local-first personal productivity application with an editorial, low-noise interface.
 
-**Release:** `1.7.0`  
-**Repository:** `thiepn/folio`  
-**IndexedDB schema:** `v15`  
+**Release:** `1.8.0`
+
+**Repository:** `thiepn/folio`
+
+**IndexedDB schema:** `v15`
+
 **Status:** release-hardened · GitHub Pages ready
 
 
@@ -82,6 +85,12 @@ See `docs/HABITS_FOCUS_V1_6.md`.
 The Command Palette is now an execution surface rather than only a search box: nested task/project/habit actions, fuzzy and token-aware matching, direct deep matches, recent commands, and scoped keyboard navigation. Fixed aliases add `/` for command/search, `N` for a contextual new task, `P` for a new project, and `T` for Today while preserving configurable shortcuts and `G` navigation chords. Mobile now has direct Search access. Schema v15 is retained.
 
 See `docs/COMMAND_FIRST_UX_V1_7.md`.
+
+## v1.8 — Visual & Interaction Refinement
+
+Folio now uses a warmer, higher-contrast editorial desk system across every existing workflow: a calmer navigation rail, stronger page hierarchy, open ruled sections in place of repetitive dashboard cards, denser readable content, sharper interaction states, restrained motion, and a purpose-built mobile reading surface. The release is visual-only at the product-model boundary: all v1.7 behavior, commands, keyboard workflows, and the IndexedDB v15 schema are retained.
+
+See `docs/VISUAL_INTERACTION_REFINEMENT_V1_8.md`.
 
 ## Data and privacy
 

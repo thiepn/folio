@@ -18,7 +18,7 @@ const hasTrackedFiles = (pathspec) => {
 }
 
 const pkg = JSON.parse(read('package.json'))
-check('stable package version', pkg.version === '1.7.0', pkg.version)
+check('stable package version', pkg.version === '1.8.0', pkg.version)
 check('package renamed to Folio', pkg.name === 'folio', pkg.name)
 check('repository points to thiepn/folio', pkg.repository?.url === 'https://github.com/thiepn/folio.git', pkg.repository?.url)
 check('final validator registered', pkg.scripts?.['validate:final'] === 'node scripts/validate-final.mjs')

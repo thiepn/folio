@@ -17,7 +17,7 @@ const topbar = read('src/components/layout/Topbar.tsx')
 const app = read('src/app/App.tsx')
 const styles = read('src/styles/index.css')
 
-check('v1.7 package version', pkg.version === '1.7.0')
+check('v1.7 command surface retained in v1.8', pkg.version === '1.8.0')
 check('command-first validator registered', pkg.scripts?.['validate:command-first'] === 'node scripts/validate-command-first.mjs')
 check('release gate runs command-first validation', pkg.scripts?.['release:verify']?.includes('validate:command-first'))
 check('schema v15 retained', /DATABASE_SCHEMA_VERSION\s*=\s*15\b/.test(database) && !database.includes('this.version(16)'))
