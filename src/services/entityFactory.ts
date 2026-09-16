@@ -1,18 +1,6 @@
-import type {
-  HabitEntity,
-  ProjectEntity,
-  RecurringSeriesEntity,
-  TaskEntity,
-  TimeBlockEntity,
-} from '../domain/models'
+import { projectCreateSchema, habitCreateSchema, taskCreateSchema, timeBlockCreateSchema, recurringSeriesCreateSchema } from '../domain/schemas'
+import type { HabitEntity, ProjectEntity, RecurringSeriesEntity, TaskEntity, TimeBlockEntity } from '../domain/models'
 import type { z } from 'zod'
-import {
-  habitCreateSchema,
-  projectCreateSchema,
-  recurringSeriesCreateSchema,
-  taskCreateSchema,
-  timeBlockCreateSchema,
-} from '../domain/schemas'
 
 export type FactoryTaskInput = z.input<typeof taskCreateSchema>
 export type FactoryProjectInput = z.input<typeof projectCreateSchema>
@@ -26,12 +14,12 @@ export function makeTaskEntity(input: FactoryTaskInput, id: string = crypto.rand
     id,
     title: parsed.title,
     description: parsed.description,
-    projectId: parsed.status === 'inbox' ? undefined : parsed.projectId,
+    projectId: parsed.projectId,
     parentTaskId: parsed.parentTaskId,
     priority: parsed.priority,
     status: parsed.status,
     lastOpenStatus: parsed.status === 'inbox' || parsed.status === 'todo' ? parsed.status : undefined,
-    plannedDate: parsed.status === 'inbox' ? undefined : parsed.plannedDate,
+    plannedDate: parsed.plannedDate,
     deadline: parsed.deadline,
     estimatedMinutes: parsed.estimatedMinutes,
     seriesId: parsed.seriesId,
@@ -79,6 +67,7 @@ export function makeHabitEntity(input: FactoryHabitInput, id: string = crypto.ra
     target: parsed.kind === 'check' ? 1 : parsed.target,
     schedule: parsed.schedule,
     countsTowardCapacity: parsed.kind === 'duration' ? parsed.countsTowardCapacity : false,
+    pauses: parsed.pauses,
     archived: false,
     sortOrder,
     createdAt: now,

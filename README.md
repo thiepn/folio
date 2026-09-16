@@ -1,10 +1,10 @@
-# Folio — v1.5.0
+# Folio — v1.6.0
 
 A local-first personal productivity application with an editorial, low-noise interface.
 
-**Release:** `1.5.0`  
+**Release:** `1.6.0`  
 **Repository:** `thiepn/folio`  
-**IndexedDB schema:** `v14`  
+**IndexedDB schema:** `v15`  
 **Status:** release-hardened · GitHub Pages ready
 
 
@@ -71,9 +71,15 @@ Review is now durable rather than week-bound. End-of-day wrap-ups create daily r
 
 See `docs/REVIEWS_HISTORY_V1_5.md`.
 
+## v1.6 — Habits & Focus refinement
+
+Habits now support durable pause periods that remain neutral in streaks, adherence, weekly targets, capacity, and history. Habit detail adds an eight-week trend and pause lifecycle controls. Focus now ranks ready work, explains the suggestion, supports a session intention, optional planned duration for open stopwatch sessions, finish notes, and richer recent-session context. Schema v15 backfills Habit pause histories while keeping the existing task/project/planner model intact.
+
+See `docs/HABITS_FOCUS_V1_6.md`.
+
 ## Data and privacy
 
-Planner data is local-first in IndexedDB. The current database schema is **v14**. Full backups export schema v14, including durable review records, and direct restore supports compatible backups from **v8 through v14**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
+Planner data is local-first in IndexedDB. The current database schema is **v15**. Full backups export schema v15, including durable review records, and direct restore supports compatible backups from **v8 through v15**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
 
 Fresh installs begin with an empty personal workspace. Optional sample data can be loaded explicitly from Data & storage.
 
@@ -97,7 +103,7 @@ Direct dependency versions and `package-lock.json` are committed for repeatable 
 
 ## Release history
 
-The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v14 data model, and `validate:final` define the current release state.
+The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v15 data model, and `validate:final` define the current release state.
 
 ## v1.1.1 release hardening
 

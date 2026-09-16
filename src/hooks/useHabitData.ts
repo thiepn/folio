@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { addLocalDays, localDateKey, localDateRange, startOfLocalWeek } from '../domain/date'
-import { habitAdherence, habitCurrentStreak, habitScheduleLabel, habitScheduledForDate, habitWeekProgress } from '../domain/habit'
+import { habitAdherence, habitCurrentPause, habitCurrentStreak, habitPauseLabel, habitScheduleLabel, habitScheduledForDate, habitWeekProgress } from '../domain/habit'
 import type { HabitEntryEntity, LocalDate } from '../domain/models'
 import { habitRepository } from '../repositories/habitRepository'
 import type { HabitPreview } from '../types/ui'
@@ -33,6 +33,8 @@ export function useHabitData(today: LocalDate = localDateKey()) {
       const week = habitWeekProgress(habit, habitEntries, today)
       const adherence = habitAdherence(habit, habitEntries, adherenceStart, today, today)
       const currentValue = entry?.value ?? 0
+      const pause = habitCurrentPause(habit, today)
+      const paused = Boolean(pause)
       return {
         id: habit.id,
         title: habit.title,
@@ -41,9 +43,11 @@ export function useHabitData(today: LocalDate = localDateKey()) {
         completed: entry?.status === 'completed' || currentValue >= habit.target,
         skipped: entry?.status === 'skipped',
         flexible,
-        scheduledToday: flexible || habitScheduledForDate(habit, today) || Boolean(entry),
+        paused,
+        pauseLabel: habitPauseLabel(habit, today),
+        scheduledToday: Boolean(entry) || (!paused && (flexible || habitScheduledForDate(habit, today))),
         progress: habit.kind === 'duration' ? `${currentValue} / ${habit.target}m` : undefined,
-        countsTowardCapacity: habit.countsTowardCapacity && (!flexible || Boolean(entry)),
+        countsTowardCapacity: !paused && habit.countsTowardCapacity && (!flexible || Boolean(entry)),
         target: habit.target,
         currentValue,
         scheduleLabel: habitScheduleLabel(habit),
@@ -57,12 +61,15 @@ export function useHabitData(today: LocalDate = localDateKey()) {
 
     const previews = active.map((habit) => makePreview(habit))
     const previewMap = new Map(previews.map((preview) => [preview.id, preview]))
-    const fixedTodayIds = new Set(active.filter((habit) => habitScheduledForDate(habit, today) || todayEntries.has(habit.id)).map((habit) => habit.id))
+    const fixedTodayIds = new Set(active.filter((habit) => todayEntries.has(habit.id) || habitScheduledForDate(habit, today)).map((habit) => habit.id))
     const fixedToday = active.filter((habit) => fixedTodayIds.has(habit.id)).map((habit) => makePreview(habit))
-    const flexible = active.filter((habit) => habit.schedule.type === 'times-per-week' && !fixedTodayIds.has(habit.id)).filter((habit) => {
-      const progress = habitWeekProgress(habit, byHabit.get(habit.id) ?? [], today)
-      return progress.completed < progress.target
-    }).map((habit) => makePreview(habit, true))
+    const flexible = active
+      .filter((habit) => habit.schedule.type === 'times-per-week' && !fixedTodayIds.has(habit.id) && !habitCurrentPause(habit, today))
+      .filter((habit) => {
+        const progress = habitWeekProgress(habit, byHabit.get(habit.id) ?? [], today)
+        return progress.target > 0 && progress.completed < progress.target
+      })
+      .map((habit) => makePreview(habit, true))
 
     let adherenceCompleted = 0
     let adherenceTarget = 0
@@ -71,7 +78,7 @@ export function useHabitData(today: LocalDate = localDateKey()) {
       if (habit.schedule.type === 'times-per-week') {
         const week = habitWeekProgress(habit, habitEntries, today)
         const weekday = Math.round((new Date(`${today}T12:00:00`).getTime() - new Date(`${weekStart}T12:00:00`).getTime()) / 86_400_000) + 1
-        const expectedByNow = Math.floor((week.target * Math.min(7, Math.max(1, weekday))) / 7)
+        const expectedByNow = week.target ? Math.floor((week.target * Math.min(7, Math.max(1, weekday))) / 7) : 0
         adherenceCompleted += Math.min(week.completed, expectedByNow)
         adherenceTarget += expectedByNow
       } else {
@@ -86,6 +93,10 @@ export function useHabitData(today: LocalDate = localDateKey()) {
       }
     }
 
+    const atRiskHabits = previews
+      .filter((habit) => !habit.paused && (habit.weeklyPercent ?? 100) < 100)
+      .sort((a, b) => (a.weeklyPercent ?? 100) - (b.weeklyPercent ?? 100))
+
     return {
       habitEntities: active,
       habits: previews,
@@ -95,6 +106,8 @@ export function useHabitData(today: LocalDate = localDateKey()) {
       weeklyAdherence: adherenceTarget ? Math.round((adherenceCompleted / adherenceTarget) * 100) : 100,
       dueToday: active.filter((habit) => habitScheduledForDate(habit, today)).filter((habit) => { const preview = previewMap.get(habit.id); return preview && !preview.completed && !preview.skipped }).length,
       longestStreak: previews.reduce((max, habit) => Math.max(max, habit.streak ?? 0), 0),
+      pausedCount: previews.filter((habit) => habit.paused).length,
+      atRiskHabits,
     }
   }, [today])
 }

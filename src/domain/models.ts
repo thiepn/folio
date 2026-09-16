@@ -85,6 +85,13 @@ export interface ProjectEntity {
   updatedAt: IsoDateTime
 }
 
+export interface HabitPausePeriod {
+  id: EntityId
+  startDate: LocalDate
+  endDate?: LocalDate
+  createdAt: IsoDateTime
+}
+
 export interface HabitEntity {
   id: EntityId
   title: string
@@ -97,6 +104,7 @@ export interface HabitEntity {
     timesPerWeek?: number
   }
   countsTowardCapacity: boolean
+  pauses: HabitPausePeriod[]
   archived: boolean
   archivedAt?: IsoDateTime
   sortOrder: number
@@ -137,6 +145,9 @@ export interface FocusSessionEntity {
   projectNameSnapshot?: string
   mode: FocusMode
   targetSeconds?: number
+  plannedSeconds?: number
+  intention?: string
+  note?: string
   startedAt: IsoDateTime
   resumedAt?: IsoDateTime
   endedAt?: IsoDateTime

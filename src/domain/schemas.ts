@@ -22,6 +22,15 @@ export const habitScheduleSchema = z.object({
   if (value.type === 'times-per-week' && !value.timesPerWeek) ctx.addIssue({ code: 'custom', message: 'Choose how many times per week.', path: ['timesPerWeek'] })
 })
 
+export const habitPausePeriodSchema = z.object({
+  id: z.string().min(1),
+  startDate: localDate,
+  endDate: localDate.optional(),
+  createdAt: isoDateTime,
+}).superRefine((value, ctx) => {
+  if (value.endDate && value.endDate < value.startDate) ctx.addIssue({ code: 'custom', message: 'Pause end date must be on or after its start date.', path: ['endDate'] })
+})
+
 export const habitCreateSchema = z.object({
   title: z.string().trim().min(1).max(160),
   description: z.string().max(10_000).default(''),
@@ -29,6 +38,7 @@ export const habitCreateSchema = z.object({
   target: z.number().int().positive().max(24 * 60).default(1),
   schedule: habitScheduleSchema,
   countsTowardCapacity: z.boolean().default(false),
+  pauses: z.array(habitPausePeriodSchema).default([]),
 })
 
 export const habitUpdateSchema = habitCreateSchema.partial().extend({
@@ -134,6 +144,9 @@ export const focusSessionCreateSchema = z.object({
   projectNameSnapshot: z.string().trim().min(1).max(120).optional(),
   mode: focusModeSchema.default('stopwatch'),
   targetSeconds: z.number().int().positive().max(24 * 60 * 60).optional(),
+  plannedSeconds: z.number().int().positive().max(24 * 60 * 60).optional(),
+  intention: z.string().trim().max(240).optional(),
+  note: z.string().trim().max(2000).optional(),
 }).superRefine((value, ctx) => {
   if (value.mode === 'countdown' && !value.targetSeconds) ctx.addIssue({ code: 'custom', message: 'Countdown sessions require a target duration.', path: ['targetSeconds'] })
 })

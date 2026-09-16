@@ -1,29 +1,25 @@
-import { db } from './database'
 import { addLocalDays, atLocalTime, localDateKey } from '../domain/date'
 import type { DailyPlanEntity, DailyPlanItemEntity, HabitEntity, ProjectEntity, TaskEntity, TimeBlockEntity } from '../domain/models'
+import { db } from './database'
 
 const SEED_VERSION = 3
-const SEED_SETTING = 'system.seedVersion'
 
 export async function seedDatabaseIfNeeded() {
-  const seeded = await db.settings.get(SEED_SETTING)
+  const seeded = await db.settings.get('system.seedVersion')
   if (seeded) return
-
   const now = new Date().toISOString()
   await db.settings.bulkPut([
     { key: 'planner.dailyCapacityMinutes', value: 300, updatedAt: now },
-    { key: SEED_SETTING, value: SEED_VERSION, updatedAt: now },
+    { key: 'system.seedVersion', value: SEED_VERSION, updatedAt: now },
   ])
 }
 
 export async function installDemoWorkspace() {
   const entityCounts = await Promise.all([
     db.tasks.count(), db.projects.count(), db.habits.count(), db.habitEntries.count(), db.timeBlocks.count(),
-    db.dailyPlans.count(), db.dailyPlanItems.count(), db.focusSessions.count(), db.recurringSeries.count(), db.reviewRecords.count(),
+    db.dailyPlans.count(), db.dailyPlanItems.count(), db.focusSessions.count(), db.recurringSeries.count(),
   ])
-  if (entityCounts.some(Boolean)) {
-    throw new Error('Demo workspace can only be loaded into an empty workspace.')
-  }
+  if (entityCounts.some(Boolean)) throw new Error('Sample workspace can only be loaded into an empty workspace.')
 
   const now = new Date().toISOString()
   const today = localDateKey()
@@ -31,14 +27,29 @@ export async function installDemoWorkspace() {
   const later = addLocalDays(today, 4)
 
   const projects: ProjectEntity[] = [
-    { id: 'project-analysis', name: 'Analysis III', description: 'Coursework, assignments and exam preparation.', notes: '', status: 'active', milestones: [], activity: [], color: '#4169FF', icon: '∑', type: 'academic', archived: false, favorite: true, examDate: addLocalDays(today, 176), weeklyTargetMinutes: 300, createdAt: now, updatedAt: now },
-    { id: 'project-french', name: 'French', description: 'Language study and recurring review.', notes: '', status: 'active', milestones: [], activity: [], color: '#D8A54A', icon: 'FR', type: 'academic', archived: false, favorite: false, weeklyTargetMinutes: 210, createdAt: now, updatedAt: now },
-    { id: 'project-website', name: 'Website', description: 'Personal web projects and development.', notes: '', status: 'active', milestones: [], activity: [], color: '#7657FF', icon: '<>', type: 'standard', archived: false, favorite: true, createdAt: now, updatedAt: now },
-    { id: 'project-personal', name: 'Personal', description: 'Personal administration and daily-life tasks.', notes: '', status: 'active', milestones: [], activity: [], color: '#3AB58A', icon: '•', type: 'standard', archived: false, favorite: false, createdAt: now, updatedAt: now },
+    { id: 'project-analysis', name: 'Analysis III', description: 'Lecture, sheets, and exam preparation.', notes: '', type: 'academic', status: 'active', milestones: [], activity: [], archived: false, favorite: true, weeklyTargetMinutes: 360, createdAt: now, updatedAt: now },
+    { id: 'project-french', name: 'French', description: 'Coursework and daily language practice.', notes: '', type: 'academic', status: 'active', milestones: [], activity: [], archived: false, favorite: true, weeklyTargetMinutes: 180, createdAt: now, updatedAt: now },
+    { id: 'project-website', name: 'Website', description: 'Personal website improvements.', notes: '', type: 'standard', status: 'active', milestones: [], activity: [], archived: false, favorite: false, createdAt: now, updatedAt: now },
+    { id: 'project-personal', name: 'Personal', description: 'Life admin and personal commitments.', notes: '', type: 'standard', status: 'active', milestones: [], activity: [], archived: false, favorite: false, createdAt: now, updatedAt: now },
   ]
 
-  const task = (partial: Partial<TaskEntity> & Pick<TaskEntity, 'id' | 'title'>): TaskEntity => ({
-    description: '', priority: 'normal', status: 'todo', blockedByTaskIds: [], sortOrder: Date.now(), rescheduleCount: 0, createdAt: now, updatedAt: now, ...partial,
+  const task = (input: Partial<TaskEntity> & Pick<TaskEntity, 'id' | 'title'>): TaskEntity => ({
+    id: input.id,
+    title: input.title,
+    description: input.description ?? '',
+    projectId: input.projectId,
+    parentTaskId: input.parentTaskId,
+    priority: input.priority ?? 'normal',
+    status: input.status ?? 'todo',
+    lastOpenStatus: input.status === 'inbox' ? 'inbox' : 'todo',
+    plannedDate: input.plannedDate,
+    deadline: input.deadline,
+    estimatedMinutes: input.estimatedMinutes,
+    blockedByTaskIds: input.blockedByTaskIds ?? [],
+    sortOrder: input.sortOrder ?? Date.now(),
+    rescheduleCount: input.rescheduleCount ?? 0,
+    createdAt: now,
+    updatedAt: now,
   })
 
   const tasks: TaskEntity[] = [
@@ -55,9 +66,9 @@ export async function installDemoWorkspace() {
   ]
 
   const habits: HabitEntity[] = [
-    { id: 'habit-bible', title: 'Bible reading', description: 'Daily reading rhythm.', kind: 'check', target: 1, schedule: { type: 'daily' }, countsTowardCapacity: false, archived: false, sortOrder: 10, createdAt: now, updatedAt: now },
-    { id: 'habit-french', title: 'French habit', description: 'Keep daily exposure small and consistent.', kind: 'duration', target: 20, schedule: { type: 'daily' }, countsTowardCapacity: true, archived: false, sortOrder: 20, createdAt: now, updatedAt: now },
-    { id: 'habit-workout', title: 'Workout', description: 'Strength training days.', kind: 'check', target: 1, schedule: { type: 'selected-days', weekdays: [1, 3, 5] }, countsTowardCapacity: false, archived: false, sortOrder: 30, createdAt: now, updatedAt: now },
+    { id: 'habit-bible', title: 'Bible reading', description: 'Daily reading rhythm.', kind: 'check', target: 1, schedule: { type: 'daily' }, countsTowardCapacity: false, pauses: [], archived: false, sortOrder: 10, createdAt: now, updatedAt: now },
+    { id: 'habit-french', title: 'French habit', description: 'Keep daily exposure small and consistent.', kind: 'duration', target: 20, schedule: { type: 'daily' }, countsTowardCapacity: true, pauses: [], archived: false, sortOrder: 20, createdAt: now, updatedAt: now },
+    { id: 'habit-workout', title: 'Workout', description: 'Strength training days.', kind: 'check', target: 1, schedule: { type: 'selected-days', weekdays: [1, 3, 5] }, countsTowardCapacity: false, pauses: [], archived: false, sortOrder: 30, createdAt: now, updatedAt: now },
   ]
 
   const timeBlocks: TimeBlockEntity[] = [
@@ -81,17 +92,12 @@ export async function installDemoWorkspace() {
     updatedAt: now,
   }))
 
-  await db.transaction('rw', [db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems, db.settings], async () => {
+  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.dailyPlans, db.dailyPlanItems], async () => {
     await db.projects.bulkPut(projects)
     await db.tasks.bulkPut(tasks)
     await db.habits.bulkPut(habits)
-    await db.habitEntries.put({ id: `habit-bible:${today}`, habitId: 'habit-bible', date: today, value: 1, status: 'completed', completedAt: now, updatedAt: now })
     await db.timeBlocks.bulkPut(timeBlocks)
     await db.dailyPlans.bulkPut(dailyPlans)
     await db.dailyPlanItems.bulkPut(dailyPlanItems)
-    await db.settings.bulkPut([
-      { key: 'planner.dailyCapacityMinutes', value: 300, updatedAt: now },
-      { key: SEED_SETTING, value: SEED_VERSION, updatedAt: now },
-    ])
   })
 }

@@ -1,5 +1,7 @@
+import { addLocalDays } from '../domain/date'
+import { habitPausedForDate } from '../domain/habit'
 import { habitRepository, type HabitCreateInput, type HabitUpdateInput } from '../repositories/habitRepository'
-import type { HabitEntryEntity, LocalDate } from '../domain/models'
+import type { HabitEntryEntity, HabitPausePeriod, LocalDate } from '../domain/models'
 import type { UndoableMutation } from './undo'
 
 function now() { return new Date().toISOString() }
@@ -7,6 +9,7 @@ function now() { return new Date().toISOString() }
 async function mutateEntry(habitId: string, date: LocalDate, transform: (habitTarget: number, previous?: HabitEntryEntity) => HabitEntryEntity | undefined, message: string): Promise<UndoableMutation> {
   const habit = await habitRepository.get(habitId)
   if (!habit || habit.archived) throw new Error('Habit not found.')
+  if (habitPausedForDate(habit, date)) throw new Error('This habit is paused on that date. Resume it before logging progress.')
   const previous = await habitRepository.getEntry(habitId, date)
   const next = transform(habit.target, previous)
   if (next) await habitRepository.putEntry(next)
@@ -31,6 +34,33 @@ export const habitService = {
     if (!previous) throw new Error('Habit not found.')
     await habitRepository.update(habitId, input)
     return { message: 'Habit updated', undo: async () => { await habitRepository.replace(previous) } }
+  },
+
+  async pause(habitId: string, startDate: LocalDate, through?: LocalDate): Promise<UndoableMutation> {
+    const previous = await habitRepository.get(habitId)
+    if (!previous || previous.archived) throw new Error('Habit not found.')
+    if (through && through < startDate) throw new Error('Pause end date cannot be before its start date.')
+    const pauses = [...(previous.pauses ?? [])]
+    const activeIndex = pauses.findIndex((period) => startDate >= period.startDate && (!period.endDate || startDate <= period.endDate))
+    if (activeIndex >= 0) pauses[activeIndex] = { ...pauses[activeIndex], endDate: through }
+    else {
+      const period: HabitPausePeriod = { id: crypto.randomUUID(), startDate, endDate: through, createdAt: now() }
+      pauses.push(period)
+    }
+    await habitRepository.replace({ ...previous, pauses, updatedAt: now() })
+    return { message: through ? 'Habit paused through selected date' : 'Habit paused', undo: async () => { await habitRepository.replace(previous) } }
+  },
+
+  async resume(habitId: string, date: LocalDate): Promise<UndoableMutation> {
+    const previous = await habitRepository.get(habitId)
+    if (!previous || previous.archived) throw new Error('Habit not found.')
+    const pauses = [...(previous.pauses ?? [])]
+    const index = pauses.findIndex((period) => date >= period.startDate && (!period.endDate || date <= period.endDate))
+    if (index < 0) throw new Error('This habit is not paused today.')
+    if (pauses[index].startDate >= date) pauses.splice(index, 1)
+    else pauses[index] = { ...pauses[index], endDate: addLocalDays(date, -1) }
+    await habitRepository.replace({ ...previous, pauses, updatedAt: now() })
+    return { message: 'Habit resumed', undo: async () => { await habitRepository.replace(previous) } }
   },
 
   async archive(habitId: string): Promise<UndoableMutation> {

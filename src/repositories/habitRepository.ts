@@ -92,6 +92,7 @@ export const habitRepository = {
       target: parsed.kind === 'check' ? 1 : parsed.target,
       schedule: parsed.schedule,
       countsTowardCapacity: parsed.kind === 'duration' ? parsed.countsTowardCapacity : false,
+      pauses: parsed.pauses,
       archived: false,
       sortOrder: Date.now(),
       createdAt: now,

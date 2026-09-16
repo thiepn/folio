@@ -1,18 +1,19 @@
 {
   "product": "Folio",
   "repository": "thiepn/folio",
-  "version": "1.5.0",
-  "databaseSchema": 14,
-  "releaseType": "reviews-history",
-  "generatedAt": "2026-09-16T14:40:19.006Z",
-  "sourceTreeSha256": "2db99c39e9d9a3c8eccb38efbc9916814f5fa39f3933d815824ec1f8657aa040",
+  "version": "1.6.0",
+  "databaseSchema": 15,
+  "releaseType": "habits-focus-refinement",
+  "generatedAt": "2026-09-16T15:16:27.871Z",
+  "sourceTreeSha256": "8dadb92890e827924c7e643f249cfdf70b388efa1ff31196cfdad0bd501c6334",
   "validation": {
-    "finalReleaseContract": "57/57 PASS",
+    "finalReleaseContract": "58/58 PASS",
     "releaseHardeningContract": "38/38 PASS",
     "dailyWorkflowContract": "16/16 PASS",
     "taskProjectWorkflowContract": "19/19 PASS",
     "plannerOverhaulContract": "21/21 PASS",
     "reviewsHistoryContract": "26/26 PASS",
+    "habitsFocusContract": "35/35 PASS",
     "dependencyBackedProductionBuild": "PASS — GitHub Actions",
     "githubPagesDeployment": "PASS — GitHub Actions"
   },
@@ -23,19 +24,21 @@
   },
   "compatibility": {
     "databaseName": "folio",
-    "databaseSchema": 14,
+    "databaseSchema": 15,
     "legacyDatabaseMigration": true,
     "legacyBackupImportPatchAcceptance": true
   },
   "highlights": [
-    "Durable daily, weekly, and monthly review records with reflection and metric snapshots",
-    "Today end-of-day wrap-up now becomes the canonical daily review instead of creating a second ritual",
-    "Weekly review preserves wins, friction, lessons, and next focus before opening the next planning cycle",
-    "Searchable history unifies completed tasks, focus, habits, project activity/milestones, and saved reviews",
-    "Plan-vs-actual evidence remains visible alongside the historical record",
-    "Schema v14 adds only reviewRecords; existing planning/task/project structures are retained",
-    "Full backups include review records and preserve v13 project workflow fields during restore",
-    "Full final, release-hardening, daily-workflow, task-project, planner-overhaul, reviews-history, typecheck, production-build, and dist validation gate",
+    "Durable habit pause intervals stay neutral in streaks, adherence, capacity, and historical evaluation",
+    "Habit detail now includes an eight-week trend, pause lifecycle, and expanded daily history",
+    "Habit weekly review surfaces rhythms still in motion without penalizing planned pauses",
+    "Focus ranks ready work and explains why the suggested task is relevant",
+    "Focus sessions preserve intention, optional planned duration, and finish notes",
+    "Open stopwatch plans guide without automatically stopping the session",
+    "Focus launcher exposes today/week totals, prior task focus, estimate remaining, and recent sessions",
+    "Schema v15 backfills Habit pause history while leaving existing task/project/planner structures intact",
+    "Full backups preserve v15 Habit pauses and Focus context with v8–v15 direct restore",
+    "Full final, release-hardening, daily-workflow, task-project, planner-overhaul, reviews-history, habits-focus, typecheck, production-build, and dist validation gate",
     "GitHub Pages deployment verified from main"
   ],
   "files": [
@@ -56,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 5840,
-      "sha256": "3a5a3b9f47ae8161ff580cf7c85ed79298f7f12dbf227c330fa524f42874ff7d"
+      "bytes": 6397,
+      "sha256": "c7b206af3f7f2b588fea848cf169a0c42dd1decf978480bf30e1d528e548b2e1"
     },
     {
       "path": "docs/ACCESSIBILITY_PERFORMANCE_RELIABILITY.md",
@@ -128,6 +131,11 @@
       "path": "docs/FOLIO_REBRAND.md",
       "bytes": 1226,
       "sha256": "db3d699cda83cb001eb4d5e30be203518a086612fa8f63559dd83a95ced5b866"
+    },
+    {
+      "path": "docs/HABITS_FOCUS_V1_6.md",
+      "bytes": 3094,
+      "sha256": "37d6625a3f497fe6cb0e561b5c51fdc5d6dc469cf22167552d2e190651306419"
     },
     {
       "path": "docs/HABIT_ENGINE.md",
@@ -237,12 +245,12 @@
     {
       "path": "package-lock.json",
       "bytes": 62456,
-      "sha256": "0cf03e0d1024b8ab2a1966cb3f46630aa23e0efaa9deb9d227a0870e0df26ca7"
+      "sha256": "da6f36e0bb3b6efd061e9a65f21eaa305f7a4904e03da3f2efd3e712ad6e34be"
     },
     {
       "path": "package.json",
-      "bytes": 1824,
-      "sha256": "cf5a065871146f7b4d2549a80367ef800d042d125d08100d4bcbdcb030e88e60"
+      "bytes": 1928,
+      "sha256": "eaf5e7028918842297bd068e104f0bc8db61a2b522cc26ab4da1226deb6538b9"
     },
     {
       "path": "public/.nojekyll",
@@ -300,6 +308,11 @@
       "sha256": "e647477840b1bab24275228623260b90c885d5bf94057b221edef87297a0e6d8"
     },
     {
+      "path": "public/schema/folio-backup-v15.schema.json",
+      "bytes": 1850,
+      "sha256": "cb0e4bd3bb41a14656a79f9666ad83f0e1f90dcaaa0bacbc17f7d2b2e16f31b1"
+    },
+    {
       "path": "public/schema/folio-import-v1.schema.json",
       "bytes": 10026,
       "sha256": "198e8535b85cc734edaf580d6fb6e8f7b0c6adc5b4e9ca662547e40a56100afb"
@@ -316,8 +329,8 @@
     },
     {
       "path": "scripts/generate-release-manifest.mjs",
-      "bytes": 3144,
-      "sha256": "d62ed87ab4102ce6c69d1d0336f9db885c1ad981f905291d1e34c0c449ff0a27"
+      "bytes": 3357,
+      "sha256": "f4ab020db5e7ace0641100b102a6a85e9935bbc5e86df894df07e0448a6b9ee4"
     },
     {
       "path": "scripts/validate-daily-workflow.mjs",
@@ -332,7 +345,12 @@
     {
       "path": "scripts/validate-final.mjs",
       "bytes": 7632,
-      "sha256": "c8224245b1f50568666d3f697dc8b3fc4a2203148d67782d6de148710fb0164a"
+      "sha256": "c91f63b6d8d7b6b2515885a346628d15e37265c0f9c232dfc4d208ef4b12f012"
+    },
+    {
+      "path": "scripts/validate-habits-focus.mjs",
+      "bytes": 6276,
+      "sha256": "4b9915c331134590b7045346c07a7a1a965d6d852d9fa031b449fb3525ee7b78"
     },
     {
       "path": "scripts/validate-planner-overhaul.mjs",
@@ -342,12 +360,12 @@
     {
       "path": "scripts/validate-release.mjs",
       "bytes": 4204,
-      "sha256": "25551df9cfdb2f2bb034515cabb3af644d86634ab57a463a6ba625e3a2b444be"
+      "sha256": "c65919daadfbee41b28678cfd4a2daa63959533b526694b04df849a836f7c74c"
     },
     {
       "path": "scripts/validate-reviews-history.mjs",
-      "bytes": 4945,
-      "sha256": "dfd57fb2f0aaf16d403cc45877047befc19fa2b77e850eb4316f183cbee5590e"
+      "bytes": 4952,
+      "sha256": "c35a5ffbdc13a4f6876e79d3e7bbd597e0a86450dcad31893169b6696ce8634a"
     },
     {
       "path": "scripts/validate-task-project-workflow.mjs",
@@ -361,8 +379,8 @@
     },
     {
       "path": "src/app/App.tsx",
-      "bytes": 56574,
-      "sha256": "7dbb7bcfd3c197553ed61396c0e3342d391ac3b57c93d606406d41667aaecf4f"
+      "bytes": 57307,
+      "sha256": "5ed6e58d1f61e62ead7ac5e835a9f2a71a5e5f9f04c9a49a7f59f88b6ea1f97e"
     },
     {
       "path": "src/components/layout/AppearanceDrawer.tsx",
@@ -486,13 +504,13 @@
     },
     {
       "path": "src/db/database.ts",
-      "bytes": 13188,
-      "sha256": "915d9912c7f709097879fcadaa2bc8fa3f81fd52b5a955b00f8b64fac3af078a"
+      "bytes": 14365,
+      "sha256": "ac8e2058ba1f58cfdc56ce261e987feebdd4ba6c8e2fd8b3605bacea5c12b398"
     },
     {
       "path": "src/db/seed.ts",
-      "bytes": 7191,
-      "sha256": "cc6782ba22c0208e2d7150287bd69671304c2e7e3e1f3555e4fbf35e23886de2"
+      "bytes": 7041,
+      "sha256": "0dd6f9f0ef3a86279da2dbc673cebb1e326a2173ad5180b4262e670126c10027"
     },
     {
       "path": "src/domain/date.ts",
@@ -501,18 +519,18 @@
     },
     {
       "path": "src/domain/habit.ts",
-      "bytes": 6858,
-      "sha256": "009e3e50eae1012cd77183036f2c4771a1a05d6e8beeb378765d1f6f2681ff75"
+      "bytes": 9534,
+      "sha256": "0a524be0d0d64ad757b82d35feb9b123a93b92fc5a693ffe0ebdae44eff99de2"
     },
     {
       "path": "src/domain/models.ts",
-      "bytes": 7931,
-      "sha256": "2629283c58e1452c6301afa9068fdcf5b24188132aae9b3e192b43502b744645"
+      "bytes": 8147,
+      "sha256": "a99a7ed8405af44287f2f9bbefa7891f85e9796eea518b921c84e069709da911"
     },
     {
       "path": "src/domain/schemas.ts",
-      "bytes": 10113,
-      "sha256": "cd8b26b10d1ea8493a36d5aeecbe9ea96214be50d83cbdff8bbf36f208a78e14"
+      "bytes": 10709,
+      "sha256": "165490c19f0ec1285c0db8986bae18f71dee03789a1684af85a7fddeb4c61518"
     },
     {
       "path": "src/features/capture/QuickAddModal.tsx",
@@ -531,13 +549,18 @@
     },
     {
       "path": "src/features/focus/FocusOverlay.tsx",
-      "bytes": 8078,
-      "sha256": "21c5725787a1debffcf7afa8dace18fec8d971dde1e30284922fb320cc9c72f9"
+      "bytes": 12878,
+      "sha256": "e4d8f96ca010aa0ab0675b74360cca5e53f571320ef9b943254454a504099026"
     },
     {
       "path": "src/features/focus/focusLogic.ts",
       "bytes": 1728,
       "sha256": "cfbf1a42811b27d952a9e9bb1e099c7bb3a4d2be863ea5d95ab17fed71a456c8"
+    },
+    {
+      "path": "src/features/focus/focusPlanning.ts",
+      "bytes": 2551,
+      "sha256": "f5683378f2242ab1bce5d49332eb4f445bfbc7dd6f5ba68928a53010acdb3186"
     },
     {
       "path": "src/features/habits/ArchivedHabitsDrawer.tsx",
@@ -546,8 +569,8 @@
     },
     {
       "path": "src/features/habits/HabitDetailDrawer.tsx",
-      "bytes": 4840,
-      "sha256": "4d96056539adf8b0aaaa66f0a1ae596bb0269227decafe333d6cdc026205f084"
+      "bytes": 7993,
+      "sha256": "f5d68230956cc0a07c526cfd297776f140691900ab7f1bda7a4ad384660e8374"
     },
     {
       "path": "src/features/habits/HabitEditorModal.tsx",
@@ -556,13 +579,13 @@
     },
     {
       "path": "src/features/habits/HabitsView.tsx",
-      "bytes": 2811,
-      "sha256": "2c883d7b3fdc0851314a54ba1779af1d54f12064fbbbe9116875b4c7f751a5b5"
+      "bytes": 4711,
+      "sha256": "aaaaa3394c06ad96666a5a989f489930a5577843b8a408e1a3a58f314e37f2ea"
     },
     {
       "path": "src/features/habits/habitLogicCases.ts",
-      "bytes": 2223,
-      "sha256": "f7897e57e52ee7ce3676fe7b5a0d0507270ff70863cbe456880f289208c8305e"
+      "bytes": 2870,
+      "sha256": "51b146d137eb6fdf1aa2f20a913ffa9033e8d8bb6eb369c63a79aeb8b35b8c8b"
     },
     {
       "path": "src/features/habits/habitPlanningCases.ts",
@@ -602,7 +625,7 @@
     {
       "path": "src/features/interop/InteroperabilityModal.tsx",
       "bytes": 16640,
-      "sha256": "cc985f16a06f8628c58da5d6e889ea1141a695216447ee37c0da35d1e5bf0e78"
+      "sha256": "504b5bbc7aa9b998d6c4a0f2772ce0742d1736b46d91a1ff54560d70b5049dc3"
     },
     {
       "path": "src/features/interop/icsLogic.ts",
@@ -666,8 +689,8 @@
     },
     {
       "path": "src/features/planner/advancedPlanningCases.ts",
-      "bytes": 3074,
-      "sha256": "307943c34d72a50153829f2bf62ef41d66afb40172bd1c4e71225a478776d88c"
+      "bytes": 3086,
+      "sha256": "967d1264fece9cdce49231d4273c150a8cb21b698bf75c9c97680c9d736f0c50"
     },
     {
       "path": "src/features/planner/calendarLogic.ts",
@@ -776,8 +799,8 @@
     },
     {
       "path": "src/features/review/historyLogic.ts",
-      "bytes": 5753,
-      "sha256": "416f9c30287847d17a075b4fb947044f17afcb7ce0823f05e7bbe3eb6fa506cd"
+      "bytes": 5833,
+      "sha256": "29432b3676d304f28e0a6fe70878fd68cec9c8fff1e48a6670d3724f5d3169e9"
     },
     {
       "path": "src/features/review/reviewLogic.ts",
@@ -841,13 +864,13 @@
     },
     {
       "path": "src/hooks/useFocusData.ts",
-      "bytes": 4314,
-      "sha256": "0fd06d3d170ceaebab439f18d7700afe84e140d1e734c1289bf1cd9627029dd0"
+      "bytes": 4428,
+      "sha256": "6c4ce0a629bf23fd629028672c2e26cc14b730a89c8baa390eb8665080b5e2db"
     },
     {
       "path": "src/hooks/useHabitData.ts",
-      "bytes": 5041,
-      "sha256": "6b4124f3f984c73e1d8bd715c8e5ffe8b4d1f99ec4cedd4027bac0051a7a2650"
+      "bytes": 5638,
+      "sha256": "d6cc3671dd5bf662b2265f3a0fba6c29b389e7c5787488cc4b2b3b0e7e055e62"
     },
     {
       "path": "src/hooks/useHistoryData.ts",
@@ -920,6 +943,11 @@
       "sha256": "9f22740674402e76963dda006b094fff7c23b34ba8799177aa97df221823278e"
     },
     {
+      "path": "src/migrations/v14ToV15.ts",
+      "bytes": 488,
+      "sha256": "56a5cd59895041007a204ae56f352580ff1a7b70d307b6d0c9ff3f2bbaa98fb0"
+    },
+    {
       "path": "src/migrations/v1ToV2.ts",
       "bytes": 1091,
       "sha256": "e7a61acd22cc68e64ed0af6145b073aa2ca702eb472c78a8efefe335b3cdc46f"
@@ -971,13 +999,13 @@
     },
     {
       "path": "src/repositories/focusSessionRepository.ts",
-      "bytes": 2644,
-      "sha256": "e248b647315e9c6709474e81c1bb2106cef729dafb9fa9c7205caf5df5dff918"
+      "bytes": 2749,
+      "sha256": "352dd5fd8cc7a52cd3a1e23d19c89b9f994e5df58581462e5317f0562dffcebc"
     },
     {
       "path": "src/repositories/habitRepository.ts",
-      "bytes": 5480,
-      "sha256": "6d51a251dc7de13c67b90e4f15bb0fdcefa82baa7d0ac616f5a88d82085a9adc"
+      "bytes": 5509,
+      "sha256": "315d31c5c3de4bd47b87c6228008946d75b259ad0810b72634d68d6a563f5d6f"
     },
     {
       "path": "src/repositories/importBatchRepository.ts",
@@ -1021,8 +1049,8 @@
     },
     {
       "path": "src/services/backupSchemas.ts",
-      "bytes": 7875,
-      "sha256": "3286c188759150e9822f6e61a8cb30e8ec14c134750240803b97214440dcb2c5"
+      "bytes": 8164,
+      "sha256": "5fe8a54e4f1e6437c72a7a6da6ac284b02e8c352c17792a9b96158e0793a6ccb"
     },
     {
       "path": "src/services/backupService.ts",
@@ -1051,18 +1079,18 @@
     },
     {
       "path": "src/services/entityFactory.ts",
-      "bytes": 4019,
-      "sha256": "a97cb21ffc547653a8f6b4a43bb9c40c3f1c5600845828d02f72594a97190111"
+      "bytes": 3944,
+      "sha256": "2a78722b2425d9718076d8ae82a76e5b4896268b2cd4770588a37fcb5569f2f5"
     },
     {
       "path": "src/services/focusService.ts",
-      "bytes": 3866,
-      "sha256": "dd9e4e449cd2faa2b6800b7efc35adeebe02182e8db215544fdc2bbd5cad5d04"
+      "bytes": 4109,
+      "sha256": "c8b27a9f8bdf2581a2db79d8a5ba0620b69ed709c049c66ed4e4207566679a71"
     },
     {
       "path": "src/services/habitService.ts",
-      "bytes": 4373,
-      "sha256": "8108879cc0142d495057cab9b847c955b14cafca7ade062d62fcd05ab95b8cca"
+      "bytes": 6406,
+      "sha256": "14f214da316bdaa38238697aedf9d585e3318e554a68b192356144ce44d6d1af"
     },
     {
       "path": "src/services/importService.ts",
@@ -1160,9 +1188,14 @@
       "sha256": "883908d1c7fd35ba8d9d8de5c084d06b22f8345000e0c15af167546effd46b7f"
     },
     {
+      "path": "src/styles/habits-focus.css",
+      "bytes": 7679,
+      "sha256": "34e519bb543bc0acd6049f1ceb41bb1d11d92dc2eba36a26936dc92a9371631a"
+    },
+    {
       "path": "src/styles/index.css",
-      "bytes": 318,
-      "sha256": "8282d2b7246dcabe97f9991586631f7bb60c92a1cab5f556d9c9e16e59e9cb82"
+      "bytes": 348,
+      "sha256": "b6f69304a86f4a1a497ad1151e15bdd0290026c0523663ff6cfcf5552d0a226d"
     },
     {
       "path": "src/styles/layout.css",
@@ -1206,8 +1239,8 @@
     },
     {
       "path": "src/types/ui.ts",
-      "bytes": 1856,
-      "sha256": "cf6ddd4b245a0b8d6e532ce24e18baba9ec65afa485778bcdbb4e072069bf335"
+      "bytes": 1960,
+      "sha256": "89c785418bbf9bb8560397c363e1effe04f9793349687be9bae371f05e92de9a"
     },
     {
       "path": "tsconfig.app.json",

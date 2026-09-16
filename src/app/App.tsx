@@ -689,7 +689,7 @@ function AppContent() {
             onToggleMilestone={selectedProject ? (milestoneId) => void projectService.toggleMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
             onRemoveMilestone={selectedProject ? (milestoneId) => void projectService.removeMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
           /> : <ProjectsView projects={data.projects} unassignedCount={data.unassignedCount} onCreate={() => { setEditingProjectId(null); setProjectEditorOpen(true) }} onOpen={setSelectedProjectId} onArchived={() => setArchivedProjectsOpen(true)} />) : null}
-          {view === 'habits' ? <HabitsView habits={habitData.habits} weeklyAdherence={habitData.weeklyAdherence} dueToday={habitData.dueToday} longestStreak={habitData.longestStreak} onCreate={() => { setEditingHabitId(null); setHabitEditorOpen(true) }} onArchived={() => setArchivedHabitsOpen(true)} onOpen={setSelectedHabitId} onToggle={(id) => void toggleHabit(id)} onIncrement={(id, minutes) => void incrementHabit(id, minutes)} /> : null}
+          {view === 'habits' ? <HabitsView habits={habitData.habits} weeklyAdherence={habitData.weeklyAdherence} dueToday={habitData.dueToday} longestStreak={habitData.longestStreak} pausedCount={habitData.pausedCount} onCreate={() => { setEditingHabitId(null); setHabitEditorOpen(true) }} onArchived={() => setArchivedHabitsOpen(true)} onOpen={setSelectedHabitId} onToggle={(id) => void toggleHabit(id)} onIncrement={(id, minutes) => void incrementHabit(id, minutes)} /> : null}
           {view === 'review' ? <ReviewView
             snapshot={reviewData}
             recentCompleted={data.allTasks.filter((task) => task.completed).sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))}
@@ -816,6 +816,8 @@ function AppContent() {
         onToggle={() => selectedHabitId && void toggleHabit(selectedHabitId)}
         onIncrement={(minutes) => selectedHabitId && void incrementHabit(selectedHabitId, minutes)}
         onSkip={() => selectedHabitId && void toggleHabitSkip(selectedHabitId)}
+        onPause={(through) => selectedHabitId && void habitService.pause(selectedHabitId, data.today, through).then(async (undo) => { registerUndo(undo); await dailyPlanningService.markDraft(data.today) })}
+        onResume={() => selectedHabitId && void habitService.resume(selectedHabitId, data.today).then(async (undo) => { registerUndo(undo); await dailyPlanningService.markDraft(data.today) })}
       />
 
       <ArchivedHabitsDrawer
@@ -907,12 +909,16 @@ function AppContent() {
         tasks={data.openTasks}
         preferredTaskId={focusPreferredTaskId}
         taskTotals={focusData?.taskTotals ?? {}}
+        recentSessions={focusData?.recentSessions ?? []}
+        todaySeconds={focusData?.todaySeconds ?? 0}
+        weekSeconds={focusData?.weekSeconds ?? 0}
+        weekSessionCount={focusData?.weekSessionCount ?? 0}
         onClose={() => setFocusOpen(false)}
-        onStart={async (taskId, mode, targetSeconds) => { await focusService.start(taskId, mode, targetSeconds); setFocusPreferredTaskId(taskId) }}
+        onStart={async (taskId, mode, targetSeconds, plannedSeconds, intention) => { await focusService.start(taskId, mode, targetSeconds, plannedSeconds, intention); setFocusPreferredTaskId(taskId) }}
         onPause={async (id) => { await focusService.pause(id) }}
         onResume={async (id) => { await focusService.resume(id) }}
-        onFinish={async (id) => { await focusService.finish(id); setFocusOpen(false) }}
-        onFinishTask={async (id, taskId) => { await focusService.finish(id); if (taskId) registerUndo(await taskService.setCompleted(taskId, true)); setFocusOpen(false) }}
+        onFinish={async (id, note) => { await focusService.finish(id, note); setFocusOpen(false) }}
+        onFinishTask={async (id, taskId, note) => { await focusService.finish(id, note); if (taskId) registerUndo(await taskService.setCompleted(taskId, true)); setFocusOpen(false) }}
         onCancel={async (id) => { await focusService.cancel(id); setFocusOpen(false) }}
       />
       <UndoToast

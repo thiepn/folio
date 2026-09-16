@@ -68,6 +68,7 @@ export function buildHistoryEvents(input: {
       projectName: session.projectNameSnapshot,
       taskId: session.taskId,
       projectId: session.projectIdSnapshot,
+      extraSearch: [session.intention, session.note].filter(Boolean).join(' '),
     }))
   }
 
