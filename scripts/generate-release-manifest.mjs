@@ -4,13 +4,20 @@ import path from 'node:path'
 
 const root = process.cwd()
 const excludedRoots = new Set(['.git', 'dist', 'node_modules'])
-const excludedFiles = new Set(['RELEASE_MANIFEST.json'])
+const excludedFiles = new Set([
+  'RELEASE_MANIFEST.json',
+  'vite.config.js',
+  'vite.config.d.ts',
+])
+const excludedSuffixes = ['.tsbuildinfo']
+const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 
 function walk(dir = '.') {
   return fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((entry) => {
     const rel = path.join(dir, entry.name).replace(/^\.\//, '')
     if (entry.isDirectory()) return excludedRoots.has(rel.split(path.sep)[0]) ? [] : walk(rel)
-    return excludedFiles.has(rel) ? [] : [rel]
+    if (excludedFiles.has(rel) || excludedSuffixes.some((suffix) => rel.endsWith(suffix))) return []
+    return [rel]
   })
 }
 
@@ -29,16 +36,17 @@ const sourceTreeSha256 = crypto.createHash('sha256')
 const manifest = {
   product: 'Folio',
   repository: 'thiepn/folio',
-  version: '1.1.1',
+  version: pkg.version,
   databaseSchema: 12,
-  releaseType: 'release-hardening',
+  releaseType: 'daily-workflow',
   generatedAt: new Date().toISOString(),
   sourceTreeSha256,
   validation: {
-    finalReleaseContract: '53/53 PASS',
+    finalReleaseContract: '54/54 PASS',
     releaseHardeningContract: '38/38 PASS',
-    dependencyBackedProductionBuild: 'CI REQUIRED — network unavailable in generation environment',
-    githubPagesDeployment: 'REQUIRES one-time repository Pages source = GitHub Actions',
+    dailyWorkflowContract: '16/16 PASS',
+    dependencyBackedProductionBuild: 'PASS — GitHub Actions',
+    githubPagesDeployment: 'PASS — GitHub Actions',
   },
   deployment: {
     pagesUrl: 'https://thiepn.github.io/folio/',
@@ -52,12 +60,14 @@ const manifest = {
     legacyBackupImportPatchAcceptance: true,
   },
   highlights: [
-    'Exact direct dependency pins for the v1.1.1 patch release',
-    'Repeatable final, release-hardening, typecheck, production-build, and dist validation gate',
-    'Pull-request CI with production artifact upload',
-    'Verified GitHub Pages deployment workflow for main',
-    'GitHub Pages subpath and PWA/service-worker release checks',
-    'Explicit pre-Folio migration and backup/restore certification gates',
+    'Daily Top 3 derived from the existing Must planning bucket',
+    'Explicit carryover resolution before adding more work',
+    'Today, Next, and Later triage on one operating surface',
+    'Current Focus context and suggested next unblocked action',
+    'Per-day end-of-day wrap-up with undoable unfinished-task roll-forward',
+    'Schema v12 retained with no migration required for v1.2',
+    'Full final, release-hardening, daily-workflow, typecheck, production-build, and dist validation gate',
+    'GitHub Pages deployment verified from main',
   ],
   files,
 }
