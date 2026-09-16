@@ -50,4 +50,4 @@ jobs:
           git commit -m "release: Folio v1.6 habits and focus refinement"
           git push origin HEAD:v1.6-habits-focus
 
-# Recertification after required HabitEntity pause defaults and stable drawer hook order.
+# Final recertification after HabitEntity fixture correction.
