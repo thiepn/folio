@@ -1,7 +1,7 @@
 {
   "name": "folio",
   "private": true,
-  "version": "1.1.1",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,8 +10,9 @@
     "typecheck": "tsc -b --pretty false",
     "validate:final": "node scripts/validate-final.mjs",
     "validate:release": "node scripts/validate-release.mjs",
+    "validate:daily": "node scripts/validate-daily-workflow.mjs",
     "validate:dist": "node scripts/validate-dist.mjs",
-    "release:verify": "npm run validate:final && npm run validate:release && npm run typecheck && npm run build && npm run validate:dist",
+    "release:verify": "npm run validate:final && npm run validate:release && npm run validate:daily && npm run typecheck && npm run build && npm run validate:dist",
     "manifest:release": "node scripts/generate-release-manifest.mjs"
   },
   "dependencies": {
