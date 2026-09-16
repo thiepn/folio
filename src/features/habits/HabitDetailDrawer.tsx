@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { addLocalDays, formatLocalDate, localDateRange } from '../../domain/date'
 import { habitCurrentPause, habitHistoryStatus, habitPauseLabel, habitScheduleLabel, habitWeeklyTrend } from '../../domain/habit'
 import type { HabitEntity, HabitEntryEntity, LocalDate } from '../../domain/models'
@@ -28,7 +28,7 @@ export function HabitDetailDrawer({ open, habit, preview, entries, today, onClos
   const entryMap = new Map(habitEntries.map((entry) => [entry.date, entry]))
   const dates = localDateRange(addLocalDays(today, -55), 56)
   const currentPause = habitCurrentPause(habit, today)
-  const trend = useMemo(() => habitWeeklyTrend(habit, habitEntries, today, 8), [habit, habitEntries, today])
+  const trend = habitWeeklyTrend(habit, habitEntries, today, 8)
   return (
     <Drawer open={open} title={habit.title} onClose={onClose} className="habit-detail-overlay">
       <div className="habit-detail">
