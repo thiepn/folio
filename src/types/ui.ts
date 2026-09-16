@@ -39,6 +39,8 @@ export interface HabitPreview {
   completed: boolean
   skipped?: boolean
   flexible?: boolean
+  paused?: boolean
+  pauseLabel?: string
   scheduledToday?: boolean
   progress?: string
   countsTowardCapacity?: boolean
@@ -72,6 +74,9 @@ export interface FocusSessionPreview {
   projectName?: string
   mode: 'stopwatch' | 'countdown'
   targetSeconds?: number
+  plannedSeconds?: number
+  intention?: string
+  note?: string
   durationSeconds: number
   startedAt: string
   endedAt?: string
