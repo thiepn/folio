@@ -25,7 +25,7 @@ export function validateAdvancedPlanningCases() {
   const inboxPrereq = task('inbox-prereq', { status: 'inbox' })
   if (taskIsBlocked(task('depends-on-inbox', { blockedByTaskIds: [inboxPrereq.id] }), new Map([[inboxPrereq.id, inboxPrereq]]))) failures.push('Inbox captures must never become active blockers')
 
-  const habit: HabitEntity = { id: 'h', title: 'Study', description: '', kind: 'duration', target: 30, schedule: { type: 'daily' }, countsTowardCapacity: true, archived: false, sortOrder: 1, createdAt: now, updatedAt: now }
+  const habit: HabitEntity = { id: 'h', title: 'Study', description: '', kind: 'duration', target: 30, schedule: { type: 'daily' }, countsTowardCapacity: true, pauses: [], archived: false, sortOrder: 1, createdAt: now, updatedAt: now }
   const forecast = buildForecast({ tasks: [task('planned', { plannedDate: '2026-08-21', estimatedMinutes: 90 })], habits: [habit], capacities: new Map(), today: '2026-08-21', defaultCapacity: 100, days: 7 })
   if (forecast.days[0].totalMinutes !== 120 || forecast.days[0].remainingMinutes !== -20) failures.push('Forecast must include duration-habit capacity')
   if (forecast.weeks[0].overloadedDays < 1) failures.push('Forecast overloaded-day regression')
