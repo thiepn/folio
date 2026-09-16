@@ -28,6 +28,12 @@ check('per-day wrap-up persistence wired', app.includes('daily.wrapup.${data?.to
 check('roll-forward is undoable', app.includes('rollForwardToday') && app.includes('combineUndo'))
 check('Daily Workflow stylesheet loaded', cssIndex.includes("@import './daily-workflow.css';"))
 check('daily workflow release doc exists', fs.existsSync(path.join(root, 'docs/DAILY_WORKFLOW_V1_2.md')))
+check('generated compiler artifacts absent', [
+  'tsconfig.app.tsbuildinfo',
+  'tsconfig.node.tsbuildinfo',
+  'vite.config.js',
+  'vite.config.d.ts',
+].every((file) => !fs.existsSync(path.join(root, file))))
 
 const failures = checks.filter((item) => !item.ok)
 for (const item of checks) console.log(`${item.ok ? 'PASS' : 'FAIL'}  ${item.name}`)
