@@ -93,8 +93,8 @@ export function ReviewRecordModal({ open, today, initialKind = 'daily', record, 
       <div className="review-record-form__top">
         <label className="field"><span>Review type</span><select disabled={Boolean(record)} value={kind} onChange={(event) => setKind(event.target.value as ReviewKind)}><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
         {kind === 'monthly'
-          ? <label className="field"><span>Month</span><input type="month" value={month} onChange={(event) => setAnchorDate(`${event.target.value}-01`)} /></label>
-          : <label className="field"><span>{kind === 'weekly' ? 'A day in the week' : 'Date'}</span><input type="date" value={anchorDate} onChange={(event) => setAnchorDate(event.target.value)} /></label>}
+          ? <label className="field"><span>Month</span><input disabled={Boolean(record)} type="month" value={month} onChange={(event) => { if (event.target.value) setAnchorDate(`${event.target.value}-01`) }} /></label>
+          : <label className="field"><span>{kind === 'weekly' ? 'A day in the week' : 'Date'}</span><input disabled={Boolean(record)} type="date" value={anchorDate} onChange={(event) => setAnchorDate(event.target.value)} /></label>}
       </div>
       <label className="field"><span>Title <small>optional</small></span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Leave blank for an automatic title" /></label>
       <label className="field"><span>Summary</span><textarea rows={4} value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="What happened in this period?" /></label>
@@ -104,7 +104,7 @@ export function ReviewRecordModal({ open, today, initialKind = 'daily', record, 
         <label className="field"><span>Lessons</span><textarea rows={4} value={lessons} onChange={(event) => setLessons(event.target.value)} placeholder="What should change?" /></label>
         <label className="field"><span>Next focus</span><textarea rows={4} value={nextFocus} onChange={(event) => setNextFocus(event.target.value)} placeholder="What deserves attention next?" /></label>
       </div>
-      {record ? <div className="review-record-snapshot-note">Metric snapshots are recalculated when this review is saved. The historical text remains yours to edit.</div> : null}
+      {record ? <div className="review-record-snapshot-note">The review period is fixed. Metric snapshots are recalculated when this review is saved; the historical text remains yours to edit.</div> : null}
       {error ? <div className="form-error">{error}</div> : null}
     </div>
   </Modal>
