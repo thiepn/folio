@@ -1,0 +1,465 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "folio-import-v1.schema.json",
+  "title": "Folio Import v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version"
+  ],
+  "properties": {
+    "format": {
+      "const": "folio-import"
+    },
+    "version": {
+      "const": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "default": "Imported plan"
+    },
+    "timezone": {
+      "type": "string",
+      "minLength": 1,
+      "default": "local"
+    },
+    "projects": {
+      "type": "array",
+      "maxItems": 100,
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/project"
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "maxItems": 1000,
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/task"
+      }
+    },
+    "habits": {
+      "type": "array",
+      "maxItems": 100,
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/habit"
+      }
+    },
+    "timeBlocks": {
+      "type": "array",
+      "maxItems": 2000,
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/timeBlock"
+      }
+    },
+    "recurringSeries": {
+      "type": "array",
+      "maxItems": 100,
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/series"
+      }
+    }
+  },
+  "$defs": {
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "name"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 10000,
+          "default": ""
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$"
+        },
+        "icon": {
+          "type": "string",
+          "maxLength": 24
+        },
+        "type": {
+          "enum": [
+            "standard",
+            "academic"
+          ],
+          "default": "standard"
+        },
+        "favorite": {
+          "type": "boolean",
+          "default": false
+        },
+        "examDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "format": "date"
+        },
+        "weeklyTargetMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10080
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "title"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 20000,
+          "default": ""
+        },
+        "projectRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "parentRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "priority": {
+          "enum": [
+            "normal",
+            "high",
+            "critical"
+          ]
+        },
+        "status": {
+          "enum": [
+            "todo",
+            "inbox"
+          ],
+          "default": "todo"
+        },
+        "plannedDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "format": "date"
+        },
+        "deadline": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "format": "date"
+        },
+        "estimatedMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        }
+      }
+    },
+    "habitSchedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "daily",
+            "weekdays",
+            "selected-days",
+            "times-per-week"
+          ]
+        },
+        "weekdays": {
+          "type": "array",
+          "maxItems": 7,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          }
+        },
+        "timesPerWeek": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7
+        }
+      }
+    },
+    "habit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "title",
+        "schedule"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 10000,
+          "default": ""
+        },
+        "kind": {
+          "enum": [
+            "check",
+            "duration"
+          ],
+          "default": "check"
+        },
+        "target": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440,
+          "default": 1
+        },
+        "schedule": {
+          "$ref": "#/$defs/habitSchedule"
+        },
+        "countsTowardCapacity": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "timeBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "kind",
+        "date",
+        "startMinute",
+        "durationMinutes"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "kind": {
+          "enum": [
+            "task",
+            "event"
+          ]
+        },
+        "taskRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "format": "date"
+        },
+        "startMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1439
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        }
+      }
+    },
+    "recurrenceRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frequency"
+      ],
+      "properties": {
+        "frequency": {
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly",
+            "yearly",
+            "after-completion"
+          ]
+        },
+        "interval": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365,
+          "default": 1
+        },
+        "weekdays": {
+          "type": "array",
+          "maxItems": 7,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          }
+        },
+        "monthDay": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31
+        },
+        "until": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "format": "date"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      }
+    },
+    "seriesTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 20000,
+          "default": ""
+        },
+        "projectRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "priority": {
+          "enum": [
+            "normal",
+            "high",
+            "critical"
+          ]
+        },
+        "estimatedMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        },
+        "deadlineOffsetDays": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3650
+        },
+        "startMinute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1439
+        },
+        "blockDurationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        }
+      }
+    },
+    "series": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "title",
+        "startDate",
+        "rule",
+        "taskTemplate"
+      ],
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 1
+        },
+        "startDate": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "format": "date"
+        },
+        "rule": {
+          "$ref": "#/$defs/recurrenceRule"
+        },
+        "taskTemplate": {
+          "$ref": "#/$defs/seriesTemplate"
+        }
+      }
+    }
+  }
+}

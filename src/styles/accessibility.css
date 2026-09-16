@@ -1,0 +1,120 @@
+/* Phase 20 — accessibility and resilience layer. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 10000;
+  top: 8px;
+  left: 8px;
+  transform: translateY(-160%);
+  padding: 9px 12px;
+  border: 2px solid var(--accent-text);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font: 600 12px var(--font-sans);
+}
+.skip-link:focus { transform: translateY(0); }
+
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 3px;
+}
+
+.main-content:focus { outline: none; }
+
+/* Long user content and 200%+ text zoom must wrap instead of forcing x-scroll. */
+.main-content,
+.panel,
+.modal,
+.drawer,
+.task-row,
+.task-row__body,
+.task-row__title,
+.page-header,
+.project-detail-head,
+.review-project-row,
+.protocol-preview,
+.calendar-unscheduled-card {
+  min-inline-size: 0;
+}
+.task-row__title,
+.task-row__meta,
+.page-header p,
+.phase-note,
+.form-error,
+.runtime-issue-banner span,
+.modal__body,
+.drawer__body { overflow-wrap: anywhere; }
+
+.runtime-issue-banner {
+  position: fixed;
+  z-index: 90;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 28px));
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px 11px 14px;
+  border: 1px solid rgba(225,109,122,.58);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  background: #11141b;
+  box-shadow: var(--shadow-overlay);
+}
+.runtime-issue-banner > div { display: grid; gap: 2px; }
+.runtime-issue-banner strong { font-size: 12px; }
+.runtime-issue-banner span { color: var(--muted); font-size: 11px; }
+.runtime-issue-banner button { min-height: 34px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; color: var(--text-soft); padding: 0 10px; }
+.runtime-issue-banner button:last-child { width: 34px; padding: 0; font-size: 18px; }
+
+.compatibility-list { margin: 18px 0; padding-left: 20px; color: var(--text-soft); line-height: 1.8; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .favorite-list i, .calendar-now-line i { transform: none; }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: #4b5567;
+    --border-strong: #707c90;
+    --muted: #b8c0cc;
+    --muted-2: #9ca7b7;
+  }
+  .task-row, .panel, .modal, .drawer { border-color: var(--border-strong); }
+}
+
+@media (forced-colors: active) {
+  body, .sidebar, .topbar, .mobile-nav, .panel, .modal, .drawer, .focus-overlay { background: Canvas; color: CanvasText; }
+  button, input, select, textarea, .panel, .modal, .drawer { border-color: ButtonBorder; }
+  button { color: ButtonText; }
+  .sidebar-nav button.is-active, .mobile-nav button.is-active, .tabs button.is-active { color: Highlight; box-shadow: inset 3px 0 0 Highlight; }
+  .task-check--done, .week-load__bar span, .focus-progress span { background: Highlight; border-color: Highlight; }
+  :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible { outline-color: Highlight; }
+}
+
+@media (max-width: 900px) {
+  .runtime-issue-banner { bottom: calc(var(--mobile-nav-height, 66px) + var(--safe-bottom, 0px) + 10px); grid-template-columns: minmax(0,1fr) auto; }
+  .runtime-issue-banner button:last-child { grid-column: 2; grid-row: 1; }
+  .runtime-issue-banner > button:not(:last-child) { grid-column: 1 / -1; width: 100%; }
+}

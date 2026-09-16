@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://folio.local/schema/selection-v1.json",
+  "title": "Folio Selective Export v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "exportedAt", "filters", "data"],
+  "properties": {
+    "format": { "const": "folio-selection" },
+    "version": { "const": 1 },
+    "exportedAt": { "type": "string" },
+    "filters": { "type": "object" },
+    "data": { "type": "object" }
+  }
+}

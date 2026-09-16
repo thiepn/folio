@@ -1,0 +1,39 @@
+import { z } from 'zod'
+
+const id = z.string().min(1)
+const localDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const iso = z.string().refine((value) => Number.isFinite(Date.parse(value)), 'Invalid ISO date-time')
+const priority = z.enum(['normal', 'high', 'critical'])
+const status = z.enum(['inbox', 'todo', 'completed', 'cancelled'])
+
+export const backupTaskSchema = z.object({
+  id, title: z.string(), description: z.string(), projectId: id.optional(), parentTaskId: id.optional(), priority, status,
+  lastOpenStatus: z.enum(['inbox','todo']).optional(), plannedDate: localDate.optional(), deadline: localDate.optional(), estimatedMinutes: z.number().int().positive().optional(),
+  seriesId: id.optional(), recurrenceDate: localDate.optional(), blockedByTaskIds: z.array(id).default([]), sortOrder: z.number(), rescheduleCount: z.number().int().nonnegative(), createdAt: iso, updatedAt: iso, completedAt: iso.optional(), deletedAt: iso.optional(),
+})
+export const backupProjectSchema = z.object({
+  id, name: z.string(), description: z.string(), color: z.string().optional(), icon: z.string().optional(), type: z.enum(['standard','academic']), archived: z.boolean(), archivedAt: iso.optional(), favorite: z.boolean(), examDate: localDate.optional(), weeklyTargetMinutes: z.number().int().positive().optional(), createdAt: iso, updatedAt: iso,
+})
+export const backupHabitSchema = z.object({
+  id, title: z.string(), description: z.string(), kind: z.enum(['check','duration']), target: z.number().int().positive(), schedule: z.object({ type: z.enum(['daily','weekdays','selected-days','times-per-week']), weekdays: z.array(z.number().int().min(0).max(6)).optional(), timesPerWeek: z.number().int().min(1).max(7).optional() }), countsTowardCapacity: z.boolean(), archived: z.boolean(), archivedAt: iso.optional(), sortOrder: z.number(), createdAt: iso, updatedAt: iso,
+})
+export const backupHabitEntrySchema = z.object({ id, habitId: id, date: localDate, value: z.number(), status: z.enum(['open','completed','skipped']), completedAt: iso.optional(), skippedAt: iso.optional(), updatedAt: iso })
+export const backupTimeBlockSchema = z.object({ id, taskId: id.optional(), title: z.string(), description: z.string().optional(), location: z.string().optional(), kind: z.enum(['task','event']), start: iso, end: iso, createdAt: iso, updatedAt: iso }).superRefine((value, ctx) => {
+  if (Date.parse(value.end) <= Date.parse(value.start)) ctx.addIssue({ code: 'custom', message: 'Time block end must be after start.', path: ['end'] })
+  if (value.kind === 'task' && !value.taskId) ctx.addIssue({ code: 'custom', message: 'Task TimeBlock requires taskId.', path: ['taskId'] })
+})
+export const backupDailyPlanSchema = z.object({ date: localDate, status: z.enum(['draft','committed']), capacityMinutes: z.number().int().positive().optional(), committedAt: iso.optional(), createdAt: iso, updatedAt: iso })
+export const backupDailyPlanItemSchema = z.object({ id, date: localDate, taskId: id, bucket: z.enum(['must','planned','optional']), sortOrder: z.number(), createdAt: iso, updatedAt: iso })
+export const backupFocusSchema = z.object({ id, taskId: id.optional(), taskTitleSnapshot: z.string().optional(), taskEstimateMinutesSnapshot: z.number().int().positive().optional(), projectIdSnapshot: id.optional(), projectNameSnapshot: z.string().optional(), mode: z.enum(['stopwatch','countdown']), targetSeconds: z.number().int().positive().optional(), startedAt: iso, resumedAt: iso.optional(), endedAt: iso.optional(), durationSeconds: z.number().nonnegative(), status: z.enum(['running','paused','finished','cancelled']), createdAt: iso, updatedAt: iso })
+export const backupSeriesSchema = z.object({
+  id, title: z.string(), timezone: z.string(), status: z.enum(['active','paused','archived']), startDate: localDate,
+  rule: z.object({ frequency: z.enum(['daily','weekly','monthly','yearly','after-completion']), interval: z.number().int().positive(), weekdays: z.array(z.number().int().min(0).max(6)).optional(), monthDay: z.number().int().min(1).max(31).optional(), until: localDate.optional(), count: z.number().int().positive().optional() }),
+  taskTemplate: z.object({ title: z.string(), description: z.string(), projectId: id.optional(), priority, estimatedMinutes: z.number().int().positive().optional(), deadlineOffsetDays: z.number().int().nonnegative().optional(), startMinute: z.number().int().min(0).max(1439).optional(), blockDurationMinutes: z.number().int().positive().optional() }),
+  exceptions: z.record(z.string(), z.unknown()), materializedThrough: localDate.optional(), createdAt: iso, updatedAt: iso,
+})
+export const backupSettingSchema = z.object({ key: z.string().min(1), value: z.unknown(), updatedAt: iso })
+const provenanceType = z.enum(['project','task','habit','timeBlock','recurringSeries'])
+const snapshot = z.object({ type: z.enum(['project','task','habit','timeBlock','recurringSeries','dailyPlan','dailyPlanItem']), id, value: z.unknown() })
+export const backupImportBatchSchema = z.object({ id, title: z.string(), source: z.enum(['chatgpt','file','clipboard','system']), status: z.enum(['previewed','applied','reverted','failed']), affectedEntities: z.array(z.object({ type: provenanceType, id })), createdSnapshots: z.array(snapshot), priorDailyPlans: z.array(z.object({ date: localDate, before: backupDailyPlanSchema.optional() })), createdAt: iso, updatedAt: iso, revertedAt: iso.optional(), errorMessage: z.string().optional() })
+export const backupPatchBatchSchema = z.object({ id, title: z.string(), source: z.enum(['chatgpt','file','clipboard','system']), status: z.enum(['previewed','applied','reverted','failed']), operations: z.array(z.object({ operationId: id, op: z.enum(['create','update','delete']), entity: provenanceType, targetId: id, label: z.string() })), beforeSnapshots: z.array(snapshot), afterSnapshots: z.array(snapshot), createdAt: iso, updatedAt: iso, revertedAt: iso.optional(), errorMessage: z.string().optional() })
+export const backupCalendarBatchSchema = z.object({ id, source: z.enum(['ics-file','ics-paste']), fileName: z.string().optional(), calendarName: z.string().optional(), status: z.enum(['applied','reverted','failed']), events: z.array(z.object({ uid: z.string().optional(), sourceKey: z.string().optional(), fingerprint: z.string(), timeBlockId: id, original: backupTimeBlockSchema })), createdAt: iso, updatedAt: iso, revertedAt: iso.optional(), errorMessage: z.string().optional() })

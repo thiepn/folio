@@ -1,0 +1,1178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "folio-patch-v1.schema.json",
+  "title": "Folio Patch v1",
+  "description": "Strict local ChatGPT patch protocol. Runtime Zod and semantic validation remain authoritative.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version",
+    "title",
+    "timezone",
+    "operations"
+  ],
+  "properties": {
+    "format": {
+      "const": "folio-patch"
+    },
+    "version": {
+      "const": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "timezone": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "create"
+              },
+              "entity": {
+                "const": "project"
+              },
+              "value": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ref": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 10000
+                  },
+                  "type": {
+                    "enum": [
+                      "standard",
+                      "academic"
+                    ]
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}$"
+                  },
+                  "icon": {
+                    "type": "string",
+                    "maxLength": 24
+                  },
+                  "favorite": {
+                    "type": "boolean"
+                  },
+                  "examDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "weeklyTargetMinutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10080
+                  }
+                },
+                "required": [
+                  "ref",
+                  "name"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "create"
+              },
+              "entity": {
+                "const": "task"
+              },
+              "value": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ref": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 20000
+                  },
+                  "projectRef": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "projectId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "parentRef": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "priority": {
+                    "enum": [
+                      "normal",
+                      "high",
+                      "critical"
+                    ]
+                  },
+                  "status": {
+                    "enum": [
+                      "todo",
+                      "inbox"
+                    ]
+                  },
+                  "plannedDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "deadline": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "estimatedMinutes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1440
+                  }
+                },
+                "required": [
+                  "ref",
+                  "title"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "create"
+              },
+              "entity": {
+                "const": "habit"
+              },
+              "value": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ref": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 10000
+                  },
+                  "kind": {
+                    "enum": [
+                      "check",
+                      "duration"
+                    ]
+                  },
+                  "target": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1440
+                  },
+                  "schedule": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "daily",
+                          "weekdays",
+                          "selected-days",
+                          "times-per-week"
+                        ]
+                      },
+                      "weekdays": {
+                        "type": "array",
+                        "maxItems": 7,
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6
+                        }
+                      },
+                      "timesPerWeek": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 7
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ]
+                  },
+                  "countsTowardCapacity": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "ref",
+                  "title",
+                  "kind",
+                  "schedule"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "create"
+              },
+              "entity": {
+                "const": "timeBlock"
+              },
+              "value": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ref": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "task",
+                      "event"
+                    ]
+                  },
+                  "taskRef": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "taskId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "startMinute": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1439
+                  },
+                  "durationMinutes": {
+                    "type": "integer",
+                    "minimum": 15,
+                    "maximum": 1440
+                  }
+                },
+                "required": [
+                  "kind",
+                  "date",
+                  "startMinute",
+                  "durationMinutes"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "create"
+              },
+              "entity": {
+                "const": "recurringSeries"
+              },
+              "value": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ref": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "rule": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "frequency": {
+                        "enum": [
+                          "daily",
+                          "weekly",
+                          "monthly",
+                          "yearly",
+                          "after-completion"
+                        ]
+                      },
+                      "interval": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 365
+                      },
+                      "weekdays": {
+                        "type": "array",
+                        "maxItems": 7,
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6
+                        }
+                      },
+                      "monthDay": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 31
+                      },
+                      "until": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      }
+                    },
+                    "required": [
+                      "frequency"
+                    ]
+                  },
+                  "taskTemplate": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 20000
+                      },
+                      "projectRef": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                      },
+                      "projectId": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "priority": {
+                        "enum": [
+                          "normal",
+                          "high",
+                          "critical"
+                        ]
+                      },
+                      "estimatedMinutes": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1440
+                      },
+                      "deadlineOffsetDays": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 3650
+                      },
+                      "startMinute": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1439
+                      },
+                      "blockDurationMinutes": {
+                        "type": "integer",
+                        "minimum": 15,
+                        "maximum": 1440
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ]
+                  }
+                },
+                "required": [
+                  "ref",
+                  "title",
+                  "timezone",
+                  "startDate",
+                  "rule",
+                  "taskTemplate"
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "value"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "update"
+              },
+              "entity": {
+                "const": "project"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "changes": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 10000
+                  },
+                  "color": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^#[0-9A-Fa-f]{6}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "icon": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 24
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "type": {
+                    "enum": [
+                      "standard",
+                      "academic"
+                    ]
+                  },
+                  "favorite": {
+                    "type": "boolean"
+                  },
+                  "examDate": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "weeklyTargetMinutes": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10080
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt",
+              "changes"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "update"
+              },
+              "entity": {
+                "const": "task"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "changes": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 20000
+                  },
+                  "projectId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "projectRef": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                  },
+                  "priority": {
+                    "enum": [
+                      "normal",
+                      "high",
+                      "critical"
+                    ]
+                  },
+                  "status": {
+                    "enum": [
+                      "todo",
+                      "inbox"
+                    ]
+                  },
+                  "plannedDate": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "deadline": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "estimatedMinutes": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1440
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt",
+              "changes"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "update"
+              },
+              "entity": {
+                "const": "habit"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "changes": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 10000
+                  },
+                  "kind": {
+                    "enum": [
+                      "check",
+                      "duration"
+                    ]
+                  },
+                  "target": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1440
+                  },
+                  "schedule": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "daily",
+                          "weekdays",
+                          "selected-days",
+                          "times-per-week"
+                        ]
+                      },
+                      "weekdays": {
+                        "type": "array",
+                        "maxItems": 7,
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6
+                        }
+                      },
+                      "timesPerWeek": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 7
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ]
+                  },
+                  "countsTowardCapacity": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt",
+              "changes"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "update"
+              },
+              "entity": {
+                "const": "timeBlock"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "changes": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "startMinute": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1439
+                  },
+                  "durationMinutes": {
+                    "type": "integer",
+                    "minimum": 15,
+                    "maximum": 1440
+                  }
+                }
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt",
+              "changes"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "update"
+              },
+              "entity": {
+                "const": "recurringSeries"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "changes": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  "status": {
+                    "enum": [
+                      "active",
+                      "paused"
+                    ]
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "rule": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "frequency": {
+                        "enum": [
+                          "daily",
+                          "weekly",
+                          "monthly",
+                          "yearly",
+                          "after-completion"
+                        ]
+                      },
+                      "interval": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 365
+                      },
+                      "weekdays": {
+                        "type": "array",
+                        "maxItems": 7,
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6
+                        }
+                      },
+                      "monthDay": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 31
+                      },
+                      "until": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      }
+                    },
+                    "required": [
+                      "frequency"
+                    ]
+                  },
+                  "taskTemplate": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 20000
+                      },
+                      "projectId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "projectRef": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+                      },
+                      "priority": {
+                        "enum": [
+                          "normal",
+                          "high",
+                          "critical"
+                        ]
+                      },
+                      "estimatedMinutes": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "deadlineOffsetDays": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 3650
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "startMinute": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1439
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "blockDurationMinutes": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 15,
+                            "maximum": 1440
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt",
+              "changes"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "entity": {
+                "const": "project"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "entity": {
+                "const": "task"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "entity": {
+                "const": "habit"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "entity": {
+                "const": "timeBlock"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "delete"
+              },
+              "entity": {
+                "const": "recurringSeries"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ifUpdatedAt": {
+                "type": "string",
+                "minLength": 10
+              },
+              "reason": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "op",
+              "entity",
+              "id",
+              "ifUpdatedAt"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
