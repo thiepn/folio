@@ -24,6 +24,8 @@ export interface HistoryFilter {
   throughDate?: string
 }
 
+type HistoryEventInput = Omit<HistoryEvent, 'date' | 'searchText'> & { extraSearch?: string }
+
 export function buildHistoryEvents(input: {
   tasks: TaskEntity[]
   projects: ProjectEntity[]
@@ -48,6 +50,7 @@ export function buildHistoryEvents(input: {
       projectName,
       taskId: task.id,
       projectId: task.projectId,
+      extraSearch: task.description,
     }))
   }
 
@@ -76,7 +79,7 @@ export function buildHistoryEvents(input: {
     const detail = entry.status === 'skipped'
       ? 'Skipped habit'
       : habit?.kind === 'duration' ? `Completed · ${entry.value}m` : 'Completed habit'
-    events.push(makeEvent({ id: `habit:${entry.id}:${entry.status}`, kind: 'habit', at, title, detail }))
+    events.push(makeEvent({ id: `habit:${entry.id}:${entry.status}`, kind: 'habit', at, title, detail, extraSearch: habit?.description }))
   }
 
   for (const project of input.projects) {
@@ -89,6 +92,7 @@ export function buildHistoryEvents(input: {
         detail: activity.label,
         projectName: project.name,
         projectId: project.id,
+        extraSearch: `${project.description} ${project.notes}`,
       }))
     }
   }
@@ -102,6 +106,7 @@ export function buildHistoryEvents(input: {
       title: review.title,
       detail: `${capitalize(review.kind)} review · ${periodLabel(review.periodStart, review.periodEnd)}`,
       reviewId: review.id,
+      extraSearch: [review.summary, review.wins, review.friction, review.lessons, review.nextFocus].join(' '),
     }))
   }
 
@@ -130,10 +135,11 @@ export function historyCounts(events: HistoryEvent[], fromDate: string, throughD
   }
 }
 
-function makeEvent(input: Omit<HistoryEvent, 'date' | 'searchText'>): HistoryEvent {
-  const date = localDateKey(new Date(input.at))
-  const searchText = [input.title, input.detail, input.projectName, input.kind].filter(Boolean).join(' ').toLocaleLowerCase()
-  return { ...input, date, searchText }
+function makeEvent(input: HistoryEventInput): HistoryEvent {
+  const { extraSearch, ...event } = input
+  const date = localDateKey(new Date(event.at))
+  const searchText = [event.title, event.detail, event.projectName, event.kind, extraSearch].filter(Boolean).join(' ').toLocaleLowerCase()
+  return { ...event, date, searchText }
 }
 
 function formatMinutes(minutes: number) {
