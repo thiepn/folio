@@ -1,0 +1,49 @@
+name: Apply Folio v1.7 Command First
+
+on:
+  push:
+    branches: [v1.7-command-first-ux]
+    paths:
+      - '.github/workflows/apply-v17-command-first.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Apply v1.7 integration
+        run: node scripts/apply-v17-integration.mjs
+
+      - name: Refresh lockfile metadata
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify v1.7 release
+        run: npm run release:verify
+
+      - name: Remove staging helpers and refresh manifest
+        run: |
+          rm scripts/apply-v17-integration.mjs .github/workflows/apply-v17-command-first.yml
+          npm run manifest:release
+
+      - name: Commit verified v1.7 branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: Folio v1.7 command-first UX"
+          git push origin HEAD:v1.7-command-first-ux
