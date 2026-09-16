@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --pretty false",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json --pretty false && tsc --noEmit -p tsconfig.node.json --pretty false",
     "validate:final": "node scripts/validate-final.mjs",
     "validate:release": "node scripts/validate-release.mjs",
     "validate:daily": "node scripts/validate-daily-workflow.mjs",
