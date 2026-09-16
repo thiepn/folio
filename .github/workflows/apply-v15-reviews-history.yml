@@ -24,7 +24,9 @@ jobs:
           package-manager-cache: false
 
       - name: Apply v1.5 integration
-        run: node scripts/apply-v15-integration.mjs
+        run: |
+          node scripts/fix-v15-integration.mjs
+          node scripts/apply-v15-integration.mjs
 
       - name: Refresh lockfile metadata
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
@@ -37,7 +39,7 @@ jobs:
 
       - name: Remove staging helpers and refresh manifest
         run: |
-          rm scripts/apply-v15-integration.mjs .github/workflows/apply-v15-reviews-history.yml
+          rm scripts/apply-v15-integration.mjs scripts/fix-v15-integration.mjs .github/workflows/apply-v15-reviews-history.yml
           npm run manifest:release
 
       - name: Commit verified v1.5 branch
