@@ -20,7 +20,8 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   help: '?',
 }
 
-export const RESERVED_SHORTCUTS = new Set(['escape', 'enter', 'mod+a', 'mod+shift+a', 'alt+left', 'alt+right', 'g', 'c', 'tab', 'space', 'down', 'up', 'left', 'right'])
+// Fixed command-first aliases remain reserved so a custom binding cannot silently shadow them.
+export const RESERVED_SHORTCUTS = new Set(['escape', 'enter', 'mod+a', 'mod+shift+a', 'alt+left', 'alt+right', 'g', 'c', 'n', 'p', 't', '/', 'tab', 'space', 'down', 'up', 'left', 'right'])
 
 export const SHORTCUT_META: { action: ShortcutAction; label: string; note: string }[] = [
   { action: 'palette', label: 'Command palette', note: 'Search every command' },
