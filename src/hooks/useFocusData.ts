@@ -60,6 +60,9 @@ export function useFocusData() {
         projectName: session.projectNameSnapshot ?? project?.name,
         mode: session.mode,
         targetSeconds: session.targetSeconds,
+        plannedSeconds: session.plannedSeconds,
+        intention: session.intention,
+        note: session.note,
         durationSeconds: session.status === 'running' || session.status === 'paused' ? effectiveFocusSeconds(session) : session.durationSeconds,
         startedAt: session.startedAt,
         endedAt: session.endedAt,
@@ -69,7 +72,7 @@ export function useFocusData() {
 
     return {
       activeSession: active,
-      recentSessions: finished.slice(0, 12).map(preview),
+      recentSessions: finished.slice(0, 20).map(preview),
       taskTotals,
       projectWeekSeconds,
       weekSeconds,
