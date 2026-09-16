@@ -3,6 +3,10 @@ import { Button } from '../../components/ui/Button'
 import { formatShortcut, SHORTCUT_META, type ShortcutMap } from './shortcuts'
 
 const fixedShortcuts = [
+  ['/', 'Open command palette / search'],
+  ['N', 'New task in the current context'],
+  ['P', 'New project'],
+  ['T', 'Go straight to Today'],
   ['Enter', 'Open the focused task'],
   ['C', 'Complete the focused task or selected tasks'],
   ['Esc', 'Close the topmost surface / clear selection'],
@@ -29,7 +33,7 @@ export function ShortcutHelpModal({ open, shortcuts, onClose, onConfigure }: {
       <div className="shortcut-grid">
         {SHORTCUT_META.map((item) => <div className="shortcut-grid__row" key={item.action}><kbd>{formatShortcut(shortcuts[item.action])}</kbd><span><strong>{item.label}</strong><small>{item.note}</small></span></div>)}
       </div>
-      <div className="shortcut-help-section"><span className="eyebrow">Navigation & selection</span><div className="shortcut-grid">{fixedShortcuts.map(([keys, label]) => <div className="shortcut-grid__row" key={keys}><kbd>{keys.replace('Mod', /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl')}</kbd><span><strong>{label}</strong></span></div>)}</div></div>
+      <div className="shortcut-help-section"><span className="eyebrow">Command-first aliases</span><div className="shortcut-grid">{fixedShortcuts.map(([keys, label]) => <div className="shortcut-grid__row" key={keys}><kbd>{keys.replace('Mod', /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl')}</kbd><span><strong>{label}</strong></span></div>)}</div></div>
     </Modal>
   )
 }
