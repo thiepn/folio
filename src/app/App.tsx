@@ -665,10 +665,16 @@ function AppContent() {
             onBack={() => setSelectedProjectId(null)}
             onTaskOpen={setSelectedTaskId}
             onTaskToggle={(id) => void toggleTask(id)}
+            onTaskMove={(id, target) => void moveTaskDate(id, target)}
+            onTaskFocus={(id) => openFocus(id)}
             onAddTask={() => openAdd('todo', selectedProjectId === '__unassigned__' ? '' : selectedProjectId)}
             onEdit={selectedProject ? () => { setEditingProjectId(selectedProject.id); setProjectEditorOpen(true) } : undefined}
             onToggleFavorite={selectedProject ? () => void projectService.toggleFavorite(selectedProject.id).then(registerUndo) : undefined}
             onArchive={selectedProject ? () => void projectService.archive(selectedProject.id).then((undo) => { setSelectedProjectId(null); registerUndo(undo) }) : undefined}
+            onSetNextAction={selectedProject ? (taskId) => void projectService.setNextAction(selectedProject.id, taskId).then(registerUndo) : undefined}
+            onAddMilestone={selectedProject ? (title, dueDate) => void projectService.addMilestone(selectedProject.id, title, dueDate).then(registerUndo) : undefined}
+            onToggleMilestone={selectedProject ? (milestoneId) => void projectService.toggleMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
+            onRemoveMilestone={selectedProject ? (milestoneId) => void projectService.removeMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
           /> : <ProjectsView projects={data.projects} unassignedCount={data.unassignedCount} onCreate={() => { setEditingProjectId(null); setProjectEditorOpen(true) }} onOpen={setSelectedProjectId} onArchived={() => setArchivedProjectsOpen(true)} />) : null}
           {view === 'habits' ? <HabitsView habits={habitData.habits} weeklyAdherence={habitData.weeklyAdherence} dueToday={habitData.dueToday} longestStreak={habitData.longestStreak} onCreate={() => { setEditingHabitId(null); setHabitEditorOpen(true) }} onArchived={() => setArchivedHabitsOpen(true)} onOpen={setSelectedHabitId} onToggle={(id) => void toggleHabit(id)} onIncrement={(id, minutes) => void incrementHabit(id, minutes)} /> : null}
           {view === 'review' ? <ReviewView snapshot={reviewData} recentCompleted={data.allTasks.filter((task) => task.completed).sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))} recentFocus={focusData?.recentSessions ?? []} onOpenTask={setSelectedTaskId} onStartReview={() => setReviewWorkflowOpen(true)} /> : null}

@@ -5,6 +5,8 @@ import type { ProjectSummary, ProjectCreateInput, ProjectUpdateInput } from '../
 
 const PROJECT_COLORS = ['#4169FF', '#7657FF', '#34C6D3', '#3AB58A', '#76B947', '#D8A54A', '#E07B49', '#D45C8C']
 
+type ProjectStatus = 'active' | 'on-hold' | 'completed'
+
 export function ProjectEditorModal({ open, project, onClose, onCreate, onUpdate }: {
   open: boolean
   project?: ProjectSummary | null
@@ -14,9 +16,12 @@ export function ProjectEditorModal({ open, project, onClose, onCreate, onUpdate 
 }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [notes, setNotes] = useState('')
   const [color, setColor] = useState(PROJECT_COLORS[0])
   const [icon, setIcon] = useState('')
   const [type, setType] = useState<'standard' | 'academic'>('standard')
+  const [status, setStatus] = useState<ProjectStatus>('active')
+  const [deadline, setDeadline] = useState('')
   const [favorite, setFavorite] = useState(false)
   const [examDate, setExamDate] = useState('')
   const [weeklyTarget, setWeeklyTarget] = useState('')
@@ -27,9 +32,12 @@ export function ProjectEditorModal({ open, project, onClose, onCreate, onUpdate 
     if (!open) return
     setName(project?.name ?? '')
     setDescription(project?.description ?? '')
+    setNotes(project?.notes ?? '')
     setColor(project?.color ?? PROJECT_COLORS[0])
     setIcon(project?.icon ?? '')
     setType(project?.type ?? 'standard')
+    setStatus(project?.status ?? 'active')
+    setDeadline(project?.deadline ?? '')
     setFavorite(project?.favorite ?? false)
     setExamDate(project?.examDate ?? '')
     setWeeklyTarget(project?.weeklyTargetMinutes ? String(project.weeklyTargetMinutes) : '')
@@ -44,21 +52,25 @@ export function ProjectEditorModal({ open, project, onClose, onCreate, onUpdate 
     const common = {
       name: name.trim(),
       description,
+      notes,
       color,
       icon: icon.trim() || undefined,
       type,
+      status,
       favorite,
     }
     try {
       if (project) {
         await onUpdate(project.id, {
           ...common,
+          deadline: deadline || null,
           examDate: type === 'academic' ? (examDate || null) : null,
           weeklyTargetMinutes: type === 'academic' ? (weeklyTarget ? Number(weeklyTarget) : null) : null,
         })
       } else {
         await onCreate({
           ...common,
+          deadline: deadline || undefined,
           examDate: type === 'academic' && examDate ? examDate : undefined,
           weeklyTargetMinutes: type === 'academic' && weeklyTarget ? Number(weeklyTarget) : undefined,
         })
@@ -80,7 +92,12 @@ export function ProjectEditorModal({ open, project, onClose, onCreate, onUpdate 
     >
       <form className="form-stack" onSubmit={submit}>
         <label className="field"><span>Name</span><input autoFocus value={name} onChange={(event) => setName(event.target.value)} placeholder="Analysis III" /></label>
-        <label className="field"><span>Description</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What belongs in this project?" /></label>
+        <label className="field"><span>Outcome / summary</span><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What result is this project meant to produce?" /></label>
+        <label className="field"><span>Context / notes</span><textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Constraints, decisions, links, context, or reference notes." /></label>
+        <div className="form-grid">
+          <label className="field"><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value as ProjectStatus)}><option value="active">Active</option><option value="on-hold">On hold</option><option value="completed">Completed</option></select></label>
+          <label className="field"><span>Project deadline</span><input type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label>
+        </div>
         <div className="form-grid">
           <label className="field"><span>Type</span><select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="standard">Standard project</option><option value="academic">Academic / course</option></select></label>
           <label className="field"><span>Icon label</span><input value={icon} onChange={(event) => setIcon(event.target.value)} placeholder="∑ or short label" maxLength={24} /></label>
