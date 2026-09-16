@@ -44,10 +44,10 @@ async function migrateLegacyDatabaseName() {
   ])
 
   await db.open()
-  await db.transaction('rw',
+  await db.transaction('rw', [
     db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
     db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches,
-    async () => {
+  ], async () => {
       await Promise.all([
         db.tasks.clear(), db.projects.clear(), db.habits.clear(), db.habitEntries.clear(), db.timeBlocks.clear(),
         db.dailyPlans.clear(), db.dailyPlanItems.clear(), db.focusSessions.clear(), db.recurringSeries.clear(), db.settings.clear(),

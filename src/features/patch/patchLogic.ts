@@ -35,7 +35,7 @@ function fieldDiff(field: string, before: unknown, after: unknown): PatchFieldDi
 function normalizeTitle(value: string) { return value.trim().toLocaleLowerCase().replace(/\s+/g, ' ') }
 
 function operationTarget(op: PatchOperationV1) {
-  return op.op === 'create' ? op.value.ref : op.id
+  return op.op === 'create' ? (op.value.ref ?? '(new)') : op.id
 }
 
 function labelFor(entity: string, value: any) {
@@ -104,11 +104,13 @@ export function buildPatchAnalysis(document: PatchDocumentV1, context: PatchAnal
   document.operations.forEach((op, index) => {
     if (op.op === 'create') {
       const ref = op.value.ref
+    if (ref) {
       if (createdRefs.has(ref)) issues.push(issue('error', 'duplicate_create_ref', `Create ref “${ref}” is used more than once.`, index))
       createdRefs.add(ref)
       if (op.entity === 'project') createdProjectRefs.add(ref)
       if (op.entity === 'task') { createdTaskRefs.add(ref); createdTaskValues.set(ref, op.value) }
-      return
+    }
+    return
     }
     const key = `${op.entity}:${op.id}`
     if (targetKeys.has(key)) issues.push(issue('error', 'duplicate_target', `The patch targets ${op.entity} “${op.id}” more than once. Split this into one final operation.`, index))
@@ -185,7 +187,7 @@ export function buildPatchAnalysis(document: PatchDocumentV1, context: PatchAnal
           for (const date of dates) deltaByDate.set(date, (deltaByDate.get(date) ?? 0) + (preview.taskTemplate.estimatedMinutes ?? 0))
         }
       }
-      diffs.push({ operationIndex: index, op: 'create', entity: op.entity, target: op.value.ref, label: labelFor(op.entity, op.value), effect: `Create new ${op.entity}.`, destructive: false, fields: [{ field: 'entity', before: 'Does not exist', after: labelFor(op.entity, op.value) }] })
+      diffs.push({ operationIndex: index, op: 'create', entity: op.entity, target: operationTarget(op), label: labelFor(op.entity, op.value), effect: `Create new ${op.entity}.`, destructive: false, fields: [{ field: 'entity', before: 'Does not exist', after: labelFor(op.entity, op.value) }] })
       continue
     }
 

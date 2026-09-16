@@ -254,7 +254,7 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
   const now = new Date().toISOString()
   let createdBatchId = ''
 
-  await db.transaction('rw', db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.dailyPlanItems, db.patchBatches, async () => {
+  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.dailyPlanItems, db.patchBatches], async () => {
     // Optimistic concurrency is rechecked inside the write transaction, not only during Preview.
     for (const op of document.operations) if (op.op !== 'create') {
       const current = op.entity === 'project' ? await db.projects.get(op.id) : op.entity === 'task' ? await db.tasks.get(op.id) : op.entity === 'habit' ? await db.habits.get(op.id) : op.entity === 'timeBlock' ? await db.timeBlocks.get(op.id) : await db.recurringSeries.get(op.id)
@@ -483,7 +483,7 @@ export async function revertPatch(batchId: string): Promise<void> {
   }
   for (const habitId of createdHabitIds) if (await db.habitEntries.where('habitId').equals(habitId).count()) throw new Error('Revert blocked: a Habit created by this patch now has history.')
 
-  await db.transaction('rw', db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.dailyPlanItems, db.patchBatches, async () => {
+  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.dailyPlanItems, db.patchBatches], async () => {
     if (extraSeriesBlockIds.size) await db.timeBlocks.bulkDelete([...extraSeriesBlockIds])
     if (extraSeriesTaskIds.size) { await db.dailyPlanItems.where('taskId').anyOf([...extraSeriesTaskIds]).delete(); await db.tasks.bulkDelete([...extraSeriesTaskIds]) }
 

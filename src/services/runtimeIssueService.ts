@@ -38,7 +38,7 @@ export function dismissRuntimeIssue() {
 export function subscribeRuntimeIssues(listener: Listener) {
   listeners.add(listener)
   listener(current)
-  return () => listeners.delete(listener)
+  return () => { listeners.delete(listener) }
 }
 
 let installed = false

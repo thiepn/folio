@@ -20,7 +20,7 @@ export type FactoryHabitInput = z.input<typeof habitCreateSchema>
 export type FactoryTimeBlockInput = z.input<typeof timeBlockCreateSchema>
 export type FactorySeriesInput = z.input<typeof recurringSeriesCreateSchema>
 
-export function makeTaskEntity(input: FactoryTaskInput, id = crypto.randomUUID(), now = new Date().toISOString(), sortOrder = Date.now()): TaskEntity {
+export function makeTaskEntity(input: FactoryTaskInput, id: string = crypto.randomUUID(), now = new Date().toISOString(), sortOrder = Date.now()): TaskEntity {
   const parsed = taskCreateSchema.parse(input)
   return {
     id,
@@ -45,7 +45,7 @@ export function makeTaskEntity(input: FactoryTaskInput, id = crypto.randomUUID()
   }
 }
 
-export function makeProjectEntity(input: FactoryProjectInput, id = crypto.randomUUID(), now = new Date().toISOString()): ProjectEntity {
+export function makeProjectEntity(input: FactoryProjectInput, id: string = crypto.randomUUID(), now = new Date().toISOString()): ProjectEntity {
   const parsed = projectCreateSchema.parse(input)
   return {
     id,
@@ -63,7 +63,7 @@ export function makeProjectEntity(input: FactoryProjectInput, id = crypto.random
   }
 }
 
-export function makeHabitEntity(input: FactoryHabitInput, id = crypto.randomUUID(), now = new Date().toISOString(), sortOrder = Date.now()): HabitEntity {
+export function makeHabitEntity(input: FactoryHabitInput, id: string = crypto.randomUUID(), now = new Date().toISOString(), sortOrder = Date.now()): HabitEntity {
   const parsed = habitCreateSchema.parse(input)
   return {
     id,
@@ -80,12 +80,12 @@ export function makeHabitEntity(input: FactoryHabitInput, id = crypto.randomUUID
   }
 }
 
-export function makeTimeBlockEntity(input: FactoryTimeBlockInput, id = crypto.randomUUID(), now = new Date().toISOString()): TimeBlockEntity {
+export function makeTimeBlockEntity(input: FactoryTimeBlockInput, id: string = crypto.randomUUID(), now = new Date().toISOString()): TimeBlockEntity {
   const parsed = timeBlockCreateSchema.parse(input)
   return { id, taskId: parsed.taskId, title: parsed.title, description: parsed.description || undefined, location: parsed.location || undefined, kind: parsed.kind, start: parsed.start, end: parsed.end, createdAt: now, updatedAt: now }
 }
 
-export function makeSeriesEntity(input: FactorySeriesInput, id = crypto.randomUUID(), now = new Date().toISOString()): RecurringSeriesEntity {
+export function makeSeriesEntity(input: FactorySeriesInput, id: string = crypto.randomUUID(), now = new Date().toISOString()): RecurringSeriesEntity {
   const parsed = recurringSeriesCreateSchema.parse(input)
   return {
     id,

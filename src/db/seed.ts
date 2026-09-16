@@ -81,7 +81,7 @@ export async function installDemoWorkspace() {
     updatedAt: now,
   }))
 
-  await db.transaction('rw', db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems, db.settings, async () => {
+  await db.transaction('rw', [db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems, db.settings], async () => {
     await db.projects.bulkPut(projects)
     await db.tasks.bulkPut(tasks)
     await db.habits.bulkPut(habits)

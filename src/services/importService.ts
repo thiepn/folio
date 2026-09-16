@@ -122,7 +122,7 @@ async function safeImportRevert(batch: ImportBatchEntity) {
   const extraBlocks = taskIdsToRemove.size ? await db.timeBlocks.where('taskId').anyOf([...taskIdsToRemove]).toArray() : []
   const explicitBlockIds = batch.affectedEntities.filter((entry) => entry.type === 'timeBlock').map((entry) => entry.id)
 
-  await db.transaction('rw', db.timeBlocks, db.dailyPlanItems, db.tasks, db.recurringSeries, db.habitEntries, db.habits, db.projects, db.dailyPlans, db.importBatches, async () => {
+  await db.transaction('rw', [db.timeBlocks, db.dailyPlanItems, db.tasks, db.recurringSeries, db.habitEntries, db.habits, db.projects, db.dailyPlans, db.importBatches], async () => {
     await db.timeBlocks.bulkDelete([...new Set([...explicitBlockIds, ...extraBlocks.map((block) => block.id)])])
     if (taskIdsToRemove.size) {
       await db.dailyPlanItems.where('taskId').anyOf([...taskIdsToRemove]).delete()
@@ -195,7 +195,7 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
   ]
   const batch: ImportBatchEntity = { id: crypto.randomUUID(), title: document.title, source, status: 'applied', affectedEntities, createdSnapshots, priorDailyPlans, createdAt: now, updatedAt: now }
 
-  await db.transaction('rw', db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.importBatches, async () => {
+  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.importBatches], async () => {
     if (projects.length) await db.projects.bulkAdd(projects)
     if (allTasks.length) await db.tasks.bulkAdd(allTasks)
     if (habits.length) await db.habits.bulkAdd(habits)

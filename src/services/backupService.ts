@@ -200,10 +200,10 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
   // Re-run validation immediately before the write transaction.
   const verified = previewBackup(preview.backup)
   const d = verified.backup.data
-  await db.transaction('rw',
+  await db.transaction('rw', [
     db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
     db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches,
-    async () => {
+  ], async () => {
       await Promise.all(TABLE_KEYS.map((key) => (db[key] as any).clear()))
       await db.projects.bulkPut(d.projects)
       await db.recurringSeries.bulkPut(d.recurringSeries)
