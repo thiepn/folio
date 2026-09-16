@@ -17,10 +17,10 @@ export function Topbar({ title, meta, onSearch, onAppearance, onAdd, onFocus, fo
         <strong>{title}</strong>
         <span>{meta}</span>
       </div>
-      <button type="button" className="topbar__search" onClick={onSearch} aria-label="Search tasks, projects, habits, and commands">
+      <button type="button" className="topbar__search" onClick={onSearch} aria-label="Search Folio or run a command">
         <Icon name="search" />
-        <span>Search</span>
-        <kbd>Ctrl/⌘ K</kbd>
+        <span>Search or command</span>
+        <kbd>Ctrl/⌘ K · /</kbd>
       </button>
       <Button icon="focus" variant={focusActive ? 'primary' : 'outline'} onClick={onFocus}>{focusActive ? 'Resume focus' : 'Focus'}</Button>
       <Button icon="plus" variant="primary" onClick={onAdd}>Add</Button>

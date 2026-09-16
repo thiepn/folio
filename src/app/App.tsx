@@ -61,6 +61,7 @@ import type { HabitCreateInput, HabitUpdateInput } from '../repositories/habitRe
 import type { NavView } from '../types/ui'
 import type { DailyPlanBucket, ReviewKind } from '../domain/models'
 import { CommandPalette, type PowerCommand } from '../features/power/CommandPalette'
+import { buildHabitCommandChildren, buildProjectCommandChildren, buildTaskCommandChildren } from '../features/power/commandBuilders'
 import { ShortcutHelpModal } from '../features/power/ShortcutHelpModal'
 import { KeyboardSettingsDrawer } from '../features/power/KeyboardSettingsDrawer'
 import { BulkActionBar } from '../features/power/BulkActionBar'
@@ -187,7 +188,7 @@ function AppContent() {
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        if (paletteOpen) { setPaletteOpen(false); return }
+        if (paletteOpen) return
         closeTransientSurfaces()
         selection.clear()
         setGoChordPending(false)
@@ -275,7 +276,31 @@ function AppContent() {
         goChordAt.current = 0
         setGoChordPending(false)
         if (goChordTimer.current) window.clearTimeout(goChordTimer.current)
-        if (next) { event.preventDefault(); navigate(next) }
+        if (next) { event.preventDefault(); navigate(next); return }
+        return
+      }
+
+      if (!event.metaKey && !event.ctrlKey && !event.altKey && key === '/') {
+        event.preventDefault()
+        setPaletteOpen(true)
+        return
+      }
+      if (!event.metaKey && !event.ctrlKey && !event.altKey && key === 'n') {
+        event.preventDefault()
+        openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today)
+        return
+      }
+      if (!event.metaKey && !event.ctrlKey && !event.altKey && key === 'p') {
+        event.preventDefault()
+        navigate('projects')
+        setEditingProjectId(null)
+        setProjectEditorOpen(true)
+        return
+      }
+      if (!event.metaKey && !event.ctrlKey && !event.altKey && key === 't') {
+        event.preventDefault()
+        navigate('today')
+        return
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -519,6 +544,12 @@ function AppContent() {
 
   const commands = useMemo<PowerCommand[]>(() => {
     const selected = selection.selectedIds.size
+    const actionableTasks = (data?.allTasks ?? []).filter((task) => !task.deletedAt && task.status === 'todo' && !task.completed)
+    const completedTasks = (data?.allTasks ?? []).filter((task) => !task.deletedAt && task.status === 'completed')
+    const searchableTasks = (data?.allTasks ?? []).filter((task) => !task.deletedAt && task.status !== 'cancelled')
+    const readyFocusTasks = actionableTasks.filter((task) => (task.activeBlockerCount ?? 0) === 0)
+    const completableHabits = (habitData?.habits ?? []).filter((habit) => habit.scheduledToday && !habit.completed && !habit.paused)
+    const skippableHabits = completableHabits.filter((habit) => !habit.skipped)
     const list: PowerCommand[] = [
       { id: 'nav-today', group: 'Navigate', label: 'Go to Today', keywords: 'home daily', run: () => navigate('today') },
       { id: 'nav-inbox', group: 'Navigate', label: 'Go to Inbox', run: () => navigate('inbox') },
@@ -526,7 +557,9 @@ function AppContent() {
       { id: 'nav-projects', group: 'Navigate', label: 'Go to Projects', run: () => navigate('projects') },
       { id: 'nav-habits', group: 'Navigate', label: 'Go to Habits', run: () => navigate('habits') },
       { id: 'nav-review', group: 'Navigate', label: 'Go to Review', run: () => navigate('review') },
-      { id: 'capture', group: 'Create', label: 'Quick Add', shortcut: shortcuts.quickAdd, note: 'Capture a task without leaving this view', run: () => openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today) },
+      { id: 'capture', group: 'Create', label: 'New task', shortcut: shortcuts.quickAdd, keywords: 'quick add capture create task n', note: 'Capture a task without leaving this view', run: () => openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today) },
+      { id: 'create-project', group: 'Create', label: 'New project', shortcut: 'p', keywords: 'create project', run: () => { navigate('projects'); setEditingProjectId(null); setProjectEditorOpen(true) } },
+      { id: 'create-habit', group: 'Create', label: 'New habit', keywords: 'create habit routine', run: () => { navigate('habits'); setEditingHabitId(null); setHabitEditorOpen(true) } },
       { id: 'focus', group: 'Execute', label: focusData?.activeSession ? 'Resume Focus' : 'Start Focus', shortcut: shortcuts.focus, run: () => openFocus() },
       { id: 'plan-day', group: 'Plan', label: 'Plan today', note: 'Open the guided daily planning workflow', run: () => { navigate('today'); setPlanDayOpen(true) } },
       { id: 'weekly-review', group: 'Review', label: 'Start weekly review', run: () => { navigate('review'); setReviewWorkflowOpen(true) } },
@@ -539,6 +572,21 @@ function AppContent() {
       { id: 'chatgpt-import', group: 'ChatGPT Bridge', label: 'Import a new ChatGPT plan', run: () => setImportOpen(true) },
       { id: 'chatgpt-patch', group: 'ChatGPT Bridge', label: 'Patch existing planner data', run: () => setPatchOpen(true) },
     ]
+
+    list.push(
+      { id: 'open-task-picker', group: 'Task actions', label: 'Open task…', keywords: 'find inspect edit task', children: buildTaskCommandChildren('open-task', searchableTasks, (task) => setSelectedTaskId(task.id)), run: () => {} },
+      { id: 'complete-task-picker', group: 'Task actions', label: 'Complete task…', keywords: 'done finish check task', children: buildTaskCommandChildren('complete-task', actionableTasks, async (task) => registerUndo(await taskService.setCompleted(task.id, true))), run: () => {} },
+      { id: 'reopen-task-picker', group: 'Task actions', label: 'Reopen task…', keywords: 'undo complete reopen task', children: buildTaskCommandChildren('reopen-task', completedTasks, async (task) => registerUndo(await taskService.setCompleted(task.id, false))), run: () => {} },
+      { id: 'today-task-picker', group: 'Task actions', label: 'Move task to Today…', keywords: 'schedule plan today task', children: buildTaskCommandChildren('today-task', actionableTasks, (task) => moveTaskDate(task.id, 'today')), run: () => {} },
+      { id: 'tomorrow-task-picker', group: 'Task actions', label: 'Move task to Tomorrow…', keywords: 'schedule plan tomorrow task', children: buildTaskCommandChildren('tomorrow-task', actionableTasks, (task) => moveTaskDate(task.id, 'tomorrow')), run: () => {} },
+      { id: 'later-task-picker', group: 'Task actions', label: 'Move task to Later…', keywords: 'unschedule someday later task', children: buildTaskCommandChildren('later-task', actionableTasks, (task) => moveTaskDate(task.id, 'later')), run: () => {} },
+      { id: 'focus-task-picker', group: 'Task actions', label: 'Start Focus on task…', keywords: 'work execute focus timer task', children: buildTaskCommandChildren('focus-task', readyFocusTasks, (task) => openFocus(task.id)), run: () => {} },
+      { id: 'open-project-picker', group: 'Project actions', label: 'Open project…', keywords: 'find project', children: buildProjectCommandChildren('open-project', data?.projects ?? [], (project) => { navigate('projects'); setSelectedProjectId(project.id) }), run: () => {} },
+      { id: 'open-habit-picker', group: 'Habit actions', label: 'Open habit…', keywords: 'find habit routine', children: buildHabitCommandChildren('open-habit', habitData?.habits ?? [], (habit) => { navigate('habits'); setSelectedHabitId(habit.id) }), run: () => {} },
+      { id: 'complete-habit-picker', group: 'Habit actions', label: 'Complete habit today…', keywords: 'done check habit routine today', children: buildHabitCommandChildren('complete-habit', completableHabits, (habit) => toggleHabit(habit.id)), run: () => {} },
+      { id: 'skip-habit-picker', group: 'Habit actions', label: 'Skip habit today…', keywords: 'rest skip habit routine today', children: buildHabitCommandChildren('skip-habit', skippableHabits, (habit) => toggleHabitSkip(habit.id)), run: () => {} },
+    )
+
     for (const task of data?.allTasks ?? []) {
       list.push({
         id: `search-task-${task.id}`,
@@ -615,7 +663,7 @@ function AppContent() {
       <div className="workspace">
         <div className="mobile-topbar">
           <span>{`Folio · ${viewAnnouncement}`}</span>
-          <div className="mobile-topbar__actions">{focusData?.activeSession ? <button className="is-focus-active" onClick={() => openFocus()}>Resume focus</button> : <button onClick={() => openFocus()}>Focus</button>}</div>
+          <div className="mobile-topbar__actions"><button className="mobile-command-button" onClick={() => setPaletteOpen(true)}>Search</button>{focusData?.activeSession ? <button className="is-focus-active" onClick={() => openFocus()}>Resume focus</button> : <button onClick={() => openFocus()}>Focus</button>}</div>
         </div>
         <Topbar title={topbarTitle} meta={topbarMeta} onSearch={() => setPaletteOpen(true)} onAppearance={() => setAppearanceOpen(true)} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo')} onFocus={() => openFocus()} focusActive={Boolean(focusData?.activeSession)} />
         <main className="main-content" id="main-content" ref={mainRef} tabIndex={-1}>

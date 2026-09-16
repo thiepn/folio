@@ -1,7 +1,7 @@
 {
   "name": "folio",
   "private": true,
-  "version": "1.6.0",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,12 +12,13 @@
     "validate:release": "node scripts/validate-release.mjs",
     "validate:daily": "node scripts/validate-daily-workflow.mjs",
     "validate:dist": "node scripts/validate-dist.mjs",
-    "release:verify": "npm run validate:final && npm run validate:release && npm run validate:daily && npm run validate:task-project && npm run validate:planner && npm run validate:reviews-history && npm run validate:habits-focus && npm run typecheck && npm run build && npm run validate:dist",
+    "release:verify": "npm run validate:final && npm run validate:release && npm run validate:daily && npm run validate:task-project && npm run validate:planner && npm run validate:reviews-history && npm run validate:habits-focus && npm run validate:command-first && npm run typecheck && npm run build && npm run validate:dist",
     "manifest:release": "node scripts/generate-release-manifest.mjs",
     "validate:task-project": "node scripts/validate-task-project-workflow.mjs",
     "validate:planner": "node scripts/validate-planner-overhaul.mjs",
     "validate:reviews-history": "node scripts/validate-reviews-history.mjs",
-    "validate:habits-focus": "node scripts/validate-habits-focus.mjs"
+    "validate:habits-focus": "node scripts/validate-habits-focus.mjs",
+    "validate:command-first": "node scripts/validate-command-first.mjs"
   },
   "dependencies": {
     "dexie": "4.2.0",

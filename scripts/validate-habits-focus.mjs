@@ -27,7 +27,7 @@ const app = read('src/app/App.tsx')
 const styles = read('src/styles/index.css')
 const interop = read('src/features/interop/InteroperabilityModal.tsx')
 
-check('v1.6 package version', pkg.version === '1.6.0')
+check('v1.6+ package version', Number(pkg.version.split('.')[1] ?? 0) >= 6)
 check('habits-focus validator registered', pkg.scripts?.['validate:habits-focus'] === 'node scripts/validate-habits-focus.mjs')
 check('release gate runs habits-focus validation', pkg.scripts?.['release:verify']?.includes('validate:habits-focus'))
 check('database schema v15', /DATABASE_SCHEMA_VERSION\s*=\s*15\b/.test(database))

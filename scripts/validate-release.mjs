@@ -13,7 +13,7 @@ const check = (name, ok, detail = '') => {
 }
 
 const pkg = JSON.parse(read('package.json'))
-check('release version is 1.6.0', pkg.version === '1.6.0', pkg.version)
+check('release version is 1.7.0', pkg.version === '1.7.0', pkg.version)
 check('GitHub Pages homepage configured', pkg.homepage === 'https://thiepn.github.io/folio/', pkg.homepage)
 check('release verification script registered', pkg.scripts?.['release:verify']?.includes('validate:dist'))
 
