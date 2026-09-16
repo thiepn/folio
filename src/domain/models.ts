@@ -20,6 +20,7 @@ export type DailyPlanStatus = 'draft' | 'committed'
 export type DailyPlanBucket = 'must' | 'planned' | 'optional'
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'after-completion'
 export type RecurringSeriesStatus = 'active' | 'paused' | 'archived'
+export type ReviewKind = 'daily' | 'weekly' | 'monthly'
 
 export interface TaskEntity {
   id: EntityId
@@ -211,6 +212,35 @@ export interface DailyPlanItemEntity {
   sortOrder: number
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
+}
+
+export interface ReviewRecordMetrics {
+  plannedTasks: number
+  completedPlannedTasks: number
+  completedTasks: number
+  focusSeconds: number
+  focusSessions: number
+  habitCompletions: number
+  scheduledMinutes: number
+  completedMilestones: number
+  activeProjects: number
+}
+
+export interface ReviewRecordEntity {
+  id: EntityId
+  kind: ReviewKind
+  periodStart: LocalDate
+  periodEnd: LocalDate
+  title: string
+  summary: string
+  wins: string
+  friction: string
+  lessons: string
+  nextFocus: string
+  metrics: ReviewRecordMetrics
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+  completedAt: IsoDateTime
 }
 
 export interface ProvenanceEntityRef {

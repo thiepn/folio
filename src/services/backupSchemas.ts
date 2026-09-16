@@ -11,8 +11,12 @@ export const backupTaskSchema = z.object({
   lastOpenStatus: z.enum(['inbox','todo']).optional(), plannedDate: localDate.optional(), deadline: localDate.optional(), estimatedMinutes: z.number().int().positive().optional(),
   seriesId: id.optional(), recurrenceDate: localDate.optional(), blockedByTaskIds: z.array(id).default([]), sortOrder: z.number(), rescheduleCount: z.number().int().nonnegative(), createdAt: iso, updatedAt: iso, completedAt: iso.optional(), deletedAt: iso.optional(),
 })
+const backupProjectMilestoneSchema = z.object({ id, title: z.string(), dueDate: localDate.optional(), completedAt: iso.optional(), sortOrder: z.number(), createdAt: iso, updatedAt: iso })
+const backupProjectActivitySchema = z.object({ id, kind: z.enum(['project','milestone']), label: z.string(), at: iso })
 export const backupProjectSchema = z.object({
-  id, name: z.string(), description: z.string(), color: z.string().optional(), icon: z.string().optional(), type: z.enum(['standard','academic']), archived: z.boolean(), archivedAt: iso.optional(), favorite: z.boolean(), examDate: localDate.optional(), weeklyTargetMinutes: z.number().int().positive().optional(), createdAt: iso, updatedAt: iso,
+  id, name: z.string(), description: z.string(), notes: z.string().default(''), color: z.string().optional(), icon: z.string().optional(), type: z.enum(['standard','academic']),
+  status: z.enum(['active','on-hold','completed']).default('active'), deadline: localDate.optional(), nextActionTaskId: id.optional(), milestones: z.array(backupProjectMilestoneSchema).default([]), activity: z.array(backupProjectActivitySchema).default([]), completedAt: iso.optional(),
+  archived: z.boolean(), archivedAt: iso.optional(), favorite: z.boolean(), examDate: localDate.optional(), weeklyTargetMinutes: z.number().int().positive().optional(), createdAt: iso, updatedAt: iso,
 })
 export const backupHabitSchema = z.object({
   id, title: z.string(), description: z.string(), kind: z.enum(['check','duration']), target: z.number().int().positive(), schedule: z.object({ type: z.enum(['daily','weekdays','selected-days','times-per-week']), weekdays: z.array(z.number().int().min(0).max(6)).optional(), timesPerWeek: z.number().int().min(1).max(7).optional() }), countsTowardCapacity: z.boolean(), archived: z.boolean(), archivedAt: iso.optional(), sortOrder: z.number(), createdAt: iso, updatedAt: iso,
@@ -37,3 +41,9 @@ const snapshot = z.object({ type: z.enum(['project','task','habit','timeBlock','
 export const backupImportBatchSchema = z.object({ id, title: z.string(), source: z.enum(['chatgpt','file','clipboard','system']), status: z.enum(['previewed','applied','reverted','failed']), affectedEntities: z.array(z.object({ type: provenanceType, id })), createdSnapshots: z.array(snapshot), priorDailyPlans: z.array(z.object({ date: localDate, before: backupDailyPlanSchema.optional() })), createdAt: iso, updatedAt: iso, revertedAt: iso.optional(), errorMessage: z.string().optional() })
 export const backupPatchBatchSchema = z.object({ id, title: z.string(), source: z.enum(['chatgpt','file','clipboard','system']), status: z.enum(['previewed','applied','reverted','failed']), operations: z.array(z.object({ operationId: id, op: z.enum(['create','update','delete']), entity: provenanceType, targetId: id, label: z.string() })), beforeSnapshots: z.array(snapshot), afterSnapshots: z.array(snapshot), createdAt: iso, updatedAt: iso, revertedAt: iso.optional(), errorMessage: z.string().optional() })
 export const backupCalendarBatchSchema = z.object({ id, source: z.enum(['ics-file','ics-paste']), fileName: z.string().optional(), calendarName: z.string().optional(), status: z.enum(['applied','reverted','failed']), events: z.array(z.object({ uid: z.string().optional(), sourceKey: z.string().optional(), fingerprint: z.string(), timeBlockId: id, original: backupTimeBlockSchema })), createdAt: iso, updatedAt: iso, revertedAt: iso.optional(), errorMessage: z.string().optional() })
+
+export const backupReviewRecordSchema = z.object({
+  id, kind: z.enum(['daily','weekly','monthly']), periodStart: localDate, periodEnd: localDate, title: z.string(), summary: z.string(), wins: z.string(), friction: z.string(), lessons: z.string(), nextFocus: z.string(),
+  metrics: z.object({ plannedTasks: z.number().int().nonnegative(), completedPlannedTasks: z.number().int().nonnegative(), completedTasks: z.number().int().nonnegative(), focusSeconds: z.number().nonnegative(), focusSessions: z.number().int().nonnegative(), habitCompletions: z.number().int().nonnegative(), scheduledMinutes: z.number().int().nonnegative(), completedMilestones: z.number().int().nonnegative(), activeProjects: z.number().int().nonnegative() }),
+  createdAt: iso, updatedAt: iso, completedAt: iso,
+})

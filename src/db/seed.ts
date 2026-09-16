@@ -19,7 +19,7 @@ export async function seedDatabaseIfNeeded() {
 export async function installDemoWorkspace() {
   const entityCounts = await Promise.all([
     db.tasks.count(), db.projects.count(), db.habits.count(), db.habitEntries.count(), db.timeBlocks.count(),
-    db.dailyPlans.count(), db.dailyPlanItems.count(), db.focusSessions.count(), db.recurringSeries.count(),
+    db.dailyPlans.count(), db.dailyPlanItems.count(), db.focusSessions.count(), db.recurringSeries.count(), db.reviewRecords.count(),
   ])
   if (entityCounts.some(Boolean)) {
     throw new Error('Demo workspace can only be loaded into an empty workspace.')
