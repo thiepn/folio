@@ -18,6 +18,28 @@ export function addLocalDays(dateKey: LocalDate, days: number): LocalDate {
   return localDateKey(date)
 }
 
+export function addLocalMonths(dateKey: LocalDate, months: number): LocalDate {
+  const date = localDateToDate(dateKey)
+  const originalDay = date.getDate()
+  date.setDate(1)
+  date.setMonth(date.getMonth() + months)
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0, 12).getDate()
+  date.setDate(Math.min(originalDay, lastDay))
+  return localDateKey(date)
+}
+
+export function startOfLocalMonth(dateKey: LocalDate): LocalDate {
+  const date = localDateToDate(dateKey)
+  date.setDate(1)
+  return localDateKey(date)
+}
+
+export function endOfLocalMonth(dateKey: LocalDate): LocalDate {
+  const date = localDateToDate(dateKey)
+  date.setMonth(date.getMonth() + 1, 0)
+  return localDateKey(date)
+}
+
 /** Monday-first week, matching the product's European planning model. */
 export function startOfLocalWeek(dateKey: LocalDate): LocalDate {
   const date = localDateToDate(dateKey)
@@ -33,6 +55,10 @@ export function endOfLocalWeek(dateKey: LocalDate): LocalDate {
 
 export function localDateRange(start: LocalDate, days: number): LocalDate[] {
   return Array.from({ length: days }, (_, index) => addLocalDays(start, index))
+}
+
+export function localMonthGrid(dateKey: LocalDate): LocalDate[] {
+  return localDateRange(startOfLocalWeek(startOfLocalMonth(dateKey)), 42)
 }
 
 export function atLocalTime(dateKey: LocalDate, hours: number, minutes = 0): string {

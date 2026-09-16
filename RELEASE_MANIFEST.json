@@ -1,16 +1,17 @@
 {
   "product": "Folio",
   "repository": "thiepn/folio",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "databaseSchema": 13,
-  "releaseType": "task-project-workflow",
-  "generatedAt": "2026-09-16T14:00:32.999Z",
-  "sourceTreeSha256": "981ac524f972555fd721e72ab5dd95d7406c1edb47a5aa59cbe237c678db1f52",
+  "releaseType": "planner-overhaul",
+  "generatedAt": "2026-09-16T14:15:16.263Z",
+  "sourceTreeSha256": "6f53c8c2e53bd874676e13d50d206fdcb476b9107f176a76a5105b5cf9b34b52",
   "validation": {
-    "finalReleaseContract": "55/55 PASS",
+    "finalReleaseContract": "56/56 PASS",
     "releaseHardeningContract": "38/38 PASS",
     "dailyWorkflowContract": "16/16 PASS",
     "taskProjectWorkflowContract": "19/19 PASS",
+    "plannerOverhaulContract": "21/21 PASS",
     "dependencyBackedProductionBuild": "PASS — GitHub Actions",
     "githubPagesDeployment": "PASS — GitHub Actions"
   },
@@ -26,12 +27,14 @@
     "legacyBackupImportPatchAcceptance": true
   },
   "highlights": [
-    "Project status, deadline, notes, next action, milestones, and activity history",
-    "Derived task completion progress rather than manually maintained project percentages",
-    "Project task filters for Open, Ready, Blocked, Completed, and All",
-    "Direct Today, Tomorrow, Later, Focus, and next-action task controls",
-    "Schema v13 migration that leaves task storage unchanged",
-    "Full final, release-hardening, daily-workflow, task-project, typecheck, production-build, and dist validation gate",
+    "Agenda, Day, Week, Month, exact-time Calendar, and Forecast planning modes",
+    "Planned work dates and hard deadlines remain visibly and behaviorally separate",
+    "42-day month workload map with drag-to-date planning and deadline counts",
+    "Week planning decisions surface due-but-unplanned work with capacity-aware placement suggestions",
+    "Unscheduled backlog is available directly beside Day, Week, and Month planning",
+    "Keyboard rescheduling supports Shift+Arrow and Shift+Backspace without changing deadlines",
+    "Schema v13 retained with no v1.4 migration",
+    "Full final, release-hardening, daily-workflow, task-project, planner-overhaul, typecheck, production-build, and dist validation gate",
     "GitHub Pages deployment verified from main"
   ],
   "files": [
@@ -52,8 +55,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 4856,
-      "sha256": "3c849a0aa98d4b201f686c9abce2ea402eb91e5182c14d99f1cd2fc447b53e23"
+      "bytes": 5328,
+      "sha256": "8b66efdd7acea4e3b916e05e09bf79aa4ca962c9977b21b798376b6a907e80e9"
     },
     {
       "path": "docs/ACCESSIBILITY_PERFORMANCE_RELIABILITY.md",
@@ -161,6 +164,11 @@
       "sha256": "de540d9d320fd5461e905595dccc55fcc15189d6ebe8233f19963121a7654801"
     },
     {
+      "path": "docs/PLANNER_OVERHAUL_V1_4.md",
+      "bytes": 2622,
+      "sha256": "e35182910a9d6d2f26bd868a4a2e3d9248676ddb1ddf593e3b244565af4ddeb7"
+    },
+    {
       "path": "docs/PORTABILITY_AND_RECOVERY.md",
       "bytes": 2046,
       "sha256": "5f7628a16bb4916d57dd83d402e79a5cb09617dad5e217cdf7633479e6a1d79d"
@@ -223,12 +231,12 @@
     {
       "path": "package-lock.json",
       "bytes": 62456,
-      "sha256": "d17939b588ee6279d64964a66f6545a6014673b2098459c96dca92cdd1f4d441"
+      "sha256": "af0fb33b7f53b9eb5c2c508286bb75a8faa55e9af8733e887ab6231b12e538f5"
     },
     {
       "path": "package.json",
-      "bytes": 1613,
-      "sha256": "a5eacc4a45e69a243c5db126d818d22ec38d4476848cb5edbdff9725fc97bb7c"
+      "bytes": 1711,
+      "sha256": "049a6d433cdd96a6902ed3686680fe08596d6f43ebfb39df34a8c93c140ec1b0"
     },
     {
       "path": "public/.nojekyll",
@@ -297,8 +305,8 @@
     },
     {
       "path": "scripts/generate-release-manifest.mjs",
-      "bytes": 2719,
-      "sha256": "c9b0e5b4573e7b96cce8804455b8ed6a41f08320465cc680b5ce1f0f23d5489e"
+      "bytes": 2971,
+      "sha256": "7bebb29de950fa2b2aa21040ae22c3c8d7b6b16626f6b265fb29d5a93d527aea"
     },
     {
       "path": "scripts/validate-daily-workflow.mjs",
@@ -313,17 +321,22 @@
     {
       "path": "scripts/validate-final.mjs",
       "bytes": 7630,
-      "sha256": "cd305c62637649975cc451b14780ebd1f73ea6878836c8100ca84b485a957d11"
+      "sha256": "04073997e796dc7e8492d9984d0ddaea079e38b4278d1cdd60ae62a021a7b5fe"
+    },
+    {
+      "path": "scripts/validate-planner-overhaul.mjs",
+      "bytes": 3685,
+      "sha256": "35779b96f5357fe3b1437a7bc6c659f057bd4684742f047649333f96126fc6f7"
     },
     {
       "path": "scripts/validate-release.mjs",
       "bytes": 4204,
-      "sha256": "d38ff310289b89bd469ff5d4aa9b34059878cb4d39afa31a43fc903767891385"
+      "sha256": "bc5c4e77e0b9d99f4c117fed1cd206faccfebd33427f8cd9334c94b8c1af2675"
     },
     {
       "path": "scripts/validate-task-project-workflow.mjs",
-      "bytes": 3849,
-      "sha256": "ecdd5e14a31c04d356cef1c6820c6f13e1adf677c3c0eb55f79023d0adc3dca0"
+      "bytes": 3907,
+      "sha256": "a01e8e8cc49cca7ee5c62f984354964943c70cffdd10e355a81ca5f49d4332a9"
     },
     {
       "path": "src/adapters/uiAdapters.ts",
@@ -467,8 +480,8 @@
     },
     {
       "path": "src/domain/date.ts",
-      "bytes": 2338,
-      "sha256": "01f5017920e6bffb603e15aa977b876e68e652cd79f9e19e34db69b5ffa763d3"
+      "bytes": 3193,
+      "sha256": "3462f0e2ccf22ed97355379960de6618910d0541b5b1111f4764a8b04fe4dd32"
     },
     {
       "path": "src/domain/habit.ts",
@@ -612,13 +625,18 @@
     },
     {
       "path": "src/features/planner/CalendarView.tsx",
-      "bytes": 18361,
-      "sha256": "b6ee8834e9f0b3712f482ab5cc16e3d6ab388b935627ba8927e08cd620bf7b8f"
+      "bytes": 18751,
+      "sha256": "98266f4223b7ff84d51ada8b5ec0fa3154d89d0a26591be5b761761245b451c2"
+    },
+    {
+      "path": "src/features/planner/PlannerOverhaulViews.tsx",
+      "bytes": 24251,
+      "sha256": "2243df1d1fae17d1a0c87c72a2be052203e656cbce0bb804cc37ec90c2f20b72"
     },
     {
       "path": "src/features/planner/PlannerView.tsx",
-      "bytes": 16625,
-      "sha256": "69451929c26e0cbfb15780b701fcbc0e24e82cd0b7570938f44092e09afbc6b2"
+      "bytes": 6253,
+      "sha256": "3d77ddcf1652f752c7826cd2d3c99c3647774e64b706f9360cfb9d4295a7e2e9"
     },
     {
       "path": "src/features/planner/TimeBlockModal.tsx",
@@ -652,8 +670,8 @@
     },
     {
       "path": "src/features/planner/plannerLogic.ts",
-      "bytes": 3643,
-      "sha256": "3d66a7bcf0c8e9f4d12dfff1b19cfab5989e7de595edfea4f569ee4671c4539e"
+      "bytes": 5436,
+      "sha256": "af61a9f4829837ecec2b5489a3550034e3b3421b6fd0d7909b5effa6c808f487"
     },
     {
       "path": "src/features/power/BulkActionBar.tsx",
@@ -817,8 +835,8 @@
     },
     {
       "path": "src/hooks/usePlannerData.ts",
-      "bytes": 3874,
-      "sha256": "c74e1adb3d85089da14b7abbff03c2d48e44f9203411c1530804696d7a55be58"
+      "bytes": 5787,
+      "sha256": "488681708c65755643dfe0cb598a5184beaf7383198fc1b381878895a6dff762"
     },
     {
       "path": "src/hooks/usePwaState.ts",
@@ -1097,8 +1115,8 @@
     },
     {
       "path": "src/styles/index.css",
-      "bytes": 251,
-      "sha256": "e4cf23119573b2a9eb57ee9035b3d93b502345ca24da5eeeb9f2156ea9ef135c"
+      "bytes": 285,
+      "sha256": "cfee36ff80977c85b8751a6d2fddd40254e3369a70cef67da86d003ba6e13d3a"
     },
     {
       "path": "src/styles/layout.css",
@@ -1109,6 +1127,11 @@
       "path": "src/styles/mobile.css",
       "bytes": 22183,
       "sha256": "f30dbd36dd42466e004ed8cb58d993eca40726e30dbf1633d73476277dfb2131"
+    },
+    {
+      "path": "src/styles/planner-overhaul.css",
+      "bytes": 12726,
+      "sha256": "fe150c583240e58e6aea240f2ce3717efff469d3bf88b4b326903534568a10bb"
     },
     {
       "path": "src/styles/polish.css",
