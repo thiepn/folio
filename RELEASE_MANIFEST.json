@@ -4,10 +4,10 @@
   "version": "1.3.0",
   "databaseSchema": 13,
   "releaseType": "task-project-workflow",
-  "generatedAt": "2026-09-16T13:56:41.018Z",
-  "sourceTreeSha256": "f7ab93a5b6358503db92647383342c8c5e136d20c4acf62894c6b33c24b3bb48",
+  "generatedAt": "2026-09-16T14:00:32.999Z",
+  "sourceTreeSha256": "981ac524f972555fd721e72ab5dd95d7406c1edb47a5aa59cbe237c678db1f52",
   "validation": {
-    "finalReleaseContract": "54/54 PASS",
+    "finalReleaseContract": "55/55 PASS",
     "releaseHardeningContract": "38/38 PASS",
     "dailyWorkflowContract": "16/16 PASS",
     "taskProjectWorkflowContract": "19/19 PASS",
@@ -297,8 +297,8 @@
     },
     {
       "path": "scripts/generate-release-manifest.mjs",
-      "bytes": 2878,
-      "sha256": "fac3b8aff81ba8ddaf9470338c805361e5054c544fbf1a2faa50ad1dfd0197fa"
+      "bytes": 2719,
+      "sha256": "c9b0e5b4573e7b96cce8804455b8ed6a41f08320465cc680b5ce1f0f23d5489e"
     },
     {
       "path": "scripts/validate-daily-workflow.mjs",
