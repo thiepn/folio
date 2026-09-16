@@ -23,79 +23,10 @@ jobs:
           node-version: '22'
           package-manager-cache: false
 
-      - name: Apply v1.3 core integration
-        run: node scripts/apply-v13-core.mjs
-
-      - name: Make inherited Daily Workflow contract forward compatible
-        shell: bash
+      - name: Apply v1.3 integration
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('scripts/validate-daily-workflow.mjs')
-          text = p.read_text()
-          old1 = "check('v1.2 package version', pkg.version === '1.2.0')"
-          new1 = "check('v1.2+ package version', Number(pkg.version.split('.')[1] ?? 0) >= 2)"
-          old2 = "check('v12 data model retained', /DATABASE_SCHEMA_VERSION\\s*=\\s*12\\b/.test(database))"
-          new2 = "check('daily workflow compatible schema', Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1] ?? 0) >= 12)"
-          if text.count(old1) != 1 or text.count(old2) != 1:
-              raise SystemExit('Daily Workflow validator anchors changed unexpectedly')
-          p.write_text(text.replace(old1, new1).replace(old2, new2))
-          PY
-
-      - name: Update v13 project constructors and fixtures
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          # Demo projects must satisfy the canonical v13 ProjectEntity shape.
-          p = Path('src/db/seed.ts')
-          text = p.read_text()
-          text, count = re.subn(
-              r"(description: '[^']*', )color:",
-              r"\1notes: '', status: 'active', milestones: [], activity: [], color:",
-              text,
-          )
-          if count != 4:
-              raise SystemExit(f'seed.ts: expected 4 project fixture updates, found {count}')
-          p.write_text(text)
-
-          # Logic-case fixtures remain intentionally minimal, but canonical.
-          for path in ['src/features/planner/advancedPlanningCases.ts', 'src/features/review/reviewLogicCases.ts']:
-              p = Path(path)
-              text = p.read_text()
-              old = "description: '', type: 'academic'"
-              new = "description: '', notes: '', type: 'academic', status: 'active', milestones: [], activity: []"
-              if text.count(old) != 1:
-                  raise SystemExit(f'{path}: expected one academic project fixture')
-              p.write_text(text.replace(old, new, 1))
-
-          # Factory-created projects receive complete v13 execution defaults.
-          p = Path('src/services/entityFactory.ts')
-          text = p.read_text()
-          old = """    description: parsed.description,
-    color: parsed.color,
-    icon: parsed.icon,
-    type: parsed.type,
-    archived: false,
-    favorite: parsed.favorite,"""
-          new = """    description: parsed.description,
-    notes: parsed.notes,
-    color: parsed.color,
-    icon: parsed.icon,
-    type: parsed.type,
-    status: parsed.status,
-    deadline: parsed.deadline,
-    milestones: [],
-    activity: [{ id: crypto.randomUUID(), kind: 'project', label: 'Project created', at: now }],
-    completedAt: parsed.status === 'completed' ? now : undefined,
-    archived: false,
-    favorite: parsed.favorite,"""
-          if text.count(old) != 1:
-              raise SystemExit('entityFactory.ts: project factory anchor changed unexpectedly')
-          p.write_text(text.replace(old, new, 1))
-          PY
+          node scripts/apply-v13-core.mjs
+          node scripts/apply-v13-followup.mjs
 
       - name: Refresh lockfile metadata
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
@@ -108,7 +39,7 @@ jobs:
 
       - name: Remove staging helpers and refresh manifest
         run: |
-          rm scripts/apply-v13-core.mjs .github/workflows/apply-v13-task-project.yml
+          rm scripts/apply-v13-core.mjs scripts/apply-v13-followup.mjs .github/workflows/apply-v13-task-project.yml
           npm run manifest:release
 
       - name: Commit verified v1.3 branch
