@@ -23,10 +23,10 @@ jobs:
           node-version: 22
 
       - name: Integrate Daily Workflow
-        run: node scripts/integrate-v12-daily.mjs
+        run: node scripts/integrate-v12-daily-fixed.mjs
 
       - name: Remove staging helpers
-        run: rm scripts/integrate-v12-daily.mjs .github/workflows/finish-v12-daily.yml
+        run: rm scripts/integrate-v12-daily.mjs scripts/integrate-v12-daily-fixed.mjs .github/workflows/finish-v12-daily.yml
 
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
