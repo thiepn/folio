@@ -26,6 +26,22 @@ jobs:
       - name: Apply v1.3 core integration
         run: node scripts/apply-v13-core.mjs
 
+      - name: Make inherited Daily Workflow contract forward compatible
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/validate-daily-workflow.mjs')
+          text = p.read_text()
+          old1 = "check('v1.2 package version', pkg.version === '1.2.0')"
+          new1 = "check('v1.2+ package version', Number(pkg.version.split('.')[1] ?? 0) >= 2)"
+          old2 = "check('v12 data model retained', /DATABASE_SCHEMA_VERSION\\s*=\\s*12\\b/.test(database))"
+          new2 = "check('daily workflow compatible schema', Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1] ?? 0) >= 12)"
+          if text.count(old1) != 1 or text.count(old2) != 1:
+              raise SystemExit('Daily Workflow validator anchors changed unexpectedly')
+          p.write_text(text.replace(old1, new1).replace(old2, new2))
+          PY
+
       - name: Refresh lockfile metadata
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
