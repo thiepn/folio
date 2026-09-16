@@ -18,7 +18,7 @@ function finalizedSeconds(session: FocusSessionEntity) {
 }
 
 export const focusService = {
-  async start(taskId: string, mode: FocusMode, targetSeconds?: number): Promise<FocusSessionEntity> {
+  async start(taskId: string, mode: FocusMode, targetSeconds?: number, plannedSeconds?: number, intention?: string): Promise<FocusSessionEntity> {
     const active = await focusSessionRepository.getActive()
     if (active) throw new Error('Another focus session is already active.')
     const task = await taskRepository.get(taskId)
@@ -34,6 +34,8 @@ export const focusService = {
       projectNameSnapshot: project?.name,
       mode,
       targetSeconds: mode === 'countdown' ? targetSeconds : undefined,
+      plannedSeconds: plannedSeconds ?? (mode === 'countdown' ? targetSeconds : undefined),
+      intention: intention?.trim() || undefined,
     })
   },
 
@@ -56,7 +58,7 @@ export const focusService = {
     return focusSessionRepository.update(id, { status: 'running', resumedAt: nowIso() })
   },
 
-  async finish(id: string): Promise<FocusSessionEntity> {
+  async finish(id: string, note?: string): Promise<FocusSessionEntity> {
     const session = await requireSession(id)
     if (session.status === 'finished') return session
     const endedAt = nowIso()
@@ -65,6 +67,7 @@ export const focusService = {
       durationSeconds: finalizedSeconds(session),
       resumedAt: undefined,
       endedAt,
+      note: note?.trim() || session.note,
     })
   },
 
