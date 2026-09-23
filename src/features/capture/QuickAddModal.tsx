@@ -121,7 +121,7 @@ export function QuickAddModal({ open, projects, lists, defaultStatus = 'todo', d
     setEstimatedMinutes(parsed.estimatedMinutes)
     setStartMinute(parsed.startMinute)
     setTagsText(parsed.tags.join(', '))
-  }, [capture, open, batchMode]) // Parser rehydrates details only when capture changes.
+  }, [capture, open, batchMode, parsed, defaultListId, initialPlannedDate])
 
   function currentSingleRequest(): CaptureCreateRequest {
     const tags = [...new Set(tagsText.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean))].slice(0, 50)
@@ -232,7 +232,7 @@ export function QuickAddModal({ open, projects, lists, defaultStatus = 'todo', d
 
         {capture.trim() ? (batchMode ? <BatchLedger items={batch} /> : <ParseLedger parsed={parsed} lists={lists} />) : <div className="capture-intro">
           <span className="capture-intro__mark" />
-          <p>Write naturally. Folio recognizes dates, times, duration, priority, project, tags, recurrence and reminders locally. Paste multiple lines to capture a list.</p>
+          <p>Write naturally. Folio recognizes dates, times, duration, priority, project, list, tags, recurrence and reminders locally. Paste multiple lines to capture a list.</p>
         </div>}
 
         {helpOpen ? <div className="capture-syntax">
@@ -240,7 +240,7 @@ export function QuickAddModal({ open, projects, lists, defaultStatus = 'todo', d
           <div className="capture-syntax-grid">
             {CAPTURE_SYNTAX_EXAMPLES.map((item) => <div key={item.syntax}><code>{item.syntax}</code><span>{item.meaning}</span></div>)}
           </div>
-          <p><code>~Project</code> is the preferred project selector. Legacy <code>#Project</code> still selects a uniquely matching project; other <code>#words</code> become task tags. Ambiguous project matches are warned rather than guessed.</p>
+          <p><code>~Project</code> selects a project and <code>^List</code> selects a list. Legacy <code>#Project</code> still selects a uniquely matching project; other <code>#words</code> become global task tags. Ambiguous matches are warned rather than guessed.</p>
         </div> : null}
 
         {detailsOpen && !batchMode ? <div className="quick-details">
