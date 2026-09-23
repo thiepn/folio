@@ -1,6 +1,6 @@
 import { db, DATABASE_SCHEMA_VERSION } from '../db/database'
 import { backupEnvelopeSchema } from '../domain/schemas'
-import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema, backupReviewRecordSchema } from './backupSchemas'
+import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema, backupReviewRecordSchema, backupReminderSchema, backupReminderOccurrenceSchema } from './backupSchemas'
 import type {
   CalendarImportBatchEntity,
   DailyPlanEntity,
@@ -12,6 +12,8 @@ import type {
   PatchBatchEntity,
   ProjectEntity,
   RecurringSeriesEntity,
+  ReminderEntity,
+  ReminderOccurrenceEntity,
   ReviewRecordEntity,
   SettingEntity,
   TaskEntity,
@@ -39,6 +41,8 @@ export interface BackupEnvelope {
     patchBatches: PatchBatchEntity[]
     calendarImportBatches: CalendarImportBatchEntity[]
     reviewRecords: ReviewRecordEntity[]
+    reminders: ReminderEntity[]
+    reminderOccurrences: ReminderOccurrenceEntity[]
   }
 }
 
@@ -50,7 +54,7 @@ export interface BackupPreview {
 
 const TABLE_KEYS = [
   'tasks', 'projects', 'habits', 'habitEntries', 'timeBlocks', 'dailyPlans', 'dailyPlanItems',
-  'focusSessions', 'recurringSeries', 'settings', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords',
+  'focusSessions', 'recurringSeries', 'settings', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords', 'reminders', 'reminderOccurrences',
 ] as const
 
 function objectRow(value: unknown, label: string): Record<string, unknown> {
@@ -114,6 +118,8 @@ function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): Ba
       patchBatches: (raw.data.patchBatches ?? []).map((row) => backupPatchBatchSchema.parse(row)) as PatchBatchEntity[],
       calendarImportBatches: (raw.data.calendarImportBatches ?? []).map((row) => backupCalendarBatchSchema.parse(row)) as CalendarImportBatchEntity[],
       reviewRecords: (raw.data.reviewRecords ?? []).map((row) => backupReviewRecordSchema.parse(row)) as ReviewRecordEntity[],
+      reminders: (raw.data.reminders ?? []).map((row) => backupReminderSchema.parse(row)) as ReminderEntity[],
+      reminderOccurrences: (raw.data.reminderOccurrences ?? []).map((row) => backupReminderOccurrenceSchema.parse(row)) as ReminderOccurrenceEntity[],
     },
   }
 }
@@ -134,6 +140,8 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
   uniqueIds(data.patchBatches, 'patchBatches')
   uniqueIds(data.calendarImportBatches, 'calendarImportBatches')
   uniqueIds(data.reviewRecords, 'reviewRecords')
+  const reminderIds = uniqueIds(data.reminders, 'reminders')
+  uniqueIds(data.reminderOccurrences, 'reminderOccurrences')
 
   const warnings: string[] = []
   for (const task of data.tasks) {
@@ -165,6 +173,15 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
     if (session.taskId && !taskIds.has(session.taskId)) warnings.push(`Focus session ${session.id} references a task that is no longer present; historical snapshot data will be retained.`)
   }
   for (const series of data.recurringSeries) if (series.taskTemplate.projectId && !projectIds.has(series.taskTemplate.projectId)) throw new Error(`Recurring series “${series.title}” references a missing project.`)
+  for (const reminder of data.reminders) {
+    if (reminder.ownerType === 'task' && !taskIds.has(reminder.ownerId)) throw new Error(`Reminder ${reminder.id} references a missing task.`)
+    if (reminder.ownerType === 'series' && !seriesIds.has(reminder.ownerId)) throw new Error(`Reminder ${reminder.id} references a missing recurring series.`)
+    if (reminder.ownerType === 'habit' && !habitIds.has(reminder.ownerId)) throw new Error(`Reminder ${reminder.id} references a missing habit.`)
+  }
+  for (const occurrence of data.reminderOccurrences) {
+    if (!reminderIds.has(occurrence.reminderId)) throw new Error(`Reminder occurrence ${occurrence.id} references a missing reminder.`)
+    if (occurrence.targetTaskId && !taskIds.has(occurrence.targetTaskId)) warnings.push(`Reminder occurrence ${occurrence.id} references a task that is no longer present; the historical alert record will be retained.`)
+  }
 
   if (backup.version < DATABASE_SCHEMA_VERSION) warnings.push(`Backup schema v${backup.version} will be restored into current schema v${DATABASE_SCHEMA_VERSION}. Missing newer provenance collections will be initialized empty.`)
   const activeFocus = data.focusSessions.filter((session) => session.status === 'running' || session.status === 'paused')
@@ -174,16 +191,17 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
 }
 
 export async function createBackup(): Promise<BackupEnvelope> {
-  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords] = await Promise.all([
+  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences] = await Promise.all([
     db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(),
     db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(),
     db.settings.toArray(), db.importBatches.toArray(), db.patchBatches.toArray(), db.calendarImportBatches.toArray(), db.reviewRecords.toArray(),
+    db.reminders.toArray(), db.reminderOccurrences.toArray(),
   ])
   return {
     format: 'folio-backup',
     version: DATABASE_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords },
+    data: { tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences },
   }
 }
 
@@ -206,7 +224,7 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
   const d = verified.backup.data
   await db.transaction('rw', [
     db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
-    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords,
+    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords, db.reminders, db.reminderOccurrences,
   ], async () => {
       await Promise.all(TABLE_KEYS.map((key) => (db[key] as any).clear()))
       await db.projects.bulkPut(d.projects)
@@ -223,6 +241,8 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
       await db.patchBatches.bulkPut(d.patchBatches)
       await db.calendarImportBatches.bulkPut(d.calendarImportBatches)
       await db.reviewRecords.bulkPut(d.reviewRecords)
+      await db.reminders.bulkPut(d.reminders)
+      await db.reminderOccurrences.bulkPut(d.reminderOccurrences)
     },
   )
 }
