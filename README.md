@@ -132,6 +132,16 @@ Schema v19 migrates every existing task/series tag into canonical Tag entities w
 
 See `docs/ORGANIZATION_V2_D5.md`.
 
+## D6 — Advanced Filters, Smart Lists & Dynamic Views
+
+Folio now has one canonical Smart View engine for reusable live queries. Smart Views support nested AND/OR groups with optional NOT, filters across status/completion/priority/project/list/section/nested tags/dates/recurrence/readiness/estimate/reminder state/pinning/text, root-or-all-depth scope, ordered multi-field sorting, custom grouping, duplication, deletion, live counts, and sidebar pinning.
+
+The old Planner Saved Views editor has been retired. Built-in collections such as No list, Blocked work, Due soon and Has reminders use the same D6 query engine as custom views. Existing legacy `planning.savedViews` data is migrated in place without freezing relative filters such as Today or Next 7 days.
+
+D6 is a derived-query layer over existing task data, so IndexedDB remains schema v19 and Smart Views continue to be covered by normal settings backup/restore.
+
+See `docs/SMART_VIEWS_V2_D6.md`.
+
 ## Data and privacy
 
 Planner data is local-first in IndexedDB. The current database schema is **v19**. Full backups export schema v19, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, folders/lists/sections/tags, and durable review records; direct restore supports compatible backups from **v8 through v19**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
