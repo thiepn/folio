@@ -43,6 +43,7 @@ check('query engine supports multi-sort',engine.includes('for(const rule of rule
 check('missing sort values stay last in both directions',engine.includes('function compareOptional')&&engine.includes('if(a===undefined)return 1'))
 check('query engine supports root/all depth scope',engine.includes("view.scope==='root'")&&engine.includes('task.parentTaskId'))
 check('query engine caches dependency tag reminder context',engine.includes('interface SmartRuntime')&&engine.includes('prepareRuntime(context)'))
+check('multiple Smart Views share one prepared runtime',engine.includes('export function runSmartViews')&&engine.includes('const runtime=prepareRuntime(context)'))
 check('reminder query state ignores disabled definitions',engine.includes('enabledReminderIds')&&engine.includes('enabledReminderIds.has(occurrence.reminderId)'))
 
 check('built-ins use canonical query definitions',engine.includes('BUILTIN_SMART_VIEWS')&&engine.includes("id:'builtin-blocked'")&&engine.includes("id:'builtin-reminders'"))
@@ -57,7 +58,7 @@ check('saved views have bounded complexity',service.includes('MAX_VIEWS = 50')&&
 check('saved view duplicate names are rejected',service.includes('A smart view with that name already exists.'))
 check('saved views support duplicate and pin',service.includes('async duplicate(')&&service.includes('async duplicateDefinition(')&&service.includes('async togglePin('))
 
-check('app data computes live smart view results',appData.includes('runSmartView(view, smartContext)')&&appData.includes('smartViewResults'))
+check('app data computes live smart view results',appData.includes('runSmartViews(smartViews, smartContext)')&&appData.includes('smartViewResults'))
 check('app data includes reminders in query context',appData.includes('reminderRepository.listDefinitions()')&&appData.includes('reminderRepository.listAllOccurrences()'))
 check('app data exposes pinned smart views',appData.includes('pinnedSmartViews'))
 check('reminder repository exposes occurrence snapshot',reminders.includes('async listAllOccurrences()'))
