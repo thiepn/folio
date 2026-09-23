@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from 'react'
+import { useMemo, useState, type CSSProperties, type DragEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import type { ListEntity, SectionEntity } from '../../domain/models'
 import type { TaskPreview } from '../../types/ui'
@@ -53,7 +53,7 @@ export function KanbanBoard({
       {mode==='section'&&onAddColumn?<form onSubmit={(e)=>{e.preventDefault();const name=columnName.trim();if(!name)return;void Promise.resolve(onAddColumn(name)).then(()=>setColumnName(''))}}><input value={columnName} onChange={(e)=>setColumnName(e.target.value)} placeholder="New column"/><Button type="submit" disabled={!columnName.trim()}>Add column</Button></form>:null}
     </div>
 
-    <div className="kanban-board" style={{'--kanban-columns':Math.max(1,columns.length)} as React.CSSProperties}>
+    <div className="kanban-board" style={{'--kanban-columns':Math.max(1,columns.length)} as CSSProperties}>
       {columns.map((column)=><section
         className="kanban-column"
         key={column.id}
