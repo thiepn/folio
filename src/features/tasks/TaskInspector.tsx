@@ -7,6 +7,7 @@ import { seriesSummary } from '../recurrence/recurrenceLogic'
 import type { ProjectSummary } from '../../repositories/projectRepository'
 import type { TaskUpdateInput } from '../../repositories/taskRepository'
 import type { TaskPreview } from '../../types/ui'
+import { TaskReminderSection } from '../reminders/TaskReminderSection'
 
 type SaveScope = 'this' | 'future' | 'entire'
 type ChecklistItem = NonNullable<TaskPreview['checklist']>[number]
@@ -284,6 +285,8 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
           </div>
         </details>
       </section> : null}
+
+      <TaskReminderSection task={task} />
 
       <section className="task-execution-section">
         <div className="task-section-head"><div><div className="eyebrow">Execution</div><span>Tracked across focus sessions</span></div>{task.status === 'todo' ? <Button variant="primary" disabled={Boolean(task.activeBlockerCount)} onClick={() => onFocus(task.id)}>{task.activeBlockerCount ? 'Blocked' : 'Start focus'}</Button> : null}</div>
