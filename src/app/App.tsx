@@ -425,6 +425,10 @@ function AppContent() {
     if (Object.prototype.hasOwnProperty.call(effective, 'plannedDate')) occurrenceChanges.plannedDate = effective.plannedDate
     if (Object.prototype.hasOwnProperty.call(effective, 'deadline')) occurrenceChanges.deadline = effective.deadline
     if (Object.prototype.hasOwnProperty.call(effective, 'blockedByTaskIds')) occurrenceChanges.blockedByTaskIds = effective.blockedByTaskIds
+    if (Object.prototype.hasOwnProperty.call(effective, 'checklist')) occurrenceChanges.checklist = effective.checklist
+    if (Object.prototype.hasOwnProperty.call(effective, 'progressMode')) occurrenceChanges.progressMode = effective.progressMode
+    if (Object.prototype.hasOwnProperty.call(effective, 'progressPercent')) occurrenceChanges.progressPercent = effective.progressPercent
+    if (Object.prototype.hasOwnProperty.call(effective, 'comments')) occurrenceChanges.comments = effective.comments
     const occurrenceUndo = Object.keys(occurrenceChanges).length ? await taskChangeMutation(id, occurrenceChanges) : null
 
     if (!seriesUndo && !occurrenceUndo) return
