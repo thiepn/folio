@@ -5,6 +5,7 @@ import type { HabitEntity, HabitEntryEntity, LocalDate } from '../../domain/mode
 import { Button } from '../../components/ui/Button'
 import { Drawer } from '../../components/ui/Drawer'
 import type { HabitPreview } from '../../types/ui'
+import { HabitReminderSection } from '../reminders/HabitReminderSection'
 
 export function HabitDetailDrawer({ open, habit, preview, entries, today, onClose, onEdit, onArchive, onToggle, onIncrement, onSkip, onPause, onResume }: {
   open: boolean
@@ -85,6 +86,8 @@ export function HabitDetailDrawer({ open, habit, preview, entries, today, onClos
             <div><Button onClick={() => onPause(pauseThrough || undefined)}>Pause through date</Button><Button onClick={() => onPause(undefined)}>Pause indefinitely</Button></div>
           </div>}
         </section>
+
+        <HabitReminderSection habit={habit} />
 
         <section className="habit-detail__section">
           <div className="section-title-row"><span className="eyebrow">Definition</span></div>
