@@ -64,9 +64,6 @@ export const notificationService = {
       })
       notification.onclick = () => {
         window.focus()
-        const url = new URL(window.location.href)
-        url.searchParams.set('reminderOccurrence', occurrence.id)
-        history.replaceState(null, '', url)
         window.dispatchEvent(new CustomEvent('folio:notification-open', { detail: { occurrenceId: occurrence.id } }))
         notification.close()
       }
