@@ -50,9 +50,9 @@ export function useAppData() {
     const projects = buildProjectSummaries(projectEntities, taskSnapshot)
     const allProjectSummaries = buildProjectSummaries(projectEntities, taskSnapshot, true)
     const projectMap = new Map(projectEntities.map((project) => [project.id, project]))
-    const listMap = new Map(lists.map((list) => [list.id, list]))
+    const listMap = new Map(allLists.map((list) => [list.id, list]))
     const sectionMap = new Map(sections.map((section) => [section.id, section]))
-    const tagMap = new Map(tags.map((tag) => [tag.id, tag]))
+    const tagMap = new Map(allTags.map((tag) => [tag.id, tag]))
     const organizationMaps = { lists: listMap, sections: sectionMap, tags: tagMap }
 
     const activeTasks = taskSnapshot.filter(active)
