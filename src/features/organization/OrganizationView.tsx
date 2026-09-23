@@ -25,13 +25,14 @@ function sortTasks(tasks: TaskPreview[], mode: ListEntity['sortMode']) {
 
 
 export function OrganizationView({
-  projects, folders, archivedFolders, lists, archivedLists, sections, tags, archivedTags, tasks, smartTaskPool, smartViews, smartViewResults, listCounts, tagCounts, selectedListId,
+  today, projects, folders, archivedFolders, lists, archivedLists, sections, tags, archivedTags, tasks, smartTaskPool, smartViews, smartViewResults, listCounts, tagCounts, selectedListId,
   onSelectList, onCreateFolder, onCreateList, onCreateSection, onCreateTag,
   onUpdateList, onUpdateFolder, onUpdateTag, onMergeTag, onArchiveSection,
   onSaveSmartView, onDeleteSmartView, onDuplicateSmartView, onToggleSmartViewPin,
   onBoardDrop, onTimelineSetSpan, onTimelineClear,
   onOpenTask, onToggleTask, onMoveTask, onAddTask,
 }: {
+  today: string
   projects: Array<{id:string;name:string}>
   folders: FolderEntity[]
   archivedFolders: FolderEntity[]
@@ -322,7 +323,7 @@ function ListWorkspace({list,titleOverride,projects,allLists,folders,sections,ta
 
     {workspaceMode==='timeline'?<TimelineView
       tasks={tasks}
-      today={new Date().toISOString().slice(0,10)}
+      today={today}
       title={title}
       onOpenTask={onOpenTask}
       onToggleTask={onToggleTask}
