@@ -6,6 +6,7 @@ import type { NavView } from '../../types/ui'
 const destinations: { view: NavView; label: string; note: string; icon: IconName }[] = [
   { view: 'projects', label: 'Projects', note: 'Work, courses and areas of responsibility', icon: 'folder' },
   { view: 'lists', label: 'Lists', note: 'Folders, sections, tags and task collections', icon: 'folder' },
+  { view: 'notes', label: 'Notes', note: 'Markdown notes, attachments and indexed reference content', icon: 'review' },
   { view: 'habits', label: 'Habits', note: 'Rhythms, flexible schedules and weekly adherence', icon: 'habit' },
   { view: 'review', label: 'Review', note: 'Planning feedback and weekly review', icon: 'review' },
 ]
