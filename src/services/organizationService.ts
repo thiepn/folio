@@ -1,5 +1,5 @@
 import { db } from '../db/database'
-import type { FolderEntity, ListEntity, SectionEntity, TagEntity, TaskEntity } from '../domain/models'
+import type { FolderEntity, ListEntity, SectionEntity, TagEntity } from '../domain/models'
 import {
   organizationRepository,
   type FolderCreateInput, type FolderUpdateInput,
@@ -24,10 +24,6 @@ async function assertTagParent(id: string, parentTagId?: string) {
     seen.add(cursor)
     cursor = parentMap.get(cursor)
   }
-}
-
-async function taskSnapshots(ids: string[]) {
-  return (await Promise.all(ids.map((id) => taskRepository.get(id)))).filter(Boolean) as TaskEntity[]
 }
 
 export const organizationService = {
