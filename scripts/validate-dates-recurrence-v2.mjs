@@ -34,7 +34,7 @@ const publicPatch = read('public/schema/folio-patch-v1.schema.json')
 check('D2 validator registered', pkg.scripts?.['validate:recurrence-v2'] === 'node scripts/validate-dates-recurrence-v2.mjs')
 check('release gate runs D2 validation', pkg.scripts?.['release:verify']?.includes('validate:recurrence-v2'))
 
-check('database schema v17', /DATABASE_SCHEMA_VERSION\s*=\s*17\b/.test(database) && database.includes('this.version(17)'))
+check('D2 remains schema-compatible', Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1] ?? 0) >= 17 && database.includes('this.version(17)'))
 check('v16 to v17 migration registered', database.includes('migrateV16ToV17') && migration.includes("monthlyMode") && migration.includes("afterCompletionUnit"))
 check('migration preserves D1 template context', ['template.tags','template.checklist','template.sourceUrl','template.location','template.pinned'].every((token) => migration.includes(token)))
 
@@ -98,7 +98,7 @@ check('public import schema advertises D2 fields', publicImport.includes('"month
 check('public patch schema advertises D2 fields', publicPatch.includes('"monthlyMode"') && publicPatch.includes('"afterCompletionUnit"') && publicPatch.includes('"checklist"'))
 
 check('public v17 backup schema exists', exists('public/schema/folio-backup-v17.schema.json'))
-check('interop advertises v8 through v17 restore', interop.includes('Schema v17 · complete planner state') && interop.includes('schema v8–v17'))
+check('interop retains v17 restore compatibility', interop.includes('Schema v18 · complete planner state') && interop.includes('schema v8–v18'))
 check('D2 stylesheet loaded', styles.includes("@import './recurrence-v2.css';"))
 check('D2 design document exists', exists('docs/DATES_RECURRENCE_V2_D2.md'))
 
