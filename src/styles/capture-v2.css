@@ -1,0 +1,134 @@
+/* D4 — Capture Engine V2 */
+
+.quick-capture-input--v2 {
+  resize: vertical;
+  min-height: 66px;
+  max-height: 240px;
+  line-height: 1.45;
+}
+
+.capture-batch-label {
+  color: var(--muted-2);
+  font: 9px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.capture-batch-preview {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.capture-batch-preview__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--space-3);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.capture-batch-preview__head strong {
+  display: block;
+  margin-top: 3px;
+  font: 600 18px var(--font-serif);
+}
+
+.capture-batch-preview__head > span {
+  color: var(--muted);
+  font: 9px var(--font-mono);
+}
+
+.capture-batch-preview__list {
+  display: grid;
+}
+
+.capture-batch-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 52px;
+  border-bottom: 1px solid rgba(36,43,56,.62);
+}
+
+.capture-batch-row:last-child {
+  border-bottom: 0;
+}
+
+.capture-batch-row > span {
+  color: var(--muted-2);
+  font: 9px var(--font-mono);
+  text-align: center;
+}
+
+.capture-batch-row strong,
+.capture-batch-row small {
+  display: block;
+}
+
+.capture-batch-row strong {
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capture-batch-row small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--muted-2);
+  font: 9px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capture-batch-row > b {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(210, 165, 70, .35);
+  border-radius: 999px;
+  color: var(--warning);
+  font: 600 9px var(--font-mono);
+}
+
+.quick-add--v2 .parse-ledger__fields {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.quick-add--v2 .parse-ledger__field:nth-last-child(-n+3) {
+  border-bottom: 1px solid rgba(36,43,56,.62);
+}
+
+.quick-add--v2 .parse-ledger__field:nth-last-child(-n+5) {
+  border-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .quick-add--v2 .parse-ledger__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-add--v2 .parse-ledger__field:nth-last-child(-n+5) {
+    border-bottom: 1px solid rgba(36,43,56,.62);
+  }
+
+  .quick-add--v2 .parse-ledger__field:nth-last-child(-n+2) {
+    border-bottom: 0;
+  }
+
+  .capture-syntax-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .capture-syntax-grid > div:nth-child(odd),
+  .capture-syntax-grid > div:nth-child(even) {
+    padding-left: 0;
+    padding-right: 0;
+    border-right: 0;
+  }
+}
