@@ -71,7 +71,10 @@ export const timeBlockRepository = {
     const parsed = timeBlockUpdateSchema.parse(input)
     const current = await db.timeBlocks.get(id)
     if (!current) throw new Error('Time block not found.')
-    const next = { ...current, ...parsed, updatedAt: new Date().toISOString() }
+    const normalized = Object.fromEntries(
+      Object.entries(parsed).map(([key, value]) => [key, value === null ? undefined : value]),
+    ) as Partial<TimeBlockEntity>
+    const next: TimeBlockEntity = { ...current, ...normalized, updatedAt: new Date().toISOString() }
     timeBlockCreateSchema.parse({ taskId: next.taskId, title: next.title, description: next.description, location: next.location, kind: next.kind, allDay: next.allDay, timeZone: next.timeZone, source: next.source, sourceCalendar: next.sourceCalendar, sourceUid: next.sourceUid, start: next.start, end: next.end })
     await db.timeBlocks.put(next)
     return next
