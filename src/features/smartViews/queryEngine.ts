@@ -101,14 +101,16 @@ interface SmartRuntime {
 function prepareRuntime(context:SmartViewContext):SmartRuntime {
   const directReminderTaskIds=new Set<string>()
   const reminderSeriesIds=new Set<string>()
+  const enabledReminderIds=new Set<string>()
   for(const reminder of context.reminders){
     if(!reminder.enabled) continue
+    enabledReminderIds.add(reminder.id)
     if(reminder.ownerType==='task') directReminderTaskIds.add(reminder.ownerId)
     if(reminder.ownerType==='series') reminderSeriesIds.add(reminder.ownerId)
   }
   const reminderStatesByTask=new Map<string,Set<ReminderOccurrenceEntity['status']>>()
   for(const occurrence of context.reminderOccurrences){
-    if(!occurrence.targetTaskId) continue
+    if(!occurrence.targetTaskId || !enabledReminderIds.has(occurrence.reminderId)) continue
     const states=reminderStatesByTask.get(occurrence.targetTaskId)??new Set()
     states.add(occurrence.status);reminderStatesByTask.set(occurrence.targetTaskId,states)
   }
