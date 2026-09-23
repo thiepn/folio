@@ -1,4 +1,5 @@
-import type { IsoDateTime } from '../../domain/models'
+import { addLocalDays, atLocalTime } from '../../domain/date'
+import type { IsoDateTime, LocalDate } from '../../domain/models'
 
 export interface ParsedIcsEvent {
   uid?: string
@@ -10,6 +11,9 @@ export interface ParsedIcsEvent {
   start: IsoDateTime
   end: IsoDateTime
   timezone?: string
+  allDay?: boolean
+  startDate?: LocalDate
+  endDateExclusive?: LocalDate
   fingerprint: string
 }
 
@@ -77,8 +81,25 @@ function zonedToIso(parts: CompactParts, timeZone: string): string {
   return new Date(guess).toISOString()
 }
 
+function parseDateOnly(value: string): LocalDate | undefined {
+  const match = /^(\d{4})(\d{2})(\d{2})$/.exec(value)
+  if (!match) return undefined
+  const year=Number(match[1]), month=Number(match[2]), day=Number(match[3])
+  const date=new Date(year,month-1,day,12)
+  if(date.getFullYear()!==year||date.getMonth()+1!==month||date.getDate()!==day) return undefined
+  return `${match[1]}-${match[2]}-${match[3]}`
+}
+
+function isDateOnly(value:string,params:Record<string,string>){
+  return params.VALUE?.toUpperCase()==='DATE' || /^\d{8}$/.test(value)
+}
+
 export function parseIcsDate(value: string, params: Record<string, string>): string {
-  if (params.VALUE?.toUpperCase() === 'DATE' || /^\d{8}$/.test(value)) throw new Error('all-day events are not supported by the exact-time TimeBlock model')
+  if (isDateOnly(value,params)) {
+    const date=parseDateOnly(value)
+    if(!date) throw new Error(`invalid iCalendar date ${value}`)
+    return atLocalTime(date,0)
+  }
   const parts = parseCompact(value)
   if (!parts) throw new Error(`unsupported iCalendar date-time ${value}`)
   if (parts.month < 1 || parts.month > 12 || parts.day < 1 || parts.day > 31 || parts.hour > 23 || parts.minute > 59 || parts.second > 59) throw new Error(`invalid iCalendar date-time ${value}`)
@@ -135,20 +156,34 @@ export function parseIcs(text: string): IcsParseResult {
         if (get('STATUS')?.value.toUpperCase() === 'CANCELLED') { current = null; continue }
         const startProp = get('DTSTART')
         if (!startProp) throw new Error('missing DTSTART')
+        const allDay = isDateOnly(startProp.value,startProp.params)
+        const startDate = allDay ? parseDateOnly(startProp.value) : undefined
+        if(allDay && !startDate) throw new Error('invalid all-day DTSTART')
         const start = parseIcsDate(startProp.value, startProp.params)
         const endProp = get('DTEND')
         const durProp = get('DURATION')
         let end: string
-        if (endProp) end = parseIcsDate(endProp.value, endProp.params)
-        else if (durProp) {
+        let endDateExclusive: LocalDate | undefined
+        if (endProp) {
+          const endIsDateOnly=isDateOnly(endProp.value,endProp.params)
+          if(allDay && !endIsDateOnly) throw new Error('all-day DTSTART requires an all-day DTEND')
+          if(!allDay && endIsDateOnly) throw new Error('timed DTSTART cannot use an all-day DTEND')
+          end=parseIcsDate(endProp.value,endProp.params)
+          endDateExclusive=allDay?parseDateOnly(endProp.value):undefined
+        } else if (durProp) {
           const ms = durationMilliseconds(durProp.value)
           if (!ms || ms <= 0) throw new Error('invalid DURATION')
-          end = new Date(new Date(start).getTime() + ms).toISOString()
+          if(allDay) {
+            const days=Math.max(1,Math.round(ms/86_400_000))
+            endDateExclusive=addLocalDays(startDate!,days)
+            end=atLocalTime(endDateExclusive,0)
+          } else end = new Date(new Date(start).getTime() + ms).toISOString()
+        } else if(allDay) {
+          endDateExclusive=addLocalDays(startDate!,1)
+          end=atLocalTime(endDateExclusive,0)
         } else throw new Error('missing DTEND or DURATION')
         if (new Date(end).getTime() <= new Date(start).getTime()) throw new Error('end must be after start')
-        const startLocal = new Date(start); const endLocal = new Date(end)
-        if (startLocal.getFullYear() !== endLocal.getFullYear() || startLocal.getMonth() !== endLocal.getMonth() || startLocal.getDate() !== endLocal.getDate()) throw new Error('cross-midnight events are not supported by the current TimeBlock model')
-        events.push({ uid, recurrenceId, sourceKey, summary, description, location, start, end, timezone: startProp.params.TZID, fingerprint: calendarFingerprint(uid, summary, start, end) })
+        events.push({ uid, recurrenceId, sourceKey, summary, description, location, start, end, timezone: startProp.params.TZID, allDay, startDate, endDateExclusive, fingerprint: calendarFingerprint(uid, summary, start, end) })
       } catch (error) {
         warnings.push(`${summary}: ${error instanceof Error ? error.message : String(error)}; skipped.`)
       }
