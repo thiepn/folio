@@ -145,10 +145,12 @@ check('capture service carries organization into recurring template', captureSer
 
 check('Import v1 accepts task list section and tags', importSchema.includes('listId: z.string().min(1).optional()') && importSchema.includes('tags: z.array'))
 check('Import v1 validates existing list/section placement', importService.includes('validatePlacement(item.listId, item.sectionId)'))
-check('Import v1 canonicalizes tag names', importService.includes('organizationRepository.resolveTagNames') && importService.includes('tagIds: tagData.tagIds'))
+check('Import v1 canonicalizes tag names', importService.includes('const tagByName = new Map(existingTags') && importService.includes('tagIds: tagData.tagIds'))
+check('Import v1 creates new tags inside apply transaction', importService.includes('db.tags.bulkAdd(newTags)') && importService.includes('db.importBatches, db.tags'))
 check('Patch v1 accepts task organization edits', patchSchema.includes('listId: z.string().min(1).nullable().optional()') && patchSchema.includes('tags: z.array'))
 check('Patch v1 validates list/section placement', patchService.includes('validatePlacement(listId, sectionId)'))
 check('Patch v1 canonicalizes tag edits', patchService.includes('canonicalizeTags(changes.tags') && patchService.includes('tagIds: tagData.tagIds'))
+check('Patch v1 creates new tags inside write transaction', patchService.includes('db.tags.bulkAdd(newTags)') && patchService.includes('db.patchBatches, db.tags'))
 check('Patch recurrence reconciliation preserves organization', patchService.includes('listId: fields.listId') && patchService.includes('tagIds: fields.tagIds'))
 check('public import schema advertises D5 organization', publicImport.includes('"listId"') && publicImport.includes('"sectionId"') && publicImport.includes('"tags"'))
 check('public patch schema advertises D5 organization', publicPatch.includes('"listId"') && publicPatch.includes('"sectionId"') && publicPatch.includes('"tags"'))
