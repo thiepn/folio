@@ -89,8 +89,8 @@ check('recurring occurrence checklist receives fresh IDs', service.includes('fre
 check('backup schema preserves D2 recurrence fields', backupSchemas.includes('monthlyMode:') && backupSchemas.includes('afterCompletionUnit:') && backupSchemas.includes('backupRecurrenceExceptionSchema'))
 check('structured import schema supports D2 rules', importSchema.includes('monthlyMode:') && importSchema.includes('afterCompletionUnit:') && importSchema.includes('yearMonths:'))
 check('structured patch schema supports rich series templates', patchSchema.includes('tags: z.array') && patchSchema.includes('checklist: z.array') && patchSchema.includes('sourceUrl:'))
-check('import execution preserves recurring D1 context', importService.includes('tags: item.taskTemplate.tags') && importService.includes('dateKeyInTimeZone(new Date(), item.timezone)'))
-check('patch execution preserves recurring D1 context', patchService.includes('tags: value.taskTemplate.tags') && patchService.includes('freshChecklist(fields.checklist, now)'))
+check('import execution preserves recurring D1 context', importService.includes('tags: tagData.tags') && importService.includes('tagIds: tagData.tagIds') && importService.includes('dateKeyInTimeZone(new Date(), item.timezone)'))
+check('patch execution preserves recurring D1 context', patchService.includes('tags: tagData.tags') && patchService.includes('tagIds: tagData.tagIds') && patchService.includes('freshChecklist(fields.checklist, now)'))
 check('patch reconciliation uses series timezone', patchService.includes('dateKeyInTimeZone(new Date(), series.timezone)'))
 check('patch reconciliation preserves unchanged checklist state', patchService.includes('reconcileChecklist') && patchService.includes('currentText'))
 
