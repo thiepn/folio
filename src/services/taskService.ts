@@ -132,9 +132,12 @@ export const taskService = {
       description: '',
       parentTaskId: parentId,
       projectId: parent.projectId,
+      listId: parent.listId,
+      sectionId: parent.sectionId,
       priority: 'normal',
       status: 'todo',
       tags: parent.tags,
+      tagIds: parent.tagIds,
     })
     await db.tasks.update(parentId, {
       activity: appendTaskActivity(parent, 'subtask', `Nested task added: ${title}`),
