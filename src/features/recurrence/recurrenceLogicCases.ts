@@ -15,6 +15,7 @@ function series(partial: Partial<RecurringSeriesEntity>): RecurringSeriesEntity 
       description: '',
       priority: 'normal',
       tags: [],
+      tagIds: [],
       checklist: [],
       pinned: false,
     },
