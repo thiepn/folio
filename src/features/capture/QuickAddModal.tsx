@@ -230,7 +230,7 @@ export function QuickAddModal({ open, projects, lists, defaultStatus = 'todo', d
           </div>
         </div>
 
-        {capture.trim() ? (batchMode ? <BatchLedger items={batch} /> : <ParseLedger parsed={parsed} />) : <div className="capture-intro">
+        {capture.trim() ? (batchMode ? <BatchLedger items={batch} /> : <ParseLedger parsed={parsed} lists={lists} />) : <div className="capture-intro">
           <span className="capture-intro__mark" />
           <p>Write naturally. Folio recognizes dates, times, duration, priority, project, tags, recurrence and reminders locally. Paste multiple lines to capture a list.</p>
         </div>}
@@ -300,7 +300,7 @@ function BatchLedger({ items }: { items: ParsedCapture[] }) {
   </div>
 }
 
-function ParseLedger({ parsed }: { parsed: ParsedCapture }) {
+function ParseLedger({ parsed, lists }: { parsed: ParsedCapture; lists: ListEntity[] }) {
   return <div className="parse-ledger" aria-live="polite">
     <div className="parse-ledger__title"><span>Interpreted as</span><strong>{parsed.title || 'Untitled task'}</strong></div>
     <div className="parse-ledger__fields">
