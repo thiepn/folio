@@ -44,6 +44,9 @@ function taskFields(series: RecurringSeriesEntity, recurrenceDate: LocalDate) {
     pinned: exception.pinned ?? template.pinned ?? false,
     plannedDate: hasOwn(exception, 'plannedDate') ? (exception.plannedDate ?? undefined) : recurrenceDate,
     deadline: hasOwn(exception, 'deadline') ? (exception.deadline ?? undefined) : defaultDeadline,
+    timelineStart: hasOwn(exception, 'timelineStart') ? (exception.timelineStart ?? undefined) : undefined,
+    timelineEnd: hasOwn(exception, 'timelineEnd') ? (exception.timelineEnd ?? undefined) : undefined,
+    timelineMilestone: exception.timelineMilestone ?? false,
   }
 }
 
@@ -281,6 +284,9 @@ export const recurrenceService = {
     if (Object.prototype.hasOwnProperty.call(changes, 'pinned') && changes.pinned !== undefined) current.pinned = changes.pinned
     if (Object.prototype.hasOwnProperty.call(changes, 'plannedDate')) current.plannedDate = changes.plannedDate ?? null
     if (Object.prototype.hasOwnProperty.call(changes, 'deadline')) current.deadline = changes.deadline ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'timelineStart')) current.timelineStart = changes.timelineStart ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'timelineEnd')) current.timelineEnd = changes.timelineEnd ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'timelineMilestone') && changes.timelineMilestone !== undefined) current.timelineMilestone = changes.timelineMilestone
 
     series.exceptions = { ...series.exceptions, [task.recurrenceDate]: current }
     series.updatedAt = new Date().toISOString()
