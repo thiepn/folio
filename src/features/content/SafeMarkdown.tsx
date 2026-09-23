@@ -1,5 +1,8 @@
 import { createElement, type ReactNode } from 'react'
 
+const TICK = String.fromCharCode(96)
+const FENCE = TICK.repeat(3)
+
 function safeHref(value: string) {
   try {
     const url = new URL(value)
@@ -8,7 +11,7 @@ function safeHref(value: string) {
 }
 
 function inline(text: string, keyPrefix: string): ReactNode[] {
-  const pattern = /(\\x60[^\\x60]+\\x60|\\*\\*[^*]+\\*\\*|\\[[^\\]]+\\]\\([^)]+\\))/g
+  const pattern = /(\x60[^\x60]+\x60|\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g
   const nodes: ReactNode[] = []
   let last = 0
   let index = 0
@@ -16,10 +19,10 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
     const start = match.index ?? 0
     if (start > last) nodes.push(text.slice(last, start))
     const token = match[0]
-    if (token.startsWith('\\x60')) nodes.push(<code key={keyPrefix + '-c-' + index}>{token.slice(1, -1)}</code>)
+    if (token.startsWith(TICK)) nodes.push(<code key={keyPrefix + '-c-' + index}>{token.slice(1, -1)}</code>)
     else if (token.startsWith('**')) nodes.push(<strong key={keyPrefix + '-b-' + index}>{token.slice(2, -2)}</strong>)
     else {
-      const parts = token.match(/^\\[([^\\]]+)\\]\\(([^)]+)\\)$/)
+      const parts = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
       const href = parts ? safeHref(parts[2]) : undefined
       nodes.push(href ? <a key={keyPrefix + '-a-' + index} href={href} target="_blank" rel="noopener noreferrer">{parts?.[1]}</a> : token)
     }
@@ -31,67 +34,67 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
 }
 
 export function toggleMarkdownCheckbox(value: string, lineIndex: number) {
-  const lines = value.split('\\n')
+  const lines = value.split('\n')
   const line = lines[lineIndex]
   if (line == null) return value
-  lines[lineIndex] = line.replace(/^(\\s*[-*]\\s+)\\[([ xX])\\]/, (_match, prefix: string, state: string) => `${prefix}[${state.toLowerCase() === 'x' ? ' ' : 'x'}]`)
-  return lines.join('\\n')
+  lines[lineIndex] = line.replace(/^(\s*[-*]\s+)\[([ xX])\]/, (_match, prefix: string, state: string) => prefix + '[' + (state.toLowerCase() === 'x' ? ' ' : 'x') + ']')
+  return lines.join('\n')
 }
 
 export function SafeMarkdown({ value, onToggleChecklist }: { value: string; onToggleChecklist?: (lineIndex: number) => void }) {
-  const lines = value.replace(/\\r\\n?/g, '\\n').split('\\n')
+  const lines = value.replace(/\r\n?/g, '\n').split('\n')
   const blocks: ReactNode[] = []
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
-    if (line.startsWith('\`\`\`')) {
+    if (line.startsWith(FENCE)) {
       const language = line.slice(3).trim()
       const code: string[] = []
       const start = i
       i += 1
-      while (i < lines.length && !lines[i].startsWith('\`\`\`')) { code.push(lines[i]); i += 1 }
+      while (i < lines.length && !lines[i].startsWith(FENCE)) { code.push(lines[i]); i += 1 }
       if (i < lines.length) i += 1
-      blocks.push(<pre key={'code-' + start} data-language={language || undefined}><code>{code.join('\\n')}</code></pre>)
+      blocks.push(<pre key={'code-' + start} data-language={language || undefined}><code>{code.join('\n')}</code></pre>)
       continue
     }
-    const heading = line.match(/^(#{1,6})\\s+(.+)$/)
+    const heading = line.match(/^(#{1,6})\s+(.+)$/)
     if (heading) {
       const level = heading[1].length
-      blocks.push(createElement(`h${level}`, { key: 'h-' + i }, inline(heading[2], 'h-' + i)))
+      blocks.push(createElement('h' + level, { key: 'h-' + i }, inline(heading[2], 'h-' + i)))
       i += 1
       continue
     }
-    const checkbox = line.match(/^\\s*[-*]\\s+\\[([ xX])\\]\\s+(.*)$/)
+    const checkbox = line.match(/^\s*[-*]\s+\[([ xX])\]\s+(.*)$/)
     if (checkbox) {
       const lineIndex = i
       blocks.push(<label className="markdown-checkbox" key={'check-' + i}><input type="checkbox" checked={checkbox[1].toLowerCase() === 'x'} onChange={() => onToggleChecklist?.(lineIndex)} disabled={!onToggleChecklist} /><span>{inline(checkbox[2], 'check-' + i)}</span></label>)
       i += 1
       continue
     }
-    if (/^\\s*[-*]\\s+/.test(line)) {
+    if (/^\s*[-*]\s+/.test(line)) {
       const start = i
       const items: ReactNode[] = []
-      while (i < lines.length && /^\\s*[-*]\\s+/.test(lines[i]) && !/^\\s*[-*]\\s+\\[[ xX]\\]/.test(lines[i])) {
-        items.push(<li key={'ul-' + i}>{inline(lines[i].replace(/^\\s*[-*]\\s+/, ''), 'ul-' + i)}</li>)
+      while (i < lines.length && /^\s*[-*]\s+/.test(lines[i]) && !/^\s*[-*]\s+\[[ xX]\]/.test(lines[i])) {
+        items.push(<li key={'ul-' + i}>{inline(lines[i].replace(/^\s*[-*]\s+/, ''), 'ul-' + i)}</li>)
         i += 1
       }
       blocks.push(<ul key={'ul-block-' + start}>{items}</ul>)
       continue
     }
-    if (/^\\s*\\d+\\.\\s+/.test(line)) {
+    if (/^\s*\d+\.\s+/.test(line)) {
       const start = i
       const items: ReactNode[] = []
-      while (i < lines.length && /^\\s*\\d+\\.\\s+/.test(lines[i])) {
-        items.push(<li key={'ol-' + i}>{inline(lines[i].replace(/^\\s*\\d+\\.\\s+/, ''), 'ol-' + i)}</li>)
+      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+        items.push(<li key={'ol-' + i}>{inline(lines[i].replace(/^\s*\d+\.\s+/, ''), 'ol-' + i)}</li>)
         i += 1
       }
       blocks.push(<ol key={'ol-block-' + start}>{items}</ol>)
       continue
     }
-    if (/^>\\s?/.test(line)) {
+    if (/^>\s?/.test(line)) {
       const start = i
       const quoted: string[] = []
-      while (i < lines.length && /^>\\s?/.test(lines[i])) { quoted.push(lines[i].replace(/^>\\s?/, '')); i += 1 }
+      while (i < lines.length && /^>\s?/.test(lines[i])) { quoted.push(lines[i].replace(/^>\s?/, '')); i += 1 }
       blocks.push(<blockquote key={'quote-' + start}>{quoted.map((row, offset) => <p key={offset}>{inline(row, 'quote-' + start + '-' + offset)}</p>)}</blockquote>)
       continue
     }
