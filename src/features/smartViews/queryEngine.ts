@@ -1,7 +1,7 @@
 import { addLocalDays } from '../../domain/date'
 import type {
   ListEntity, LocalDate, ProjectEntity, ReminderEntity, ReminderOccurrenceEntity,
-  SectionEntity, TagEntity, TaskEntity, TaskPriority, TaskStatus,
+  SectionEntity, TagEntity, TaskEntity, TaskPriority,
 } from '../../domain/models'
 import { isActiveBlocker } from '../planner/dependencyLogic'
 
