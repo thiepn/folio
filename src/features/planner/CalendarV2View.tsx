@@ -161,20 +161,21 @@ export function CalendarV2View({
   }
 
   function editBlock(block: TimeBlockEntity) {
-    setEditor({ type: 'edit', block, task: block.taskId ? data?.taskMap.get(block.taskId) : undefined, timeZone })
+    setEditor({ type: 'edit', block, task: block.taskId ? data?.taskMap.get(block.taskId) : undefined, timeZone: block.allDay ? (block.timeZone ?? 'local') : timeZone })
   }
 
   async function moveBlock(block: TimeBlockEntity, date: LocalDate, startMinute?: number) {
     if (block.allDay && block.kind === 'event') {
-      const startDate = dateKeyInTimeZone(block.start, timeZone)
-      const endDateExclusive = dateKeyInTimeZone(block.end, timeZone)
+      const allDayZone = block.timeZone ?? 'local'
+      const startDate = dateKeyInTimeZone(block.start, allDayZone)
+      const endDateExclusive = dateKeyInTimeZone(block.end, allDayZone)
       const days = Math.max(1, Math.round((localDateToDate(endDateExclusive).getTime() - localDateToDate(startDate).getTime()) / 86_400_000))
       await onUpdateEvent(block.id, block.title, date, 0, days * 24 * 60, {
         description: block.description,
         location: block.location,
         allDay: true,
         endDateExclusive: addLocalDays(date, days),
-        timeZone,
+        timeZone: allDayZone,
       })
       return
     }
@@ -294,7 +295,7 @@ export function CalendarV2View({
               if (task) scheduleTask(task, date, minute)
             }}
             onMoveBlock={moveBlock}
-            onDuplicateBlock={(id, date, minute) => onDuplicateBlock(id, date, minute, timeZone)}
+            onDuplicateBlock={(id, date, minute) => { const block = data.blocks.find((item) => item.id === id); return onDuplicateBlock(id, date, minute, block?.allDay ? (block.timeZone ?? 'local') : timeZone) }}
             onResizeBlock={onResizeBlock}
             dragEnabled={!compact}
           /> : null}
@@ -316,7 +317,7 @@ export function CalendarV2View({
               if (task) scheduleTask(task, date, 9 * 60)
             }}
             onMoveBlock={moveBlock}
-            onDuplicateBlock={(id, date) => onDuplicateBlock(id, date, undefined, timeZone)}
+            onDuplicateBlock={(id, date) => { const block = data.blocks.find((item) => item.id === id); return onDuplicateBlock(id, date, undefined, block?.allDay ? (block.timeZone ?? 'local') : timeZone) }}
           /> : null}
 
           {mode === 'year' ? <CalendarYearView
