@@ -57,6 +57,15 @@ async function tick() {
   ticking = true
   try {
     await reconcileAllReminders()
+
+    // Outstanding alerts are still stateful after delivery/snooze. If the
+    // underlying task, habit, or planning condition is resolved meanwhile,
+    // clear the stale alert rather than requiring a manual dismissal.
+    for (const occurrence of await reminderRepository.listOutstanding()) {
+      const suppression = await reminderSuppressionReason(occurrence)
+      if (suppression) await markSuppressed(occurrence, suppression)
+    }
+
     const due = await reminderRepository.listDue()
     for (const occurrence of due) {
       const reminder = await reminderRepository.get(occurrence.reminderId)
