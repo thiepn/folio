@@ -3,6 +3,10 @@ import type {
   DailyPlanEntity,
   DailyPlanItemEntity,
   FocusSessionEntity,
+  FolderEntity,
+  ListEntity,
+  SectionEntity,
+  TagEntity,
   HabitEntity,
   HabitEntryEntity,
   ImportBatchEntity,
@@ -34,9 +38,10 @@ import { migrateV14ToV15 } from '../migrations/v14ToV15'
 import { migrateV15ToV16 } from '../migrations/v15ToV16'
 import { migrateV16ToV17 } from '../migrations/v16ToV17'
 import { migrateV17ToV18 } from '../migrations/v17ToV18'
+import { migrateV18ToV19 } from '../migrations/v18ToV19'
 
 export const DATABASE_NAME = 'folio'
-export const DATABASE_SCHEMA_VERSION = 18
+export const DATABASE_SCHEMA_VERSION = 19
 
 export class ProductivityDatabase extends Dexie {
   tasks!: Table<TaskEntity, string>
@@ -55,6 +60,10 @@ export class ProductivityDatabase extends Dexie {
   reviewRecords!: Table<ReviewRecordEntity, string>
   reminders!: Table<ReminderEntity, string>
   reminderOccurrences!: Table<ReminderOccurrenceEntity, string>
+  folders!: Table<FolderEntity, string>
+  lists!: Table<ListEntity, string>
+  sections!: Table<SectionEntity, string>
+  tags!: Table<TagEntity, string>
 
   constructor(databaseName = DATABASE_NAME) {
     super(databaseName)
@@ -323,6 +332,29 @@ export class ProductivityDatabase extends Dexie {
       reminders: '&id,ownerType,ownerId,triggerType,enabled,updatedAt,[ownerType+ownerId]',
       reminderOccurrences: '&id,reminderId,ownerType,ownerId,status,fireAt,scheduledFor,targetTaskId,updatedAt,[status+fireAt],[reminderId+status],[ownerType+ownerId]',
     }).upgrade(migrateV17ToV18)
+
+    this.version(19).stores({
+      tasks: '&id,status,plannedDate,deadline,projectId,listId,sectionId,parentTaskId,seriesId,recurrenceDate,*blockedByTaskIds,*tags,*tagIds,pinned,deletedAt,updatedAt,[status+plannedDate],[seriesId+recurrenceDate]',
+      projects: '&id,name,type,status,deadline,archived,favorite,updatedAt,[archived+favorite]',
+      habits: '&id,sortOrder,updatedAt',
+      habitEntries: '&id,habitId,date,status,updatedAt,[habitId+date],[habitId+status]',
+      timeBlocks: '&id,taskId,start,end,kind,updatedAt',
+      dailyPlans: '&date,status,updatedAt',
+      dailyPlanItems: '&id,date,taskId,bucket,updatedAt,[date+bucket],[date+taskId]',
+      focusSessions: '&id,taskId,projectIdSnapshot,startedAt,endedAt,status,[status+startedAt]',
+      recurringSeries: '&id,status,startDate,timezone,updatedAt,[status+startDate]',
+      settings: '&key,updatedAt',
+      importBatches: '&id,createdAt,status,source',
+      patchBatches: '&id,createdAt,status,source',
+      calendarImportBatches: '&id,createdAt,status,source',
+      reviewRecords: '&id,kind,periodStart,periodEnd,updatedAt,[kind+periodStart]',
+      reminders: '&id,ownerType,ownerId,triggerType,enabled,updatedAt,[ownerType+ownerId]',
+      reminderOccurrences: '&id,reminderId,ownerType,ownerId,status,fireAt,scheduledFor,targetTaskId,updatedAt,[status+fireAt],[reminderId+status],[ownerType+ownerId]',
+      folders: '&id,name,archived,sortOrder,updatedAt',
+      lists: '&id,name,folderId,archived,favorite,sortOrder,updatedAt,[folderId+archived]',
+      sections: '&id,listId,archived,sortOrder,updatedAt,[listId+archived]',
+      tags: '&id,&normalizedName,parentTagId,archived,favorite,sortOrder,updatedAt,[parentTagId+archived]',
+    }).upgrade(migrateV18ToV19)
   }
 }
 
