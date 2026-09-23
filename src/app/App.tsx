@@ -853,6 +853,7 @@ function AppContent() {
           {view === 'lists' ? <OrganizationView
             folders={data.folders}
             lists={data.lists}
+            archivedLists={data.archivedLists}
             sections={data.sections}
             tags={data.tags}
             tasks={data.allTasks}
