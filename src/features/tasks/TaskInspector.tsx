@@ -8,6 +8,9 @@ import type { ProjectSummary } from '../../repositories/projectRepository'
 import type { TaskUpdateInput } from '../../repositories/taskRepository'
 import type { TaskPreview } from '../../types/ui'
 import { TaskReminderSection } from '../reminders/TaskReminderSection'
+import { MarkdownEditor } from '../content/MarkdownEditor'
+import { AttachmentPanel } from '../content/AttachmentPanel'
+import { noteService } from '../../services/noteService'
 
 type SaveScope = 'this' | 'future' | 'entire'
 type ChecklistItem = NonNullable<TaskPreview['checklist']>[number]
@@ -98,6 +101,7 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
   const [subtaskTitle, setSubtaskTitle] = useState('')
   const [checklistTitle, setChecklistTitle] = useState('')
   const [commentBody, setCommentBody] = useState('')
+  const [contentMessage, setContentMessage] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [saveScope, setSaveScope] = useState<SaveScope>('this')
@@ -222,6 +226,17 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
     setCommentBody('')
   }
 
+  async function createStandaloneNote() {
+    setError(''); setContentMessage('')
+    try {
+      if (dirty) await save()
+      const note = await noteService.createFromTask(task.id)
+      setContentMessage(`Created standalone note “${note.title}” with this task's attachments.`)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The note could not be created.')
+    }
+  }
+
   const visibleProgress = progressMode === 'auto' ? autoProgress : progressPercent
 
   return (
@@ -244,7 +259,12 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
         <label className="task-title-field"><span>Task title</span><textarea rows={2} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
         <label className="task-pin-toggle"><input type="checkbox" checked={pinned} onChange={(event) => setPinned(event.target.checked)} /><span>Pin</span></label>
       </div>
-      <label className="field task-notes-field"><span>Notes · Markdown</span><textarea rows={7} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Context, links, acceptance criteria, meeting notes, or Markdown." /></label>
+      <section className="task-rich-content-section">
+        <div className="task-section-head"><div><div className="eyebrow">Rich content</div><span>Markdown content stays part of the task and is indexed for search.</span></div><Button onClick={() => void createStandaloneNote()}>Create standalone note</Button></div>
+        <MarkdownEditor value={description} onChange={setDescription} label="Task notes · Markdown" placeholder="Context, acceptance criteria, research, links, code, or an embedded checklist." />
+        <AttachmentPanel ownerType="task" ownerId={task.id} />
+        {contentMessage ? <div className="note-message">{contentMessage}</div> : null}
+      </section>
 
       <section className="task-property-section">
         <div className="eyebrow">Properties</div>
