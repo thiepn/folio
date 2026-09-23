@@ -15,6 +15,7 @@ import { InboxView } from '../features/inbox/InboxView'
 import { PlannerView } from '../features/planner/PlannerView'
 import { ProjectsView } from '../features/projects/ProjectsView'
 import { OrganizationView } from '../features/organization/OrganizationView'
+import { NotesView } from '../features/content/NotesView'
 import { ProjectDetailView } from '../features/projects/ProjectDetailView'
 import { ProjectEditorModal } from '../features/projects/ProjectEditorModal'
 import { ArchivedProjectsDrawer } from '../features/projects/ArchivedProjectsDrawer'
@@ -78,7 +79,7 @@ import { currentTaskId, focusRelativeTask } from '../features/power/taskKeyboard
 import { LEGACY_LAST_VIEW_KEY } from '../legacy/compat'
 
 const LAST_VIEW_KEY = 'folio:last-view:v1'
-const NAV_VIEWS: NavView[] = ['today', 'inbox', 'planner', 'projects', 'lists', 'habits', 'review']
+const NAV_VIEWS: NavView[] = ['today', 'inbox', 'planner', 'projects', 'lists', 'notes', 'habits', 'review']
 
 function initialView(): NavView {
   try {
@@ -154,7 +155,7 @@ function AppContent() {
   const dailyWrapUpKey = `daily.wrapup.${data?.today ?? localDateKey()}`
   const dailyWrapUp = useLiveQuery(() => settingsRepository.get<string>(dailyWrapUpKey, ''), [dailyWrapUpKey], '') ?? ''
   const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])
-  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', planner: 'Planner', projects: 'Projects', lists: 'Lists', habits: 'Habits', review: 'Review' }[view]), [view])
+  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', review: 'Review' }[view]), [view])
 
   const selectedTask = useMemo(() => data?.allTasks.find((task) => task.id === selectedTaskId) ?? data?.subtasks.find((task) => task.id === selectedTaskId) ?? null, [data?.allTasks, data?.subtasks, selectedTaskId])
   const selectedSeries = useMemo(() => selectedTask?.seriesId ? data?.recurringSeries.find((series) => series.id === selectedTask.seriesId) ?? null : null, [data?.recurringSeries, selectedTask])
@@ -314,7 +315,7 @@ function AppContent() {
         return
       }
       if (now - goChordAt.current < 900) {
-        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', p: 'planner', o: 'projects', l: 'lists', h: 'habits', r: 'review' }
+        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', p: 'planner', o: 'projects', l: 'lists', n: 'notes', h: 'habits', r: 'review' }
         const next = destination[key]
         goChordAt.current = 0
         setGoChordPending(false)
@@ -665,6 +666,7 @@ function AppContent() {
       { id: 'nav-planner', group: 'Navigate', label: 'Go to Planner', keywords: 'week calendar upcoming', run: () => navigate('planner') },
       { id: 'nav-projects', group: 'Navigate', label: 'Go to Projects', run: () => navigate('projects') },
       { id: 'nav-lists', group: 'Navigate', label: 'Go to Lists & Tags', keywords: 'lists folders sections tags organize', run: () => navigate('lists') },
+      { id: 'nav-notes', group: 'Navigate', label: 'Go to Notes', keywords: 'markdown content attachments files research', run: () => navigate('notes') },
       { id: 'nav-habits', group: 'Navigate', label: 'Go to Habits', run: () => navigate('habits') },
       { id: 'nav-review', group: 'Navigate', label: 'Go to Review', run: () => navigate('review') },
       { id: 'capture', group: 'Create', label: 'New task', shortcut: shortcuts.quickAdd, keywords: 'quick add capture create task n', note: 'Capture a task without leaving this view', run: () => openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today, view === 'lists' && selectedListId && !selectedListId.startsWith('__') ? selectedListId : '') },
@@ -811,6 +813,7 @@ function AppContent() {
                 ? `${data.tagCounts[selectedListId.slice('__tag__:'.length)] ?? 0} matching tasks`
                 : `${data.listCounts[selectedListId] ?? 0} open tasks`
             : view === 'lists' ? `${data.lists.length} active lists · ${data.tags.length} tags · ${data.customSmartViews.length} smart views`
+          : view === 'notes' ? 'Markdown · attachments · offline search'
           : view === 'habits' ? `${habitData.dueToday} due today`
             : view === 'review' ? 'Review, learn, replan'
               : 'Plan time, deadlines, and capacity'
@@ -940,6 +943,7 @@ function AppContent() {
             onMoveTask={async (taskId, listId, sectionId) => registerUndo(await organizationService.moveTask(taskId, listId, sectionId))}
             onAddTask={(listId) => openAdd('todo', '', data.today, listId)}
           /> : null}
+          {view === 'notes' ? <NotesView onOpenTask={setSelectedTaskId} /> : null}
           {view === 'habits' ? <HabitsView habits={habitData.habits} weeklyAdherence={habitData.weeklyAdherence} dueToday={habitData.dueToday} longestStreak={habitData.longestStreak} pausedCount={habitData.pausedCount} onCreate={() => { setEditingHabitId(null); setHabitEditorOpen(true) }} onArchived={() => setArchivedHabitsOpen(true)} onOpen={setSelectedHabitId} onToggle={(id) => void toggleHabit(id)} onIncrement={(id, minutes) => void incrementHabit(id, minutes)} /> : null}
           {view === 'review' ? <ReviewView
             snapshot={reviewData}
@@ -970,7 +974,7 @@ function AppContent() {
         onData={() => setDataOpen(true)}
       />
 
-      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · P Planner · O Projects · L Lists · H Habits · R Review</span></div> : null}
+      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · P Planner · O Projects · L Lists · N Notes · H Habits · R Review</span></div> : null}
       <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
       <ShortcutHelpModal open={shortcutHelpOpen} shortcuts={shortcuts} onClose={() => setShortcutHelpOpen(false)} onConfigure={() => { setShortcutHelpOpen(false); setKeyboardSettingsOpen(true) }} />
       <KeyboardSettingsDrawer open={keyboardSettingsOpen} value={shortcuts} onClose={() => setKeyboardSettingsOpen(false)} onSave={(next) => void settingsRepository.set('power.shortcuts', next)} />
