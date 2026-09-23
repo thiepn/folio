@@ -1,5 +1,5 @@
 import { db } from '../db/database'
-import { addLocalDays, localDateKey } from '../domain/date'
+import { addLocalDays, atTimeInZone, dateKeyInTimeZone, localDateKey } from '../domain/date'
 import type {
   DailyPlanEntity,
   DailyPlanItemEntity,
@@ -86,19 +86,33 @@ function scheduleMatches(schedule: HabitEntity['schedule'], date: string) {
   return false
 }
 
+function hasOwn(value: object, key: string) {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
+function freshChecklist(items: string[], now: string) {
+  return items.map((text, index) => ({ id: crypto.randomUUID(), text, completed: false, sortOrder: index, createdAt: now, updatedAt: now }))
+}
+
 function expectedSeriesFields(series: RecurringSeriesEntity, date: string) {
   const exception = series.exceptions[date] ?? {}
   const template = series.taskTemplate
+  const defaultDeadline = template.deadlineOffsetDays === undefined ? undefined : addLocalDays(date, template.deadlineOffsetDays)
   return {
     title: exception.title ?? template.title,
     description: exception.description ?? template.description,
-    projectId: Object.prototype.hasOwnProperty.call(exception, 'projectId') ? exception.projectId : template.projectId,
+    projectId: hasOwn(exception, 'projectId') ? (exception.projectId ?? undefined) : template.projectId,
     priority: exception.priority ?? template.priority,
-    estimatedMinutes: exception.estimatedMinutes ?? template.estimatedMinutes,
-    plannedDate: exception.plannedDate ?? date,
-    deadline: exception.deadline ?? (template.deadlineOffsetDays === undefined ? undefined : addLocalDays(date, template.deadlineOffsetDays)),
+    estimatedMinutes: hasOwn(exception, 'estimatedMinutes') ? (exception.estimatedMinutes ?? undefined) : template.estimatedMinutes,
+    tags: exception.tags ?? template.tags ?? [],
+    checklist: exception.checklist ?? template.checklist ?? [],
+    sourceUrl: hasOwn(exception, 'sourceUrl') ? (exception.sourceUrl ?? undefined) : template.sourceUrl,
+    location: hasOwn(exception, 'location') ? (exception.location ?? undefined) : template.location,
+    pinned: exception.pinned ?? template.pinned ?? false,
+    plannedDate: hasOwn(exception, 'plannedDate') ? (exception.plannedDate ?? undefined) : date,
+    deadline: hasOwn(exception, 'deadline') ? (exception.deadline ?? undefined) : defaultDeadline,
     startMinute: exception.startMinute ?? template.startMinute,
-    blockDurationMinutes: exception.blockDurationMinutes ?? template.blockDurationMinutes ?? (exception.estimatedMinutes ?? template.estimatedMinutes),
+    blockDurationMinutes: exception.blockDurationMinutes ?? template.blockDurationMinutes ?? (hasOwn(exception, 'estimatedMinutes') ? (exception.estimatedMinutes ?? undefined) : template.estimatedMinutes),
     skip: Boolean(exception.skip),
   }
 }
@@ -106,8 +120,8 @@ function expectedSeriesFields(series: RecurringSeriesEntity, date: string) {
 function cleanNullableTemplate(current: RecurringSeriesEntity['taskTemplate'], changes: any, projectIds: Map<string, string>) {
   if (!changes) return current
   const next: any = { ...current }
-  for (const field of ['title','description','priority'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field]
-  for (const field of ['estimatedMinutes','deadlineOffsetDays','startMinute','blockDurationMinutes'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field] ?? undefined
+  for (const field of ['title','description','priority','tags','checklist','pinned'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field]
+  for (const field of ['estimatedMinutes','sourceUrl','location','deadlineOffsetDays','startMinute','blockDurationMinutes'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field] ?? undefined
   if (changes.projectRef) next.projectId = projectIds.get(changes.projectRef)
   else if (Object.prototype.hasOwnProperty.call(changes, 'projectId')) next.projectId = changes.projectId ?? undefined
   return next
