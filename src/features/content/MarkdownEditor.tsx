@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 import { SafeMarkdown, toggleMarkdownCheckbox } from './SafeMarkdown'
 
+const TICK = String.fromCharCode(96)
+const FENCE = TICK.repeat(3)
+
 export function MarkdownEditor({ value, onChange, label = 'Notes · Markdown', placeholder = 'Write Markdown…' }: { value: string; onChange: (value: string) => void; label?: string; placeholder?: string }) {
   const [mode, setMode] = useState<'edit' | 'read'>('edit')
   const textarea = useRef<HTMLTextAreaElement>(null)
@@ -23,9 +26,10 @@ export function MarkdownEditor({ value, onChange, label = 'Notes · Markdown', p
   function linePrefix(prefix: string) {
     const target = textarea.current
     if (!target) return
-    const start = value.lastIndexOf('\\n', Math.max(0, target.selectionStart - 1)) + 1
+    const originalCursor = target.selectionStart
+    const start = value.lastIndexOf('\n', Math.max(0, originalCursor - 1)) + 1
     onChange(value.slice(0, start) + prefix + value.slice(start))
-    requestAnimationFrame(() => { target.focus(); target.setSelectionRange(target.selectionStart + prefix.length, target.selectionStart + prefix.length) })
+    requestAnimationFrame(() => { target.focus(); const cursor = originalCursor + prefix.length; target.setSelectionRange(cursor, cursor) })
   }
 
   return <section className="markdown-editor">
@@ -37,8 +41,8 @@ export function MarkdownEditor({ value, onChange, label = 'Notes · Markdown', p
         <button type="button" onClick={() => linePrefix('- ')}>List</button>
         <button type="button" onClick={() => linePrefix('- [ ] ')}>Checklist</button>
         <button type="button" onClick={() => linePrefix('> ')}>Quote</button>
-        <button type="button" onClick={() => replaceSelection('\`', '\`', 'code')}>Code</button>
-        <button type="button" onClick={() => replaceSelection('\`\`\`\\n', '\\n\`\`\`', 'code block')}>Block</button>
+        <button type="button" onClick={() => replaceSelection(TICK, TICK, 'code')}>Code</button>
+        <button type="button" onClick={() => replaceSelection(FENCE + '\n', '\n' + FENCE, 'code block')}>Block</button>
         <button type="button" onClick={() => replaceSelection('[', '](https://)', 'link text')}>Link</button>
       </div>
       <textarea ref={textarea} className="markdown-editor__textarea" rows={10} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} spellCheck />
