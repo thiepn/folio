@@ -1,26 +1,7 @@
 import { addLocalDays, localDateRange, startOfLocalWeek } from '../../domain/date'
-import type { HabitEntity, LocalDate, ProjectEntity, TaskEntity, TaskPriority } from '../../domain/models'
+import type { HabitEntity, LocalDate, ProjectEntity, TaskEntity } from '../../domain/models'
 import { habitScheduledForDate } from '../../domain/habit'
 import { isActiveBlocker } from './dependencyLogic'
-
-export type SavedViewDateMode = 'all' | 'today' | 'next7' | 'next30' | 'overdue' | 'unplanned'
-export type SavedViewDeadlineMode = 'all' | 'overdue' | 'next7' | 'next30' | 'none'
-export type SavedViewBlockMode = 'all' | 'ready' | 'blocked'
-export type SavedViewStatusMode = 'open' | 'completed' | 'all'
-
-export interface SavedTaskView {
-  id: string
-  name: string
-  query?: string
-  projectIds?: string[]
-  priorities?: TaskPriority[]
-  dateMode: SavedViewDateMode
-  deadlineMode: SavedViewDeadlineMode
-  blockMode: SavedViewBlockMode
-  statusMode: SavedViewStatusMode
-  createdAt: string
-  updatedAt: string
-}
 
 export interface ForecastDay {
   date: LocalDate
@@ -84,37 +65,6 @@ export function activeBlockerIds(task: TaskEntity, taskMap: Map<string, TaskEnti
 
 export function taskIsBlocked(task: TaskEntity, taskMap: Map<string, TaskEntity>) {
   return activeBlockerIds(task, taskMap).length > 0
-}
-
-export function filterTasksForSavedView(tasks: TaskEntity[], view: SavedTaskView, today: LocalDate) {
-  const taskMap = new Map(tasks.map((task) => [task.id, task]))
-  const query = view.query?.trim().toLowerCase()
-  const next7 = addLocalDays(today, 7)
-  const next30 = addLocalDays(today, 30)
-  return tasks.filter((task) => {
-    if (task.deletedAt || task.parentTaskId || task.status === 'cancelled' || task.status === 'inbox') return false
-    if (view.statusMode === 'open' && task.status !== 'todo') return false
-    if (view.statusMode === 'completed' && task.status !== 'completed') return false
-    if (query && !`${task.title} ${task.description}`.toLowerCase().includes(query)) return false
-    if (view.projectIds?.length && (!task.projectId || !view.projectIds.includes(task.projectId))) return false
-    if (view.priorities?.length && !view.priorities.includes(task.priority)) return false
-
-    if (view.dateMode === 'today' && task.plannedDate !== today) return false
-    if (view.dateMode === 'next7' && (!task.plannedDate || task.plannedDate < today || task.plannedDate > next7)) return false
-    if (view.dateMode === 'next30' && (!task.plannedDate || task.plannedDate < today || task.plannedDate > next30)) return false
-    if (view.dateMode === 'overdue' && (!task.plannedDate || task.plannedDate >= today || task.status !== 'todo')) return false
-    if (view.dateMode === 'unplanned' && task.plannedDate) return false
-
-    if (view.deadlineMode === 'overdue' && (!task.deadline || task.deadline >= today || task.status !== 'todo')) return false
-    if (view.deadlineMode === 'next7' && (!task.deadline || task.deadline < today || task.deadline > next7)) return false
-    if (view.deadlineMode === 'next30' && (!task.deadline || task.deadline < today || task.deadline > next30)) return false
-    if (view.deadlineMode === 'none' && task.deadline) return false
-
-    const blocked = taskIsBlocked(task, taskMap)
-    if (view.blockMode === 'blocked' && !blocked) return false
-    if (view.blockMode === 'ready' && blocked) return false
-    return true
-  }).sort((a, b) => (a.deadline ?? '9999').localeCompare(b.deadline ?? '9999') || (a.plannedDate ?? '9999').localeCompare(b.plannedDate ?? '9999') || a.sortOrder - b.sortOrder)
 }
 
 export function buildForecast({ tasks, habits, capacities, today, defaultCapacity, days = 42 }: {
@@ -198,9 +148,3 @@ export function buildProjectPlanningSummaries(tasks: TaskEntity[], projects: Pro
   }).sort((a, b) => (a.nextDeadline ?? '9999').localeCompare(b.nextDeadline ?? '9999') || b.backlogMinutes - a.backlogMinutes)
 }
 
-export const BUILTIN_SAVED_VIEWS: SavedTaskView[] = [
-  { id: 'builtin-deadlines', name: 'Deadline pressure', dateMode: 'all', deadlineMode: 'next30', blockMode: 'all', statusMode: 'open', createdAt: '', updatedAt: '' },
-  { id: 'builtin-blocked', name: 'Blocked work', dateMode: 'all', deadlineMode: 'all', blockMode: 'blocked', statusMode: 'open', createdAt: '', updatedAt: '' },
-  { id: 'builtin-unplanned', name: 'Unplanned backlog', dateMode: 'unplanned', deadlineMode: 'all', blockMode: 'all', statusMode: 'open', createdAt: '', updatedAt: '' },
-  { id: 'builtin-high-priority', name: 'High priority', priorities: ['high', 'critical'], dateMode: 'all', deadlineMode: 'all', blockMode: 'all', statusMode: 'open', createdAt: '', updatedAt: '' },
-]
