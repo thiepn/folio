@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { localDateKey } from '../domain/date'
 import type { LocalDate, TaskEntity } from '../domain/models'
 import { taskRepository } from '../repositories/taskRepository'
 import { projectRepository } from '../repositories/projectRepository'
@@ -50,7 +51,7 @@ export function useCalendarData(fromDate: LocalDate, throughDate: LocalDate, tim
     const allTaskBlocks = await timeBlockRepository.listForTaskIds(activeTasks.map((task) => task.id))
 
     const smartContext = {
-      today: fromDate,
+      today: localDateKey(),
       tasks: activeTasks,
       projects,
       lists,
