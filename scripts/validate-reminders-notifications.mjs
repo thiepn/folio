@@ -78,6 +78,7 @@ check('resolved history is preserved during reconcile', !engine.includes("row.st
 check('service creates and reconciles reminders', service.includes('async create(input: ReminderCreateInput)') && service.includes('await reconcileReminder(reminder)'))
 check('service supports snooze', service.includes("setOccurrenceStatus(occurrenceId, 'snoozed'") && service.includes('snoozedUntil'))
 check('service supports dismiss', service.includes("setOccurrenceStatus(occurrenceId, 'dismissed'"))
+check('resolved outstanding alerts auto-dismiss', service.includes('for (const occurrence of await reminderRepository.listOutstanding())') && service.includes('clear the stale alert'))
 check('service delivers due reminders', service.includes('reminderRepository.listDue()') && service.includes("setOccurrenceStatus(occurrence.id, 'due'"))
 check('service retains in-app due state without permission', service.includes('deliveryCount: occurrence.deliveryCount + (systemDelivered ? 1 : 0)'))
 check('later permission can deliver undelivered due alert', service.includes('undeliveredDue') && service.includes('item.deliveryCount === 0'))
