@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addLocalDays, localDateKey } from '../../domain/date'
 import type { ProjectSummary } from '../../repositories/projectRepository'
+import type { ListEntity } from '../../domain/models'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import type { CaptureCreateRequest } from '../../services/captureService'
@@ -34,11 +35,13 @@ function requestFromParsed(parsed: ParsedCapture, description = ''): CaptureCrea
   }
 }
 
-export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultProjectId = '', defaultPlannedDate, onClose, onCreate, onCreateBatch, onImport }: {
+export function QuickAddModal({ open, projects, lists, defaultStatus = 'todo', defaultProjectId = '', defaultListId = '', defaultPlannedDate, onClose, onCreate, onCreateBatch, onImport }: {
   open: boolean
   projects: ProjectSummary[]
+  lists: ListEntity[]
   defaultStatus?: 'todo' | 'inbox'
   defaultProjectId?: string
+  defaultListId?: string
   defaultPlannedDate?: string
   onClose: () => void
   onCreate: (request: CaptureCreateRequest) => Promise<void>
@@ -53,6 +56,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [projectId, setProjectId] = useState(defaultProjectId)
+  const [listId, setListId] = useState(defaultListId)
   const [priority, setPriority] = useState<'normal' | 'high' | 'critical'>('normal')
   const [status, setStatus] = useState<'todo' | 'inbox'>(defaultStatus)
   const initialPlannedDate = defaultPlannedDate ?? today
@@ -91,6 +95,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
     setError('')
     setStatus(defaultStatus)
     setProjectId(defaultProjectId)
+    setListId(defaultListId)
     setPriority('normal')
     setPlannedDate(initialPlannedDate)
     setDeadline('')
@@ -99,7 +104,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
     setTagsText('')
     setTitle('')
     requestAnimationFrame(() => captureRef.current?.focus())
-  }, [open, defaultStatus, defaultProjectId, initialPlannedDate])
+  }, [open, defaultStatus, defaultProjectId, defaultListId, initialPlannedDate])
 
   useEffect(() => {
     if (!open || batchMode) return
@@ -121,6 +126,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
         title: title.trim(),
         description,
         projectId: status === 'inbox' ? undefined : (projectId || undefined),
+        listId: status === 'inbox' ? undefined : (listId || undefined),
         priority,
         status,
         plannedDate: status === 'todo' && plannedDate ? plannedDate : undefined,
@@ -144,7 +150,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
       setSaving(true)
       setError('')
       try {
-        await onCreateBatch(valid.map((item) => requestFromParsed(item)))
+        await onCreateBatch(valid.map((item) => { const request=requestFromParsed(item); if(item.status!=='inbox'&&defaultListId) request.input.listId=defaultListId; return request }))
         if (closeAfter) onClose()
         else {
           setCapture('')
@@ -241,6 +247,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
             <div className="form-grid">
               <label className="field"><span>Type</span><select value={status} onChange={(event) => setStatus(event.target.value as 'todo' | 'inbox')}><option value="todo">To-do</option><option value="inbox">Inbox capture</option></select></label>
               <label className="field"><span>Project</span><select value={projectId} disabled={status === 'inbox'} onChange={(event) => setProjectId(event.target.value)}><option value="">No project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+              <label className="field"><span>List</span><select value={listId} disabled={status === 'inbox'} onChange={(event) => setListId(event.target.value)}><option value="">No list</option>{lists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}</select></label>
             </div>
             <label className="field"><span>Tags</span><input value={tagsText} onChange={(event) => setTagsText(event.target.value)} placeholder="exam, deep-work" /></label>
             <div className="form-grid">
