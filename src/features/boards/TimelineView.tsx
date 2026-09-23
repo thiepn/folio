@@ -1,6 +1,7 @@
 import { useMemo, useState, type DragEvent, type PointerEvent as ReactPointerEvent, type ReactElement } from 'react'
 import { Button } from '../../components/ui/Button'
 import { addLocalDays, addLocalMonths, formatLocalDate, localDateToDate, startOfLocalMonth, startOfLocalWeek } from '../../domain/date'
+import { normalizeTimelineSpan, timelineDayOffset, timelineIntersects } from './boardTimelineLogic'
 import type { LocalDate } from '../../domain/models'
 import type { TaskPreview } from '../../types/ui'
 
@@ -41,7 +42,7 @@ export function TimelineView({
   const backlog=useMemo(()=>activeTasks.filter((task)=>!task.timelineStart&&!task.completed),[activeTasks])
   const visible=useMemo(()=>activeTasks
     .filter((task)=>task.timelineStart)
-    .filter((task)=>(task.timelineEnd??task.timelineStart!)>=spec.start&&task.timelineStart!<=through)
+    .filter((task)=>timelineIntersects(normalizeTimelineSpan(task.timelineStart!,task.timelineEnd,Boolean(task.timelineMilestone))!,spec.start,through))
     .sort((a,b)=>(a.timelineStart??'').localeCompare(b.timelineStart??'')||(a.timelineEnd??a.timelineStart??'').localeCompare(b.timelineEnd??b.timelineStart??'')||a.title.localeCompare(b.title)),
   [activeTasks,spec.start,through])
   const width=spec.days*spec.pxPerDay
@@ -86,16 +87,16 @@ export function TimelineView({
       <div className="timeline-scroll">
         <div className="timeline-canvas" style={{width}} onDragOver={(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy'}} onDrop={dropBacklog}>
           <div className="timeline-header" style={{width}}>
-            {ticks.map((tick)=><span key={tick.date} className={'timeline-tick-label '+(tick.major?'is-major':'')} style={{left:dayOffset(spec.start,tick.date)*spec.pxPerDay}}>{tick.label}</span>)}
+            {ticks.map((tick)=><span key={tick.date} className={'timeline-tick-label '+(tick.major?'is-major':'')} style={{left:timelineDayOffset(spec.start,tick.date)*spec.pxPerDay}}>{tick.label}</span>)}
           </div>
           <div className="timeline-grid-lines">
-            {ticks.map((tick)=><i key={tick.date} className={tick.major?'is-major':''} style={{left:dayOffset(spec.start,tick.date)*spec.pxPerDay}} />)}
+            {ticks.map((tick)=><i key={tick.date} className={tick.major?'is-major':''} style={{left:timelineDayOffset(spec.start,tick.date)*spec.pxPerDay}} />)}
           </div>
-          {today>=spec.start&&today<=through?<span className="timeline-today-line" style={{left:(dayOffset(spec.start,today)+0.5)*spec.pxPerDay}}><b>Today</b></span>:null}
+          {today>=spec.start&&today<=through?<span className="timeline-today-line" style={{left:(timelineDayOffset(spec.start,today)+0.5)*spec.pxPerDay}}><b>Today</b></span>:null}
 
           <div className="timeline-milestone-lane">
             {visibleMilestones.map((item)=>{
-              const x=(dayOffset(spec.start,item.dueDate!)+0.5)*spec.pxPerDay
+              const x=(timelineDayOffset(spec.start,item.dueDate!)+0.5)*spec.pxPerDay
               return <span key={item.id} className={'timeline-project-milestone '+(item.completed?'is-complete':'')} style={{left:x}} title={item.title}><i>◆</i><em>{item.title}</em></span>
             })}
           </div>
@@ -130,8 +131,8 @@ function TimelineRow({task,index,windowStart,windowEnd,pxPerDay,onOpen,onToggle,
   const end=task.timelineEnd??start
   const visibleStart=start<windowStart?windowStart:start
   const visibleEnd=end>windowEnd?windowEnd:end
-  const left=dayOffset(windowStart,visibleStart)*pxPerDay
-  const days=dayOffset(visibleStart,visibleEnd)+1
+  const left=timelineDayOffset(windowStart,visibleStart)*pxPerDay
+  const days=timelineDayOffset(visibleStart,visibleEnd)+1
   const [preview,setPreview]=useState<{shift?:number;start?:number;end?:number}>({})
   const shift=preview.shift??0
   const startAdjust=preview.start??0
@@ -164,13 +165,13 @@ function TimelineRow({task,index,windowStart,windowEnd,pxPerDay,onOpen,onToggle,
 
   const pVisibleStart=previewStart<windowStart?windowStart:previewStart
   const pVisibleEnd=previewEnd>windowEnd?windowEnd:previewEnd
-  const pLeft=dayOffset(windowStart,pVisibleStart)*pxPerDay
-  const pDays=Math.max(1,dayOffset(pVisibleStart,pVisibleEnd)+1)
+  const pLeft=timelineDayOffset(windowStart,pVisibleStart)*pxPerDay
+  const pDays=Math.max(1,timelineDayOffset(pVisibleStart,pVisibleEnd)+1)
   const deadlineVisible=task.deadline&&task.deadline>=windowStart&&task.deadline<=windowEnd
   return <div className={'timeline-row '+(task.completed?'is-completed ':'')+(task.activeBlockerCount?'is-blocked':'')} style={{top:index*46}}>
-    {deadlineVisible?<span className="timeline-deadline-marker" style={{left:(dayOffset(windowStart,task.deadline!)+0.5)*pxPerDay}} title={'Deadline '+task.deadline}>◆</span>:null}
+    {deadlineVisible?<span className="timeline-deadline-marker" style={{left:(timelineDayOffset(windowStart,task.deadline!)+0.5)*pxPerDay}} title={'Deadline '+task.deadline}>◆</span>:null}
     {task.timelineMilestone
-      ? <button className="timeline-task-milestone" style={{left:(dayOffset(windowStart,previewStart)+0.5)*pxPerDay}} onPointerDown={beginMilestoneMove} onClick={onOpen} title={task.title}><i>◆</i><span>{task.title}</span></button>
+      ? <button className="timeline-task-milestone" style={{left:(timelineDayOffset(windowStart,previewStart)+0.5)*pxPerDay}} onPointerDown={beginMilestoneMove} onClick={onOpen} title={task.title}><i>◆</i><span>{task.title}</span></button>
       : <article className="timeline-bar" style={{left:pLeft,width:Math.max(20,pDays*pxPerDay-2)}}>
           <button className="timeline-bar__resize is-start" aria-label="Resize timeline start" onPointerDown={(e)=>beginResize(e,'start')}/>
           <button className="timeline-bar__main" onPointerDown={beginMove} onDoubleClick={onOpen}>
@@ -191,8 +192,8 @@ function DependencyOverlay({tasks,start,pxPerDay}:{tasks:TaskPreview[];start:Loc
       const blocker=index.get(blockerId)
       if(!blocker?.task.timelineStart)continue
       const blockerEnd=blocker.task.timelineEnd??blocker.task.timelineStart
-      const x1=(dayOffset(start,blockerEnd)+1)*pxPerDay
-      const x2=dayOffset(start,task.timelineStart!)*pxPerDay
+      const x1=(timelineDayOffset(start,blockerEnd)+1)*pxPerDay
+      const x2=timelineDayOffset(start,task.timelineStart!)*pxPerDay
       const y1=blocker.row*46+23
       const y2=current.row*46+23
       const mid=x1+(x2-x1)/2
@@ -221,6 +222,6 @@ function timelineTicks(spec:WindowSpec,zoom:TimelineZoom){
   }
   return rows
 }
-function dayOffset(from:LocalDate,to:LocalDate){return Math.round((localDateToDate(to).getTime()-localDateToDate(from).getTime())/86_400_000)}
+
 function shortDate(value:LocalDate){return formatLocalDate(value,{month:'short',day:'numeric'})}
 function formatRange(start:LocalDate,end:LocalDate){return formatLocalDate(start,{month:'short',day:'numeric',year:'numeric'})+' – '+formatLocalDate(end,{month:'short',day:'numeric',year:'numeric'})}
