@@ -20,6 +20,7 @@ function requestFromParsed(parsed: ParsedCapture, description = ''): CaptureCrea
       title: parsed.title,
       description,
       projectId: parsed.status === 'inbox' ? undefined : parsed.projectId,
+      listId: parsed.status === 'inbox' ? undefined : parsed.listId,
       priority: parsed.priority,
       status: parsed.status,
       plannedDate: parsed.status === 'todo' ? parsed.plannedDate : undefined,
@@ -71,11 +72,13 @@ export function QuickAddModal({ open, projects, lists, defaultStatus = 'todo', d
   const defaults = useMemo(() => ({
     status: defaultStatus,
     projectId: defaultProjectId,
+    listId: defaultListId,
+    lists,
     plannedDate: initialPlannedDate,
     estimatedMinutes: 30,
     priority: 'normal' as const,
     today,
-  }), [defaultStatus, defaultProjectId, initialPlannedDate, today])
+  }), [defaultStatus, defaultProjectId, defaultListId, lists, initialPlannedDate, today])
 
   const lineBreak = String.fromCharCode(10)
   const carriageReturn = String.fromCharCode(13)
@@ -111,6 +114,7 @@ export function QuickAddModal({ open, projects, lists, defaultStatus = 'todo', d
     setTitle(parsed.title)
     setStatus(parsed.status)
     setProjectId(parsed.projectId ?? '')
+    setListId(parsed.listId ?? defaultListId)
     setPriority(parsed.priority)
     setPlannedDate(parsed.plannedDate ?? initialPlannedDate)
     setDeadline(parsed.deadline ?? '')
@@ -150,7 +154,7 @@ export function QuickAddModal({ open, projects, lists, defaultStatus = 'todo', d
       setSaving(true)
       setError('')
       try {
-        await onCreateBatch(valid.map((item) => { const request=requestFromParsed(item); if(item.status!=='inbox'&&defaultListId) request.input.listId=defaultListId; return request }))
+        await onCreateBatch(valid.map((item) => { const request=requestFromParsed(item); if(item.status!=='inbox'&&!request.input.listId&&defaultListId) request.input.listId=defaultListId; return request }))
         if (closeAfter) onClose()
         else {
           setCapture('')
@@ -285,6 +289,7 @@ function BatchLedger({ items }: { items: ParsedCapture[] }) {
         <div><strong>{item.title || 'Untitled task'}</strong><small>{[
           item.status === 'inbox' ? 'Inbox' : formatDate(item.plannedDate),
           item.projectName,
+          item.listName ? '☰ ' + item.listName : undefined,
           item.tags.length ? item.tags.map((tag) => `#${tag}`).join(' ') : undefined,
           item.recurrence ? formatRecurrence(item.recurrence) : undefined,
           item.reminders.length ? `${item.reminders.length} reminder${item.reminders.length === 1 ? '' : 's'}` : undefined,
@@ -305,6 +310,7 @@ function ParseLedger({ parsed }: { parsed: ParsedCapture }) {
       <LedgerItem label="Time" value={parsed.startMinute === undefined ? 'None' : minuteToTime(parsed.startMinute)} />
       <LedgerItem label="Priority" value={capitalize(parsed.priority)} tone={parsed.priority === 'critical' ? 'danger' : parsed.priority === 'high' ? 'accent' : undefined} />
       <LedgerItem label="Project" value={parsed.projectName ?? 'No project'} />
+      <LedgerItem label="List" value={parsed.listName ?? (parsed.listId ? lists.find((list)=>list.id===parsed.listId)?.name ?? 'List' : 'No list')} />
       <LedgerItem label="Tags" value={parsed.tags.length ? parsed.tags.map((tag) => `#${tag}`).join(' ') : 'None'} />
       <LedgerItem label="Deadline" value={parsed.deadline ? formatDate(parsed.deadline) : 'None'} />
       <LedgerItem label="Repeat" value={parsed.recurrence ? formatRecurrence(parsed.recurrence) : 'None'} />
