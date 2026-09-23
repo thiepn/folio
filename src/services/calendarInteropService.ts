@@ -61,7 +61,7 @@ export async function previewCalendarImport(text: string, source: CalendarImport
   const events = parsed.events.map((event) => {
     const duplicateReason = findDuplicate(event, state)
     const startMs = new Date(event.start).getTime(); const endMs = new Date(event.end).getTime()
-    const conflictTitles = state.blocks.filter((block) => new Date(block.start).getTime() < endMs && new Date(block.end).getTime() > startMs && !(block.kind === 'event' && block.title.trim().toLowerCase() === event.summary.trim().toLowerCase() && block.start === event.start && block.end === event.end)).map((block) => block.title).slice(0, 4)
+    const conflictTitles = event.allDay ? [] : state.blocks.filter((block) => !block.allDay && new Date(block.start).getTime() < endMs && new Date(block.end).getTime() > startMs && !(block.kind === 'event' && block.title.trim().toLowerCase() === event.summary.trim().toLowerCase() && block.start === event.start && block.end === event.end)).map((block) => block.title).slice(0, 4)
     return { ...event, duplicate: Boolean(duplicateReason), duplicateReason, conflictTitles }
   })
   for (let i = 0; i < events.length; i++) {
@@ -69,7 +69,7 @@ export async function previewCalendarImport(text: string, source: CalendarImport
     const startMs = Date.parse(events[i].start); const endMs = Date.parse(events[i].end)
     for (let j = 0; j < events.length; j++) {
       if (i === j || events[j].duplicate) continue
-      if (Date.parse(events[j].start) < endMs && Date.parse(events[j].end) > startMs) {
+      if (!events[i].allDay && !events[j].allDay && Date.parse(events[j].start) < endMs && Date.parse(events[j].end) > startMs) {
         const label = `Import: ${events[j].summary}`
         if (!events[i].conflictTitles.includes(label) && events[i].conflictTitles.length < 4) events[i].conflictTitles.push(label)
       }
@@ -89,7 +89,7 @@ export async function previewCalendarImport(text: string, source: CalendarImport
 
 export async function applyCalendarImport(preview: CalendarImportPreview): Promise<UndoableMutation> {
   const importable = preview.events.filter((event) => !event.duplicate)
-  if (!importable.length) throw new Error('There are no new timed events to import.')
+  if (!importable.length) throw new Error('There are no new calendar events to import.')
   const now = new Date().toISOString()
   const batchId = crypto.randomUUID()
   const created: CalendarImportEventRef[] = []
