@@ -177,10 +177,7 @@ function parseDatePhrase(input: string, today: LocalDate): LocalDate | undefined
     if (target === undefined) return undefined
     const current = localDateToDate(today).getDay()
     let delta = (target - current + 7) % 7
-    if (match[1].toLowerCase() === 'next') {
-      if (delta === 0) delta = 7
-      else if (delta < 7) delta += 7
-    }
+    if (match[1].toLowerCase() === 'next' && delta === 0) delta = 7
     return addLocalDays(today, delta)
   }
 
@@ -681,7 +678,7 @@ export const CAPTURE_SYNTAX_EXAMPLES = [
   { syntax: '~Analysis / project:"Analysis III"', meaning: 'project' },
   { syntax: '#exam #deep-work', meaning: 'tags' },
   { syntax: 'every 2 weeks on mon,wed', meaning: 'weekly repeat' },
-  { syntax: 'every month on 1,15 / last Friday', meaning: 'monthly repeat' },
+  { syntax: 'every month on 1,15 / every month on last Friday', meaning: 'monthly repeat' },
   { syntax: '30 days after completion', meaning: 'completion repeat' },
   { syntax: 'remind 30m before', meaning: 'before calendar start' },
   { syntax: 'remind 1 day before deadline at 09:00', meaning: 'deadline reminder' },
