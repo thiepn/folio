@@ -260,6 +260,7 @@ function AppContent() {
         event.preventDefault()
         setAddDefaultStatus(view === 'inbox' ? 'inbox' : 'todo')
         setAddDefaultProjectId(view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '')
+        setAddDefaultListId(view === 'lists' && selectedListId && !selectedListId.startsWith('__') ? selectedListId : '')
         setAddDefaultPlannedDate(view === 'inbox' ? undefined : localDateKey())
         setAddOpen(true)
         return
@@ -311,7 +312,7 @@ function AppContent() {
         return
       }
       if (now - goChordAt.current < 900) {
-        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', p: 'planner', o: 'projects', h: 'habits', r: 'review' }
+        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', p: 'planner', o: 'projects', l: 'lists', h: 'habits', r: 'review' }
         const next = destination[key]
         goChordAt.current = 0
         setGoChordPending(false)
@@ -327,7 +328,7 @@ function AppContent() {
       }
       if (!event.metaKey && !event.ctrlKey && !event.altKey && key === 'n') {
         event.preventDefault()
-        openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today)
+        openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today, view === 'lists' && selectedListId && !selectedListId.startsWith('__') ? selectedListId : '')
         return
       }
       if (!event.metaKey && !event.ctrlKey && !event.altKey && key === 'p') {
@@ -661,8 +662,9 @@ function AppContent() {
       { id: 'nav-lists', group: 'Navigate', label: 'Go to Lists & Tags', keywords: 'lists folders sections tags organize', run: () => navigate('lists') },
       { id: 'nav-habits', group: 'Navigate', label: 'Go to Habits', run: () => navigate('habits') },
       { id: 'nav-review', group: 'Navigate', label: 'Go to Review', run: () => navigate('review') },
-      { id: 'capture', group: 'Create', label: 'New task', shortcut: shortcuts.quickAdd, keywords: 'quick add capture create task n', note: 'Capture a task without leaving this view', run: () => openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today) },
+      { id: 'capture', group: 'Create', label: 'New task', shortcut: shortcuts.quickAdd, keywords: 'quick add capture create task n', note: 'Capture a task without leaving this view', run: () => openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today, view === 'lists' && selectedListId && !selectedListId.startsWith('__') ? selectedListId : '') },
       { id: 'create-project', group: 'Create', label: 'New project', shortcut: 'p', keywords: 'create project', run: () => { navigate('projects'); setEditingProjectId(null); setProjectEditorOpen(true) } },
+      { id: 'create-list', group: 'Create', label: 'New list', keywords: 'create list organize folder', run: async () => { navigate('lists'); const { list, undo } = await organizationService.createList({ name: 'New list' }); setSelectedListId(list.id); registerUndo(undo) } },
       { id: 'create-habit', group: 'Create', label: 'New habit', keywords: 'create habit routine', run: () => { navigate('habits'); setEditingHabitId(null); setHabitEditorOpen(true) } },
       { id: 'focus', group: 'Execute', label: focusData?.activeSession ? 'Resume Focus' : 'Start Focus', shortcut: shortcuts.focus, run: () => openFocus() },
       { id: 'plan-day', group: 'Plan', label: 'Plan today', note: 'Open the guided daily planning workflow', run: () => { navigate('today'); setPlanDayOpen(true) } },
@@ -742,9 +744,11 @@ function AppContent() {
         { id: 'bulk-trash', group: `Selected · ${selected}`, label: 'Move selected to Trash', destructive: true, note: 'Reversible with Undo', run: trashSelected },
       )
       for (const project of data?.projects ?? []) list.push({ id: `bulk-project-${project.id}`, group: `Selected · ${selected} · Project`, label: `Move selected to ${project.name}`, run: () => updateSelected({ projectId: project.id }, `${selected} tasks moved to ${project.name}`) })
+      list.push({ id: 'bulk-no-list', group: `Selected · ${selected} · List`, label: 'Move selected to No list', run: () => updateSelected({ listId: null, sectionId: null }, `${selected} tasks moved to No list`) })
+      for (const targetList of data?.lists ?? []) list.push({ id: `bulk-list-${targetList.id}`, group: `Selected · ${selected} · List`, label: `Move selected to ${targetList.name}`, run: () => updateSelected({ listId: targetList.id, sectionId: null }, `${selected} tasks moved to ${targetList.name}`) })
     }
     return list
-  }, [selection.selectedIds, shortcuts, view, selectedProjectId, data?.today, data?.projects, data?.allTasks, focusData?.activeSession, habitData?.habits])
+  }, [selection.selectedIds, shortcuts, view, selectedProjectId, selectedListId, data?.today, data?.projects, data?.lists, data?.allTasks, focusData?.activeSession, habitData?.habits])
 
   if (!data || !habitData) return <BootState />
 
@@ -774,7 +778,7 @@ function AppContent() {
           <span>{`Folio · ${viewAnnouncement}`}</span>
           <div className="mobile-topbar__actions"><button className={reminderData?.dueCount ? 'mobile-reminder-button has-reminders' : 'mobile-reminder-button'} onClick={() => setReminderCenterOpen(true)}>Alerts{reminderData?.dueCount ? ` ${reminderData.dueCount}` : ''}</button><button className="mobile-command-button" onClick={() => setPaletteOpen(true)}>Search</button>{focusData?.activeSession ? <button className="is-focus-active" onClick={() => openFocus()}>Resume focus</button> : <button onClick={() => openFocus()}>Focus</button>}</div>
         </div>
-        <Topbar title={topbarTitle} meta={topbarMeta} onSearch={() => setPaletteOpen(true)} onAppearance={() => setAppearanceOpen(true)} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo')} onFocus={() => openFocus()} onReminders={() => setReminderCenterOpen(true)} reminderCount={reminderData?.dueCount ?? 0} focusActive={Boolean(focusData?.activeSession)} />
+        <Topbar title={topbarTitle} meta={topbarMeta} onSearch={() => setPaletteOpen(true)} onAppearance={() => setAppearanceOpen(true)} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo', '', view === 'inbox' ? undefined : data.today, view === 'lists' && selectedListId && !selectedListId.startsWith('__') ? selectedListId : '')} onFocus={() => openFocus()} onReminders={() => setReminderCenterOpen(true)} reminderCount={reminderData?.dueCount ?? 0} focusActive={Boolean(focusData?.activeSession)} />
         <main className="main-content" id="main-content" ref={mainRef} tabIndex={-1}>
           {view === 'today' ? <TodayView
             tasks={data.todayTasks}
@@ -899,7 +903,7 @@ function AppContent() {
         onData={() => setDataOpen(true)}
       />
 
-      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · P Planner · O Projects · H Habits · R Review</span></div> : null}
+      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · P Planner · O Projects · L Lists · H Habits · R Review</span></div> : null}
       <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
       <ShortcutHelpModal open={shortcutHelpOpen} shortcuts={shortcuts} onClose={() => setShortcutHelpOpen(false)} onConfigure={() => { setShortcutHelpOpen(false); setKeyboardSettingsOpen(true) }} />
       <KeyboardSettingsDrawer open={keyboardSettingsOpen} value={shortcuts} onClose={() => setKeyboardSettingsOpen(false)} onSave={(next) => void settingsRepository.set('power.shortcuts', next)} />
