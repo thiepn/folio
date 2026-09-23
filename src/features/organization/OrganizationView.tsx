@@ -11,12 +11,13 @@ import type { SmartTaskViewInput } from '../../services/savedViewService'
 
 
 export function OrganizationView({
-  folders, archivedFolders, lists, archivedLists, sections, tags, archivedTags, tasks, smartTaskPool, smartViews, smartViewResults, listCounts, tagCounts, selectedListId,
+  projects, folders, archivedFolders, lists, archivedLists, sections, tags, archivedTags, tasks, smartTaskPool, smartViews, smartViewResults, listCounts, tagCounts, selectedListId,
   onSelectList, onCreateFolder, onCreateList, onCreateSection, onCreateTag,
   onUpdateList, onUpdateFolder, onUpdateTag, onMergeTag, onArchiveSection,
   onSaveSmartView, onDeleteSmartView, onDuplicateSmartView, onToggleSmartViewPin,
   onOpenTask, onToggleTask, onMoveTask, onAddTask,
 }: {
+  projects: Array<{id:string;name:string}>
   folders: FolderEntity[]
   archivedFolders: FolderEntity[]
   lists: ListEntity[]
@@ -96,7 +97,7 @@ export function OrganizationView({
       <SmartViewEditorModal
         open={smartEditorOpen}
         view={editingSmartView}
-        projects={[]}
+        projects={projects}
         lists={lists}
         sections={sections}
         tags={tags}
@@ -175,7 +176,7 @@ export function OrganizationView({
     <SmartViewEditorModal
       open={smartEditorOpen}
       view={editingSmartView}
-      projects={[]}
+      projects={projects}
       lists={lists}
       sections={sections}
       tags={tags}
