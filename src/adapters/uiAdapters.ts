@@ -5,6 +5,10 @@ import type { HabitWithEntry } from '../repositories/habitRepository'
 import type { HabitPreview, SchedulePreview, TaskPreview } from '../types/ui'
 
 export function taskToPreview(task: TaskEntity, projects: Map<string, ProjectEntity>, children: TaskEntity[] = [], tasks?: Map<string, TaskEntity>): TaskPreview {
+  const checklist = task.checklist ?? []
+  const progressUnits = children.length + checklist.length
+  const completedUnits = children.filter((child) => child.status === 'completed').length + checklist.filter((item) => item.completed).length
+  const automaticProgress = task.status === 'completed' ? 100 : progressUnits ? Math.round((completedUnits / progressUnits) * 100) : 0
   return {
     id: task.id,
     title: task.title,
@@ -14,6 +18,15 @@ export function taskToPreview(task: TaskEntity, projects: Map<string, ProjectEnt
     parentTaskId: task.parentTaskId,
     meta: relativeDateLabel(task.deadline),
     durationMinutes: task.estimatedMinutes,
+    tags: task.tags ?? [],
+    checklist,
+    progressMode: task.progressMode ?? 'auto',
+    progressPercent: task.progressMode === 'manual' ? (task.progressPercent ?? 0) : automaticProgress,
+    sourceUrl: task.sourceUrl,
+    location: task.location,
+    pinned: task.pinned ?? false,
+    comments: task.comments ?? [],
+    activity: task.activity ?? [],
     priority: task.priority,
     completed: task.status === 'completed',
     plannedDate: task.plannedDate,
