@@ -1,4 +1,4 @@
-import { atTimeInZone } from '../domain/date'
+import { atTimeInZone, localDateKey } from '../domain/date'
 import type { LocalDate } from '../domain/models'
 import type { TaskCreateInput } from '../repositories/taskRepository'
 import { recurrenceRepository } from '../repositories/recurrenceRepository'
@@ -88,9 +88,12 @@ export async function createCapturedItem(request: CaptureCreateRequest): Promise
 
   try {
     if (request.recurrence && request.input.status !== 'inbox') {
-      const startDate = request.input.plannedDate ?? new Date().toISOString().slice(0, 10)
+      const startDate = request.input.plannedDate ?? localDateKey()
+      if (request.input.deadline && request.input.deadline < startDate) {
+        throw new Error('A recurring task deadline cannot be before its occurrence date.')
+      }
       const deadlineOffsetDays = request.input.deadline
-        ? Math.max(0, Math.round((Date.parse(`${request.input.deadline}T12:00:00`) - Date.parse(`${startDate}T12:00:00`)) / 86_400_000))
+        ? Math.round((Date.parse(`${request.input.deadline}T12:00:00`) - Date.parse(`${startDate}T12:00:00`)) / 86_400_000)
         : undefined
       const { series, undo } = await recurrenceService.create({
         title: request.input.title,
