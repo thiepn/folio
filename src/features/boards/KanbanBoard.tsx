@@ -138,11 +138,11 @@ function shortDate(value:string){
 function sortBoardTasks(tasks:TaskPreview[],mode:KanbanSortMode){
   const rows=[...tasks]
   const rank={critical:0,high:1,normal:2}
-  if(mode==='priority') return rows.sort((a,b)=>rank[a.priority]-rank[b.priority]||(a.sortOrder??0)-(b.sortOrder??0))
-  if(mode==='deadline') return rows.sort((a,b)=>(a.deadline??'9999-99-99').localeCompare(b.deadline??'9999-99-99')||(a.sortOrder??0)-(b.sortOrder??0))
-  if(mode==='planned') return rows.sort((a,b)=>(a.plannedDate??'9999-99-99').localeCompare(b.plannedDate??'9999-99-99')||(a.sortOrder??0)-(b.sortOrder??0))
+  if(mode==='priority') return rows.sort((a,b)=>rank[a.priority]-rank[b.priority]||(a.planningOrder??0)-(b.planningOrder??0))
+  if(mode==='deadline') return rows.sort((a,b)=>(a.deadline??'9999-99-99').localeCompare(b.deadline??'9999-99-99')||(a.planningOrder??0)-(b.planningOrder??0))
+  if(mode==='planned') return rows.sort((a,b)=>(a.plannedDate??'9999-99-99').localeCompare(b.plannedDate??'9999-99-99')||(a.planningOrder??0)-(b.planningOrder??0))
   if(mode==='title') return rows.sort((a,b)=>a.title.localeCompare(b.title))
-  return rows.sort((a,b)=>(a.planningOrder??a.sortOrder??0)-(b.planningOrder??b.sortOrder??0)||(a.createdAt??'').localeCompare(b.createdAt??''))
+  return rows.sort((a,b)=>(a.planningOrder??0)-(b.planningOrder??0)||(a.createdAt??'').localeCompare(b.createdAt??''))
 }
 function buildSwimlanes(tasks:TaskPreview[],mode:KanbanSwimlaneMode,lists:Array<Pick<ListEntity,'id'|'name'>>,projects:Array<{id:string;name:string}>){
   if(mode==='none') return [{id:'all',label:'All tasks',tasks}]
