@@ -11,12 +11,12 @@ export interface ContentSearchHit {
 
 export function markdownToSearchText(value: string) {
   return value
-    .replace(/\`\`\`[\\s\\S]*?\`\`\`/g, (block) => block.replace(/\`/g, ' '))
-    .replace(/!\\[([^\\]]*)\\]\\([^)]*\\)/g, '$1')
-    .replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '$1 $2')
-    .replace(/[*_~#>\`]/g, ' ')
-    .replace(/\\[(?: |x|X)\\]/g, ' ')
-    .replace(/\\s+/g, ' ')
+    .replace(/\x60\x60\x60[\s\S]*?\x60\x60\x60/g, (block) => block.replace(/\x60/g, ' '))
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 $2')
+    .replace(/[*_~#>\x60]/g, ' ')
+    .replace(/\[(?: |x|X)\]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
 }
 
@@ -30,7 +30,7 @@ async function attachmentText(ownerType: ContentOwnerType, ownerId: string) {
 async function taskDocument(task: TaskEntity): Promise<SearchDocumentEntity> {
   const attachments = await attachmentText('task', task.id)
   return {
-    id: `task:${task.id}`, ownerType: 'task', ownerId: task.id,
+    id: 'task:' + task.id, ownerType: 'task', ownerId: task.id,
     text: markdownToSearchText([task.title, task.description, task.location ?? '', task.sourceUrl ?? '', ...(task.tags ?? []), ...(task.comments ?? []).map((comment) => comment.body), attachments].join(' ')),
     updatedAt: task.updatedAt,
   }
@@ -39,7 +39,7 @@ async function taskDocument(task: TaskEntity): Promise<SearchDocumentEntity> {
 async function noteDocument(note: NoteEntity): Promise<SearchDocumentEntity> {
   const attachments = await attachmentText('note', note.id)
   return {
-    id: `note:${note.id}`, ownerType: 'note', ownerId: note.id,
+    id: 'note:' + note.id, ownerType: 'note', ownerId: note.id,
     text: markdownToSearchText([note.title, note.body, attachments].join(' ')),
     updatedAt: note.updatedAt,
   }
@@ -47,17 +47,17 @@ async function noteDocument(note: NoteEntity): Promise<SearchDocumentEntity> {
 
 export const contentSearchService = {
   async indexTask(task: TaskEntity) {
-    if (task.deletedAt || task.status === 'cancelled') { await db.searchDocuments.delete(`task:${task.id}`); return }
+    if (task.deletedAt || task.status === 'cancelled') { await db.searchDocuments.delete('task:' + task.id); return }
     await db.searchDocuments.put(await taskDocument(task))
   },
 
   async indexNote(note: NoteEntity) {
-    if (note.archived) { await db.searchDocuments.delete(`note:${note.id}`); return }
+    if (note.archived) { await db.searchDocuments.delete('note:' + note.id); return }
     await db.searchDocuments.put(await noteDocument(note))
   },
 
   async remove(ownerType: ContentOwnerType, ownerId: string) {
-    await db.searchDocuments.delete(`${ownerType}:${ownerId}`)
+    await db.searchDocuments.delete(ownerType + ':' + ownerId)
   },
 
   async rebuildOwner(ownerType: ContentOwnerType, ownerId: string) {
@@ -79,7 +79,7 @@ export const contentSearchService = {
   },
 
   async search(query: string, limit = 80): Promise<ContentSearchHit[]> {
-    const tokens = normalized(query).split(/\\s+/).filter(Boolean)
+    const tokens = normalized(query).split(/\s+/).filter(Boolean)
     if (!tokens.length) return []
     const documents = await db.searchDocuments.toArray()
     const matches = documents
