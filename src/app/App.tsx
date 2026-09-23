@@ -863,12 +863,13 @@ function AppContent() {
             onMoveDate={(id, date) => void moveTaskToExactDate(id, date)}
             onSetCapacity={(date, minutes) => void setPlannerCapacity(date, minutes)}
             onAddForDate={(date) => openAdd('todo', '', date)}
-            onCreateTaskBlock={(taskId, date, startMinute, durationMinutes) => void timeBlockService.createTaskBlock(taskId, date, startMinute, durationMinutes).then(({ undo }) => registerUndo(undo))}
+            onCreateTaskBlock={(taskId, date, startMinute, durationMinutes, timeZone) => void timeBlockService.createTaskBlock(taskId, date, startMinute, durationMinutes, timeZone).then(({ undo }) => registerUndo(undo))}
             onCreateEvent={(title, date, startMinute, durationMinutes, details) => void timeBlockService.createEvent(title, date, startMinute, durationMinutes, details).then(({ undo }) => registerUndo(undo))}
-            onUpdateBlock={(id, date, startMinute, durationMinutes) => void timeBlockService.updateTiming(id, date, startMinute, durationMinutes).then(registerUndo)}
+            onUpdateBlock={(id, date, startMinute, durationMinutes, timeZone) => void timeBlockService.updateTiming(id, date, startMinute, durationMinutes, timeZone).then(registerUndo)}
             onUpdateEvent={(id, title, date, startMinute, durationMinutes, details) => void timeBlockService.updateEvent(id, title, date, startMinute, durationMinutes, details).then(registerUndo)}
             onResizeBlock={(id, durationMinutes) => void timeBlockService.resize(id, durationMinutes).then(registerUndo)}
             onDeleteBlock={(id) => void timeBlockService.remove(id).then(registerUndo)}
+            onDuplicateBlock={(id, date, startMinute, timeZone) => void timeBlockService.duplicate(id, date, startMinute, timeZone).then(({ undo }) => registerUndo(undo))}
           /> : null}
           {view === 'projects' ? (selectedProjectId ? <ProjectDetailView
             project={selectedProject}
