@@ -852,6 +852,7 @@ function AppContent() {
           /> : <ProjectsView projects={data.projects} unassignedCount={data.unassignedCount} onCreate={() => { setEditingProjectId(null); setProjectEditorOpen(true) }} onOpen={setSelectedProjectId} onArchived={() => setArchivedProjectsOpen(true)} />) : null}
           {view === 'lists' ? <OrganizationView
             folders={data.folders}
+            archivedFolders={data.archivedFolders}
             lists={data.lists}
             archivedLists={data.archivedLists}
             sections={data.sections}
@@ -868,6 +869,7 @@ function AppContent() {
             onUpdateList={async (id, changes) => registerUndo(await organizationService.updateList(id, changes))}
             onUpdateFolder={async (id, changes) => registerUndo(await organizationService.updateFolder(id, changes))}
             onUpdateTag={async (id, changes) => registerUndo(await organizationService.updateTag(id, changes))}
+            onMergeTag={async (sourceId, targetId) => registerUndo(await organizationService.mergeTag(sourceId, targetId))}
             onArchiveSection={async (id) => registerUndo(await organizationService.archiveSection(id, true))}
             onOpenTask={setSelectedTaskId}
             onToggleTask={(id) => void toggleTask(id)}
