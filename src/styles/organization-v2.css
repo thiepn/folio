@@ -241,3 +241,9 @@
   .organized-task { grid-template-columns: 1fr; padding-bottom: var(--space-2); }
   .organized-task > select { justify-self: end; width: 160px; }
 }
+
+.task-known-tags { display: grid; gap: 7px; }
+.task-known-tags > span { color: var(--muted-2); font: 8px var(--font-mono); text-transform: uppercase; letter-spacing: .08em; }
+.task-known-tags > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.task-known-tags button { min-height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-input); color: var(--muted); font: 9px var(--font-mono); }
+.task-known-tags button.is-selected { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-text); }
