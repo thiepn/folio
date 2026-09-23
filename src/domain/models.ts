@@ -19,6 +19,9 @@ export type PatchOperationKind = 'create' | 'update' | 'delete'
 export type DailyPlanStatus = 'draft' | 'committed'
 export type DailyPlanBucket = 'must' | 'planned' | 'optional'
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'after-completion'
+export type CompletionIntervalUnit = 'day' | 'week' | 'month' | 'year'
+export type MonthlyRecurrenceMode = 'days' | 'ordinal-weekday' | 'last-day'
+export type RecurrenceOrdinal = 1 | 2 | 3 | 4 | 5 | -1
 export type RecurringSeriesStatus = 'active' | 'paused' | 'archived'
 export type ReviewKind = 'daily' | 'weekly' | 'monthly'
 export type TaskProgressMode = 'auto' | 'manual'
@@ -199,6 +202,11 @@ export interface RecurrenceException {
   projectId?: EntityId
   priority?: TaskPriority
   estimatedMinutes?: number
+  tags?: string[]
+  checklist?: string[]
+  sourceUrl?: string
+  location?: string
+  pinned?: boolean
   plannedDate?: LocalDate
   deadline?: LocalDate
   startMinute?: number
@@ -216,6 +224,12 @@ export interface RecurringSeriesEntity {
     interval: number
     weekdays?: number[]
     monthDay?: number
+    monthlyMode?: MonthlyRecurrenceMode
+    monthDays?: number[]
+    ordinal?: RecurrenceOrdinal
+    weekday?: number
+    yearMonths?: number[]
+    afterCompletionUnit?: CompletionIntervalUnit
     until?: LocalDate
     count?: number
   }
@@ -225,6 +239,11 @@ export interface RecurringSeriesEntity {
     projectId?: EntityId
     priority: TaskPriority
     estimatedMinutes?: number
+    tags: string[]
+    checklist: string[]
+    sourceUrl?: string
+    location?: string
+    pinned: boolean
     deadlineOffsetDays?: number
     startMinute?: number
     blockDurationMinutes?: number
