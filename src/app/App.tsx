@@ -145,7 +145,7 @@ function AppContent() {
   const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])
   const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', planner: 'Planner', projects: 'Projects', habits: 'Habits', review: 'Review' }[view]), [view])
 
-  const selectedTask = useMemo(() => data?.allTasks.find((task) => task.id === selectedTaskId) ?? null, [data?.allTasks, selectedTaskId])
+  const selectedTask = useMemo(() => data?.allTasks.find((task) => task.id === selectedTaskId) ?? data?.subtasks.find((task) => task.id === selectedTaskId) ?? null, [data?.allTasks, data?.subtasks, selectedTaskId])
   const selectedSeries = useMemo(() => selectedTask?.seriesId ? data?.recurringSeries.find((series) => series.id === selectedTask.seriesId) ?? null : null, [data?.recurringSeries, selectedTask])
   const selectedSubtasks = useMemo(() => data?.subtasks.filter((task) => task.parentTaskId === selectedTaskId) ?? [], [data?.subtasks, selectedTaskId])
   const selectedProject = useMemo(() => data?.projects.find((project) => project.id === selectedProjectId), [data?.projects, selectedProjectId])
@@ -912,6 +912,7 @@ function AppContent() {
         onSave={saveTask}
         onToggle={(id) => void toggleTask(id)}
         onToggleSubtask={(id) => void toggleTask(id)}
+        onOpenSubtask={(id) => setSelectedTaskId(id)}
         onAddSubtask={(parentId, title) => taskService.createSubtask(parentId, title).then(() => undefined)}
         onDeleteSubtask={(id) => void taskService.softDelete(id).then(registerUndo)}
         onDuplicate={(id) => void taskService.duplicate(id).then(({ id: newId, undo }) => { setSelectedTaskId(newId); registerUndo(undo) })}
