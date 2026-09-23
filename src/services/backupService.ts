@@ -245,7 +245,7 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
   for (const attachment of data.attachments) {
     if (attachment.ownerType === 'task' && !taskIds.has(attachment.ownerId)) throw new Error(`Attachment “${attachment.name}” references a missing task.`)
     if (attachment.ownerType === 'note' && !noteIds.has(attachment.ownerId)) throw new Error(`Attachment “${attachment.name}” references a missing note.`)
-    if (attachment.kind !== 'link' && !attachment.dataBase64) warnings.push(`Attachment “${attachment.name}” has metadata but no binary payload.`)
+    if (attachment.kind !== 'link' && attachment.dataBase64 === undefined) throw new Error(`Attachment “${attachment.name}” is missing its binary payload.`)
   }
   for (const task of data.tasks) {
     if (task.timelineEnd && !task.timelineStart) throw new Error(`Task “${task.title}” has a timeline end without a start.`)
