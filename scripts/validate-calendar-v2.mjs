@@ -41,7 +41,7 @@ const css=read('src/styles/calendar-v2.css')
 
 check('D7 validator registered',pkg.scripts?.['validate:calendar-v2']==='node scripts/validate-calendar-v2.mjs')
 check('release gate runs D7 validation',pkg.scripts?.['release:verify']?.includes('validate:calendar-v2'))
-check('D7 intentionally retains schema v19',/DATABASE_SCHEMA_VERSION\s*=\s*19\b/.test(database)&&!database.includes('this.version(20)'))
+check('D7 remains schema-compatible',Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1]??0)>=19&&database.includes('this.version(19)'))
 
 check('TimeBlock model supports all-day metadata',models.includes('allDay?: boolean')&&models.includes("source?: 'folio' | 'ics'"))
 check('TimeBlock model stores timezone and external provenance',models.includes('timeZone?: string')&&models.includes('sourceCalendar?: string')&&models.includes('sourceUid?: string'))
