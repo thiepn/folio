@@ -178,12 +178,14 @@ function AppContent() {
       const occurrenceId = url.searchParams.get('reminderOccurrence')
       if (!occurrenceId) return
       const action = url.searchParams.get('reminderAction') || 'open'
-      if (action !== 'open') await reminderService.handleNotificationAction(occurrenceId, action)
-      const occurrence = await reminderService.openTarget(occurrenceId)
-      if (action === 'open' && occurrence) openReminderOccurrence(occurrence)
+      // Consume the URL action before awaiting so React StrictMode cannot
+      // process the same notification action twice during its dev remount.
       url.searchParams.delete('reminderOccurrence')
       url.searchParams.delete('reminderAction')
       window.history.replaceState(null, '', url)
+      if (action !== 'open') await reminderService.handleNotificationAction(occurrenceId, action)
+      const occurrence = await reminderService.openTarget(occurrenceId)
+      if (action === 'open' && occurrence) openReminderOccurrence(occurrence)
     }
     void handleUrlAction()
     const listener = (event: Event) => {
