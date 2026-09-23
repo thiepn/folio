@@ -79,6 +79,7 @@ check('organization repository enforces unique normalized tags', repo.includes("
 check('tag resolution creates missing registry entries', repo.includes('resolveTagNames') && repo.includes('if(!tag) tag=await this.createTag'))
 check('list repository validates folder reference', repo.includes("throw new Error('Folder not found.')"))
 check('section repository validates list reference', repo.includes("throw new Error('List not found.')"))
+check('repository rejects archived folder/list placement', repo.includes('folder.archived') && repo.includes('list.archived'))
 
 check('tag parent cycles are rejected before mutation', service.includes('assertTagParent') && service.includes('Tag nesting cannot contain a cycle.'))
 check('task movement validates section ownership', service.includes('Section does not belong to the selected list.'))
@@ -157,6 +158,7 @@ check('backup parser includes organization entities', ['backupFolderSchema','bac
 check('backup envelope exports organization collections', backup.includes('folders: FolderEntity[]') && backup.includes('tags: TagEntity[]'))
 check('backup validates task section ownership', backup.includes('has a section but no list') && backup.includes('has a section from another list'))
 check('backup validates tag hierarchy cycles', backup.includes('Backup contains a tag hierarchy cycle.'))
+check('backup validates normalized tag uniqueness', backup.includes("uniqueIds(data.tags, 'tags', 'normalizedName')"))
 check('backup validates recurrence organization overrides', backup.includes('exception') && backup.includes('references missing tag'))
 check('legacy backups are upgraded into canonical v19 tags', backup.includes('upgradeBackupOrganizationV19') && backup.includes('legacyTagIdFor') && backup.includes('task.tagIds = idsFor(task.tags)'))
 check('restore writes organization tables', backup.includes('db.folders.bulkPut') && backup.includes('db.tags.bulkPut'))
