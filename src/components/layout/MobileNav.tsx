@@ -13,7 +13,7 @@ export function MobileNav({ active, onNavigate, onAdd, onMore }: {
   onAdd: () => void
   onMore: () => void
 }) {
-  const moreActive = active === 'projects' || active === 'lists' || active === 'habits' || active === 'review'
+  const moreActive = active === 'projects' || active === 'lists' || active === 'notes' || active === 'habits' || active === 'review'
   return (
     <nav className="mobile-nav" aria-label="Primary navigation">
       {primaryNav.slice(0, 2).map((item) => (
