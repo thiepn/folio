@@ -465,9 +465,12 @@ function AppContent() {
     if (Object.prototype.hasOwnProperty.call(effective, 'title')) template.title = effective.title
     if (Object.prototype.hasOwnProperty.call(effective, 'description')) template.description = effective.description
     if (Object.prototype.hasOwnProperty.call(effective, 'projectId')) template.projectId = effective.projectId === null ? undefined : effective.projectId
+    if (Object.prototype.hasOwnProperty.call(effective, 'listId')) template.listId = effective.listId === null ? undefined : effective.listId
+    if (Object.prototype.hasOwnProperty.call(effective, 'sectionId')) template.sectionId = effective.sectionId === null ? undefined : effective.sectionId
     if (Object.prototype.hasOwnProperty.call(effective, 'priority')) template.priority = effective.priority
     if (Object.prototype.hasOwnProperty.call(effective, 'estimatedMinutes')) template.estimatedMinutes = effective.estimatedMinutes === null ? undefined : effective.estimatedMinutes
     if (Object.prototype.hasOwnProperty.call(effective, 'tags')) template.tags = effective.tags
+    if (Object.prototype.hasOwnProperty.call(effective, 'tagIds')) template.tagIds = effective.tagIds
     if (Object.prototype.hasOwnProperty.call(effective, 'checklist')) {
       const beforeText = (before.checklist ?? []).map((item) => item.text)
       const nextText = effective.checklist?.map((item) => item.text) ?? []
@@ -1110,6 +1113,8 @@ function taskUpdateDiff(before: TaskPreview, changes: TaskUpdateInput): TaskUpda
   if (has('title') && changes.title !== before.title) diff.title = changes.title
   if (has('description') && changes.description !== (before.description ?? '')) diff.description = changes.description
   if (has('projectId') && normalized(changes.projectId) !== before.projectId) diff.projectId = changes.projectId
+  if (has('listId') && normalized(changes.listId) !== before.listId) diff.listId = changes.listId
+  if (has('sectionId') && normalized(changes.sectionId) !== before.sectionId) diff.sectionId = changes.sectionId
   if (has('parentTaskId') && normalized(changes.parentTaskId) !== before.parentTaskId) diff.parentTaskId = changes.parentTaskId
   if (has('priority') && changes.priority !== before.priority) diff.priority = changes.priority
   if (has('status') && changes.status !== before.status) diff.status = changes.status
@@ -1117,6 +1122,7 @@ function taskUpdateDiff(before: TaskPreview, changes: TaskUpdateInput): TaskUpda
   if (has('deadline') && normalized(changes.deadline) !== before.deadline) diff.deadline = changes.deadline
   if (has('estimatedMinutes') && normalized(changes.estimatedMinutes) !== before.durationMinutes) diff.estimatedMinutes = changes.estimatedMinutes
   if (has('tags') && !sameValue(changes.tags ?? [], before.tags ?? [])) diff.tags = changes.tags
+  if (has('tagIds') && !sameValue(changes.tagIds ?? [], before.tagIds ?? [])) diff.tagIds = changes.tagIds
   if (has('checklist') && !sameValue(changes.checklist ?? [], before.checklist ?? [])) diff.checklist = changes.checklist
   if (has('progressMode') && changes.progressMode !== (before.progressMode ?? 'auto')) diff.progressMode = changes.progressMode
   const nextProgressMode = changes.progressMode ?? before.progressMode ?? 'auto'
