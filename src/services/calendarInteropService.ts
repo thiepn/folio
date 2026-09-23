@@ -107,7 +107,7 @@ export async function applyCalendarImport(preview: CalendarImportPreview): Promi
         location: event.location?.trim() || undefined,
         kind: 'event',
         allDay: Boolean(event.allDay),
-        timeZone: event.timezone,
+        timeZone: event.timezone ?? (event.allDay ? 'local' : undefined),
         source: 'ics',
         sourceCalendar: preview.calendarName,
         sourceUid: event.sourceKey ?? event.uid,
@@ -224,5 +224,6 @@ export async function exportCalendarIcs(options: CalendarExportOptions): Promise
 }
 
 export function calendarImportDay(event: ParsedIcsEvent) {
-  return localDateKey(new Date(event.start))
+  if (event.allDay && event.startDate) return event.startDate
+  return dateKeyInTimeZone(event.start, event.timezone ?? 'local')
 }
