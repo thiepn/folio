@@ -218,9 +218,10 @@ function ListWorkspace({list,smart,titleOverride,folders,sections,tags,tasks,onB
       ]
     }
     if(mode==='tag') {
+      const activeTagIds = new Set(tags.map((tag)=>tag.id))
       const used=tags.filter((tag)=>visible.some((task)=>task.tagIds?.includes(tag.id)))
       const result=used.map((tag)=>({key:tag.id,label:'#'+tag.name,tasks:visible.filter((task)=>task.tagIds?.includes(tag.id))}))
-      result.push({key:'untagged',label:'Untagged',tasks:visible.filter((task)=>!task.tagIds?.length)})
+      result.push({key:'untagged',label:'Untagged',tasks:visible.filter((task)=>!task.tagIds?.some((id)=>activeTagIds.has(id)))})
       return result
     }
     return [{key:'all',label:'Tasks',tasks:visible}]
