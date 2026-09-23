@@ -1,5 +1,5 @@
 import { db } from '../db/database'
-import { addLocalDays, atLocalTime } from '../domain/date'
+import { addLocalDays, atTimeInZone } from '../domain/date'
 import { timeBlockCreateSchema, timeBlockUpdateSchema } from '../domain/schemas'
 import type { z } from 'zod'
 import type { LocalDate, TimeBlockEntity } from '../domain/models'
@@ -16,13 +16,13 @@ async function withoutDeletedLinkedTasks(blocks: TimeBlockEntity[]): Promise<Tim
 }
 
 export const timeBlockRepository = {
-  async listForDate(date: LocalDate): Promise<TimeBlockEntity[]> {
-    return this.listBetween(date, date)
+  async listForDate(date: LocalDate, timeZone = 'local'): Promise<TimeBlockEntity[]> {
+    return this.listBetween(date, date, timeZone)
   },
 
-  async listBetween(fromDate: LocalDate, throughDate: LocalDate): Promise<TimeBlockEntity[]> {
-    const start = atLocalTime(fromDate, 0)
-    const endExclusive = atLocalTime(addLocalDays(throughDate, 1), 0)
+  async listBetween(fromDate: LocalDate, throughDate: LocalDate, timeZone = 'local'): Promise<TimeBlockEntity[]> {
+    const start = atTimeInZone(fromDate, 0, timeZone)
+    const endExclusive = atTimeInZone(addLocalDays(throughDate, 1), 0, timeZone)
     const blocks = (await db.timeBlocks.where('start').below(endExclusive).toArray())
       .filter((block) => block.end > start)
       .sort((a, b) => a.start.localeCompare(b.start))
