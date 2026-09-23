@@ -58,6 +58,8 @@ import { reviewRecordService } from '../services/reviewRecordService'
 import { reminderService } from '../services/reminderService'
 import { createCapturedBatch, createCapturedItem } from '../services/captureService'
 import { organizationService } from '../services/organizationService'
+import { boardService } from '../services/boardService'
+import { timelineService } from '../services/timelineService'
 import type { UndoableMutation } from '../services/undo'
 import type { TaskUpdateInput } from '../repositories/taskRepository'
 import type { ProjectCreateInput, ProjectUpdateInput } from '../repositories/projectRepository'
@@ -879,12 +881,17 @@ function AppContent() {
             unassigned={selectedProjectId === '__unassigned__'}
             tasks={data.allTasks.filter((task) => selectedProjectId === '__unassigned__' ? (!task.projectId && task.status !== 'inbox') : task.projectId === selectedProjectId)}
             schedule={data.allTimeBlocks}
+            lists={data.lists}
+            today={data.today}
             focusThisWeekSeconds={focusData?.projectWeekSeconds[selectedProjectId === '__unassigned__' ? '__unassigned__' : selectedProjectId] ?? 0}
             onBack={() => setSelectedProjectId(null)}
             onTaskOpen={setSelectedTaskId}
             onTaskToggle={(id) => void toggleTask(id)}
             onTaskMove={(id, target) => void moveTaskDate(id, target)}
             onTaskFocus={(id) => openFocus(id)}
+            onBoardDrop={async (taskId,target) => registerUndo(await boardService.moveTask(taskId,target))}
+            onTimelineSetSpan={async (taskId,start,end,milestone) => registerUndo(await timelineService.setSpan(taskId,start,end,milestone))}
+            onTimelineClear={async (taskId) => registerUndo(await timelineService.clear(taskId))}
             onAddTask={() => openAdd('todo', selectedProjectId === '__unassigned__' ? '' : selectedProjectId)}
             onEdit={selectedProject ? () => { setEditingProjectId(selectedProject.id); setProjectEditorOpen(true) } : undefined}
             onToggleFavorite={selectedProject ? () => void projectService.toggleFavorite(selectedProject.id).then(registerUndo) : undefined}
@@ -895,6 +902,7 @@ function AppContent() {
             onRemoveMilestone={selectedProject ? (milestoneId) => void projectService.removeMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
           /> : <ProjectsView projects={data.projects} unassignedCount={data.unassignedCount} onCreate={() => { setEditingProjectId(null); setProjectEditorOpen(true) }} onOpen={setSelectedProjectId} onArchived={() => setArchivedProjectsOpen(true)} />) : null}
           {view === 'lists' ? <OrganizationView
+            today={data.today}
             projects={data.projects}
             folders={data.folders}
             archivedFolders={data.archivedFolders}
@@ -924,6 +932,9 @@ function AppContent() {
             onDeleteSmartView={async (id) => { const action = await savedViewService.remove(id); registerUndo(action) }}
             onDuplicateSmartView={async (smartView) => { const { id, undo } = smartView.builtin ? await savedViewService.duplicateDefinition(smartView) : await savedViewService.duplicate(smartView.id); registerUndo(undo); setSelectedListId('__smart__:'+id) }}
             onToggleSmartViewPin={async (id) => registerUndo(await savedViewService.togglePin(id))}
+            onBoardDrop={async (taskId,target,context) => registerUndo(await boardService.moveTask(taskId,target,context))}
+            onTimelineSetSpan={async (taskId,start,end,milestone) => registerUndo(await timelineService.setSpan(taskId,start,end,milestone))}
+            onTimelineClear={async (taskId) => registerUndo(await timelineService.clear(taskId))}
             onOpenTask={setSelectedTaskId}
             onToggleTask={(id) => void toggleTask(id)}
             onMoveTask={async (taskId, listId, sectionId) => registerUndo(await organizationService.moveTask(taskId, listId, sectionId))}
