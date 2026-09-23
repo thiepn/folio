@@ -140,9 +140,10 @@ export function layoutTimedBlocks(blocks: TimeBlockEntity[], date: LocalDate, ti
 }
 
 export function blockTouchesDate(block: TimeBlockEntity, date: LocalDate, timeZone = 'local'): boolean {
-  const startDate = localDateFromIso(block.start, timeZone)
+  const zone = block.allDay ? (block.timeZone ?? 'local') : timeZone
+  const startDate = localDateFromIso(block.start, zone)
   const endInstant = new Date(Math.max(Date.parse(block.start), Date.parse(block.end) - 1)).toISOString()
-  const endDate = localDateFromIso(endInstant, timeZone)
+  const endDate = localDateFromIso(endInstant, zone)
   return date >= startDate && date <= endDate
 }
 
