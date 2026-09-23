@@ -159,7 +159,7 @@ export const organizationService = {
     if (next.name !== beforeName && affectedTasks.length) {
       await db.tasks.bulkPut(affectedTasks.map((task) => ({
         ...task,
-        tags: (task.tagIds ?? []).map((tagId) => tagId === id ? next.name : task.tags[(task.tagIds ?? []).indexOf(tagId)]).filter(Boolean),
+        tags: (task.tagIds ?? []).map((tagId) => tagId === id ? next.name : task.tags[(task.tagIds ?? []).indexOf(tagId)]).filter((name): name is string => Boolean(name)),
         updatedAt: now(),
       })))
     }
@@ -168,13 +168,13 @@ export const organizationService = {
       for (const series of affectedSeries) {
         const templateTags = [...(series.taskTemplate.tags ?? [])]
         const templateIds = series.taskTemplate.tagIds ?? []
-        series.taskTemplate.tags = templateIds.map((tagId, index) => tagId === id ? next.name : templateTags[index]).filter(Boolean)
+        series.taskTemplate.tags = templateIds.map((tagId, index) => tagId === id ? next.name : templateTags[index]).filter((name): name is string => Boolean(name))
         for (const [date, exception] of Object.entries(series.exceptions ?? {})) {
           if (!exception.tagIds?.includes(id)) continue
           const names = [...(exception.tags ?? [])]
           series.exceptions[date] = {
             ...exception,
-            tags: exception.tagIds.map((tagId, index) => tagId === id ? next.name : names[index]).filter(Boolean),
+            tags: exception.tagIds.map((tagId, index) => tagId === id ? next.name : names[index]).filter((name): name is string => Boolean(name)),
           }
         }
         series.updatedAt = now()
