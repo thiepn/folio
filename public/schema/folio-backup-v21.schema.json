@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://folio.local/schema/backup-v21.json",
+  "title": "Folio Backup Envelope v21",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "version",
+    "exportedAt",
+    "data"
+  ],
+  "properties": {
+    "format": {
+      "const": "folio-backup"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 8,
+      "maximum": 21
+    },
+    "exportedAt": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tasks",
+        "projects",
+        "habits",
+        "habitEntries",
+        "timeBlocks",
+        "dailyPlans",
+        "dailyPlanItems",
+        "focusSessions",
+        "recurringSeries",
+        "settings",
+        "importBatches",
+        "reviewRecords",
+        "reminders",
+        "reminderOccurrences",
+        "folders",
+        "lists",
+        "sections",
+        "tags",
+        "notes",
+        "attachments"
+      ],
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "habits": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "habitEntries": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "timeBlocks": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "dailyPlans": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "dailyPlanItems": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "focusSessions": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "recurringSeries": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "settings": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "importBatches": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "patchBatches": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "calendarImportBatches": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "reviewRecords": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "reminders": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "reminderOccurrences": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "folders": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "lists": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "sections": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        },
+        "attachments": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}
