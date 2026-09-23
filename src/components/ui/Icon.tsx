@@ -3,7 +3,7 @@ import type { SVGProps } from 'react'
 export type IconName =
   | 'home' | 'inbox' | 'calendar' | 'folder' | 'habit' | 'review'
   | 'settings' | 'search' | 'focus' | 'plus' | 'close' | 'more'
-  | 'check' | 'clock' | 'chevronRight' | 'download'
+  | 'check' | 'clock' | 'chevronRight' | 'download' | 'bell'
 
 const paths: Record<IconName, React.ReactNode> = {
   home: <><path d="M4 10.5 12 4l8 6.5v8.5a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z" /></>,
@@ -22,6 +22,7 @@ const paths: Record<IconName, React.ReactNode> = {
   clock: <><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3 2" /></>,
   chevronRight: <path d="m9 5 7 7-7 7" />,
   download: <><path d="M12 3v12m0 0 4-4m-4 4-4-4" /><path d="M4 19h16" /></>,
+  bell: <><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7 2.5 7h-17S6 15 6 9z" /><path d="M10 20h4" /></>,
 }
 
 export function Icon({ name, ...props }: { name: IconName } & SVGProps<SVGSVGElement>) {
