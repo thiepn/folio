@@ -116,9 +116,17 @@ Reminder occurrences remain in-app even when system-notification permission is u
 
 See `docs/REMINDERS_NOTIFICATION_ENGINE_D3.md`.
 
+## D4 — Capture Engine V2 & Natural-Language Quick Add
+
+Quick Add now parses substantially richer local natural language into Folio's existing canonical models: natural dates and deadlines, 12/24-hour times and ranges, duration phrases, priorities, explicit project selectors, D1 tags, advanced D2 recurrence rules, and D3 reminders. Legacy compact syntax remains supported.
+
+Quick Add also accepts one task per line. Multi-line paste shows an independent interpretation for every row and creates the batch through one rollback-safe capture pipeline, including recurring series, time blocks, tags, and reminders. D4 adds no parallel storage model and keeps IndexedDB at schema v18.
+
+See `docs/CAPTURE_ENGINE_V2_D4.md`.
+
 ## Data and privacy
 
-Planner data is local-first in IndexedDB. The current database schema is **v18**. Full backups export schema v18, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, and durable review records; direct restore supports compatible backups from **v8 through v18**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
+Planner data is local-first in IndexedDB. The current database schema remains **v18**. Full backups export schema v18, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, and durable review records; direct restore supports compatible backups from **v8 through v18**. D4 Capture Engine V2 is an input-layer upgrade and adds no duplicate persistence model. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
 
 Fresh installs begin with an empty personal workspace. Optional sample data can be loaded explicitly from Data & storage.
 
