@@ -126,6 +126,7 @@ check('organization workspace restores archived organization', view.includes('Ar
 check('list workspace supports seven sort modes', ['manual','planned','deadline','priority','title','created','updated'].every((token)=>view.includes('value="'+token+'"')))
 check('list workspace supports five group modes', ['section','none','planned','priority','tag'].every((token)=>view.includes('value="'+token+'"')))
 check('list workspace supports completed visibility', view.includes('Show completed') && view.includes('showCompleted'))
+check('tag grouping keeps archived-tag-only tasks visible', view.includes('activeTagIds') && view.includes('activeTagIds.has(id)'))
 check('sections can be created and archived', view.includes('Add section') && view.includes('Archive section'))
 check('tasks can move between list sections', view.includes('Move ') && view.includes('onMoveTask'))
 check('task rows surface list and section', taskRow.includes("task.list") && taskRow.includes("task.section"))
