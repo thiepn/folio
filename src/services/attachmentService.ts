@@ -87,7 +87,7 @@ export async function serializeAttachment(attachment: AttachmentEntity): Promise
 
 export function deserializeAttachment(attachment: PortableAttachment): AttachmentEntity {
   const { dataBase64, ...metadata } = attachment
-  return { ...metadata, blob: dataBase64 ? new Blob([base64ToBytes(dataBase64)], { type: attachment.mimeType || 'application/octet-stream' }) : undefined }
+  return { ...metadata, blob: dataBase64 !== undefined ? new Blob([base64ToBytes(dataBase64)], { type: attachment.mimeType || 'application/octet-stream' }) : undefined }
 }
 
 export const attachmentService = {
