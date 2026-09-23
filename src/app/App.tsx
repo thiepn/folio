@@ -665,6 +665,7 @@ function AppContent() {
       { id: 'capture', group: 'Create', label: 'New task', shortcut: shortcuts.quickAdd, keywords: 'quick add capture create task n', note: 'Capture a task without leaving this view', run: () => openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today, view === 'lists' && selectedListId && !selectedListId.startsWith('__') ? selectedListId : '') },
       { id: 'create-project', group: 'Create', label: 'New project', shortcut: 'p', keywords: 'create project', run: () => { navigate('projects'); setEditingProjectId(null); setProjectEditorOpen(true) } },
       { id: 'create-list', group: 'Create', label: 'New list', keywords: 'create list organize folder', run: async () => { navigate('lists'); const { list, undo } = await organizationService.createList({ name: 'New list' }); setSelectedListId(list.id); registerUndo(undo) } },
+      { id: 'open-smart-views', group: 'Navigate', label: 'Go to Smart Views', keywords: 'filter query saved smart dynamic view create', run: () => { navigate('lists'); setSelectedListId(null) } },
       { id: 'create-habit', group: 'Create', label: 'New habit', keywords: 'create habit routine', run: () => { navigate('habits'); setEditingHabitId(null); setHabitEditorOpen(true) } },
       { id: 'focus', group: 'Execute', label: focusData?.activeSession ? 'Resume Focus' : 'Start Focus', shortcut: shortcuts.focus, run: () => openFocus() },
       { id: 'plan-day', group: 'Plan', label: 'Plan today', note: 'Open the guided daily planning workflow', run: () => { navigate('today'); setPlanDayOpen(true) } },
@@ -738,6 +739,17 @@ function AppContent() {
         run: () => { navigate('lists'); setSelectedListId('__tag__:' + tag.id) },
       })
     }
+    for (const smartView of data?.smartViews ?? []) {
+      list.push({
+        id: `search-smart-view-${smartView.id}`,
+        group: 'Smart View',
+        label: smartView.name,
+        note: `${data?.smartViewResults[smartView.id]?.count ?? 0} matching tasks`,
+        keywords: `${smartView.description ?? ''} filter query dynamic saved view`,
+        searchOnly: true,
+        run: () => { navigate('lists'); setSelectedListId('__smart__:' + smartView.id) },
+      })
+    }
     for (const habit of habitData?.habits ?? []) {
       list.push({
         id: `search-habit-${habit.id}`,
@@ -770,7 +782,7 @@ function AppContent() {
       for (const targetList of data?.lists ?? []) list.push({ id: `bulk-list-${targetList.id}`, group: `Selected · ${selected} · List`, label: `Move selected to ${targetList.name}`, run: () => updateSelected({ listId: targetList.id, sectionId: null }, `${selected} tasks moved to ${targetList.name}`) })
     }
     return list
-  }, [selection.selectedIds, shortcuts, view, selectedProjectId, selectedListId, data?.today, data?.projects, data?.lists, data?.tags, data?.listCounts, data?.tagCounts, data?.allTasks, focusData?.activeSession, habitData?.habits])
+  }, [selection.selectedIds, shortcuts, view, selectedProjectId, selectedListId, data?.today, data?.projects, data?.lists, data?.tags, data?.smartViews, data?.smartViewResults, data?.listCounts, data?.tagCounts, data?.allTasks, focusData?.activeSession, habitData?.habits])
 
   if (!data || !habitData) return <BootState />
 
@@ -779,19 +791,21 @@ function AppContent() {
     : view === 'lists' && selectedListId
       ? data.lists.find((list) => list.id === selectedListId)?.name
         ?? (selectedListId.startsWith('__tag__:') ? '#' + (data.tags.find((tag) => tag.id === selectedListId.slice('__tag__:'.length))?.name ?? 'Tag')
-          : selectedListId === '__all__' ? 'All tasks'
-            : selectedListId === '__unlisted__' ? 'No list'
-              : selectedListId === '__high__' ? 'High priority'
-                : selectedListId === '__unscheduled__' ? 'Unscheduled'
-                  : 'Lists')
+          : selectedListId.startsWith('__smart__:') ? data.smartViews.find((item) => item.id === selectedListId.slice('__smart__:'.length))?.name ?? 'Smart View'
+            : 'Lists')
       : viewAnnouncement
   const topbarMeta = view === 'today'
     ? new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date())
     : view === 'inbox' ? `${data.inboxTasks.length} unprocessed`
       : view === 'projects' && selectedProjectId ? `${selectedProject?.openTaskCount ?? data.unassignedCount} open tasks`
         : view === 'projects' ? `${data.projects.length} active projects`
-          : view === 'lists' && selectedListId ? `${selectedListId.startsWith('__') ? 'Smart collection' : (data.listCounts[selectedListId] ?? 0) + ' open tasks'}`
-            : view === 'lists' ? `${data.lists.length} active lists · ${data.tags.length} tags`
+          : view === 'lists' && selectedListId
+            ? selectedListId.startsWith('__smart__:')
+              ? `${data.smartViewResults[selectedListId.slice('__smart__:'.length)]?.count ?? 0} matching tasks`
+              : selectedListId.startsWith('__tag__:')
+                ? `${data.tagCounts[selectedListId.slice('__tag__:'.length)] ?? 0} matching tasks`
+                : `${data.listCounts[selectedListId] ?? 0} open tasks`
+            : view === 'lists' ? `${data.lists.length} active lists · ${data.tags.length} tags · ${data.customSmartViews.length} smart views`
           : view === 'habits' ? `${habitData.dueToday} due today`
             : view === 'review' ? 'Review, learn, replan'
               : 'Plan time, deadlines, and capacity'
@@ -800,7 +814,7 @@ function AppContent() {
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{viewAnnouncement} view</div>
-      <Sidebar active={view} inboxCount={data.inboxTasks.length} favoriteProjects={data.favoriteProjects} favoriteLists={data.favoriteLists} favoriteTags={data.favoriteTags} onNavigate={navigate} onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }} onOpenList={(id) => { navigate('lists'); setSelectedListId(id) }} onOpenTag={(id) => { navigate('lists'); setSelectedListId('__tag__:'+id) }} onAppearance={() => setAppearanceOpen(true)} onData={() => setDataOpen(true)} />
+      <Sidebar active={view} inboxCount={data.inboxTasks.length} favoriteProjects={data.favoriteProjects} favoriteLists={data.favoriteLists} favoriteTags={data.favoriteTags} pinnedSmartViews={data.pinnedSmartViews} onNavigate={navigate} onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }} onOpenList={(id) => { navigate('lists'); setSelectedListId(id) }} onOpenTag={(id) => { navigate('lists'); setSelectedListId('__tag__:'+id) }} onOpenSmartView={(id) => { navigate('lists'); setSelectedListId('__smart__:'+id) }} onAppearance={() => setAppearanceOpen(true)} onData={() => setDataOpen(true)} />
       <div className="workspace">
         <div className="mobile-topbar">
           <span>{`Folio · ${viewAnnouncement}`}</span>
@@ -855,8 +869,6 @@ function AppContent() {
             onUpdateEvent={(id, title, date, startMinute, durationMinutes, details) => void timeBlockService.updateEvent(id, title, date, startMinute, durationMinutes, details).then(registerUndo)}
             onResizeBlock={(id, durationMinutes) => void timeBlockService.resize(id, durationMinutes).then(registerUndo)}
             onDeleteBlock={(id) => void timeBlockService.remove(id).then(registerUndo)}
-            onSaveSavedView={async (savedView) => { const action = await savedViewService.save(savedView); registerUndo(action); return action }}
-            onDeleteSavedView={async (id) => { const action = await savedViewService.remove(id); registerUndo(action); return action }}
           /> : null}
           {view === 'projects' ? (selectedProjectId ? <ProjectDetailView
             project={selectedProject}
@@ -879,6 +891,7 @@ function AppContent() {
             onRemoveMilestone={selectedProject ? (milestoneId) => void projectService.removeMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
           /> : <ProjectsView projects={data.projects} unassignedCount={data.unassignedCount} onCreate={() => { setEditingProjectId(null); setProjectEditorOpen(true) }} onOpen={setSelectedProjectId} onArchived={() => setArchivedProjectsOpen(true)} />) : null}
           {view === 'lists' ? <OrganizationView
+            projects={data.projects}
             folders={data.folders}
             archivedFolders={data.archivedFolders}
             lists={data.lists}
@@ -887,6 +900,9 @@ function AppContent() {
             tags={data.tags}
             archivedTags={data.archivedTags}
             tasks={data.allTasks}
+            smartTaskPool={[...data.allTasks, ...data.subtasks]}
+            smartViews={data.smartViews}
+            smartViewResults={data.smartViewResults}
             listCounts={data.listCounts}
             tagCounts={data.tagCounts}
             selectedListId={selectedListId}
@@ -900,6 +916,10 @@ function AppContent() {
             onUpdateTag={async (id, changes) => registerUndo(await organizationService.updateTag(id, changes))}
             onMergeTag={async (sourceId, targetId) => registerUndo(await organizationService.mergeTag(sourceId, targetId))}
             onArchiveSection={async (id) => registerUndo(await organizationService.archiveSection(id, true))}
+            onSaveSmartView={async (smartView) => { const action = await savedViewService.save(smartView); registerUndo(action) }}
+            onDeleteSmartView={async (id) => { const action = await savedViewService.remove(id); registerUndo(action) }}
+            onDuplicateSmartView={async (smartView) => { const { id, undo } = smartView.builtin ? await savedViewService.duplicateDefinition(smartView) : await savedViewService.duplicate(smartView.id); registerUndo(undo); setSelectedListId('__smart__:'+id) }}
+            onToggleSmartViewPin={async (id) => registerUndo(await savedViewService.togglePin(id))}
             onOpenTask={setSelectedTaskId}
             onToggleTask={(id) => void toggleTask(id)}
             onMoveTask={async (taskId, listId, sectionId) => registerUndo(await organizationService.moveTask(taskId, listId, sectionId))}

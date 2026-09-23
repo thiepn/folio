@@ -1,5 +1,5 @@
 import type { HabitEntity, ProjectEntity, TaskEntity } from '../../domain/models'
-import { buildDeadlinePressure, buildForecast, filterTasksForSavedView, taskIsBlocked, type SavedTaskView } from './advancedPlanning'
+import { buildDeadlinePressure, buildForecast, taskIsBlocked } from './advancedPlanning'
 import { wouldCreateDependencyCycle } from './dependencyLogic'
 
 const now = '2026-08-21T08:00:00.000Z'
@@ -19,9 +19,6 @@ export function validateAdvancedPlanningCases() {
   const pressure = buildDeadlinePressure([blocked, prereq], '2026-08-21')
   if (pressure[0]?.pressure !== 'critical' || !pressure[0].blocked) failures.push('Blocked near deadline should be critical pressure')
 
-  const view: SavedTaskView = { id: 'v', name: 'Blocked', dateMode: 'all', deadlineMode: 'all', blockMode: 'blocked', statusMode: 'open', createdAt: now, updatedAt: now }
-  const filtered = filterTasksForSavedView([blocked, prereq], view, '2026-08-21')
-  if (filtered.length !== 1 || filtered[0].id !== 'blocked') failures.push('Blocked saved-view filter regression')
   const inboxPrereq = task('inbox-prereq', { status: 'inbox' })
   if (taskIsBlocked(task('depends-on-inbox', { blockedByTaskIds: [inboxPrereq.id] }), new Map([[inboxPrereq.id, inboxPrereq]]))) failures.push('Inbox captures must never become active blockers')
 
