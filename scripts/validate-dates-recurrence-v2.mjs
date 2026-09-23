@@ -72,6 +72,9 @@ check('editor exposes completion interval unit', editor.includes('afterCompletio
 check('editor explains calendar-week weekly anchoring', editor.includes('Monday-first calendar weeks'))
 
 check('one-off edits persist recurrence exceptions', service.includes('recordOccurrenceException') && app.includes('recurrenceService.recordOccurrenceException'))
+check('scoped recurring edits are diffed before mutation', app.includes('taskUpdateDiff') && app.includes('recurrenceOverrideDiff') && app.includes('const effective = taskUpdateDiff(before, changes)'))
+check('checklist completion alone does not freeze series checklist template', app.includes('beforeText') && app.includes('nextText') && app.includes('delete override.checklist'))
+check('future and entire edits preserve occurrence-local state', app.includes("occurrenceChanges.progressMode") && app.includes("occurrenceChanges.comments") && app.includes("occurrenceChanges.checklist"))
 check('planner reschedules persist occurrence exceptions', dailyPlanning.includes('recurrenceService.recordOccurrenceException') && dailyPlanning.includes('{ plannedDate: targetDate ?? null }'))
 check('direct reschedules persist occurrence exceptions', taskService.includes('recurrenceService.recordOccurrenceException') && taskService.includes('{ plannedDate: plannedDate ?? null }'))
 check('future series split moves exceptions', service.includes('earlierExceptions') && service.includes('futureExceptions'))
