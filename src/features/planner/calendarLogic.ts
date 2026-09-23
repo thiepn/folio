@@ -41,22 +41,13 @@ export function formatClockMinute(minute: number): string {
 
 export function blockConflicts(blocks: TimeBlockEntity[]): Set<string> {
   const conflicts = new Set<string>()
-  const byDate = new Map<LocalDate, TimeBlockEntity[]>()
-  for (const block of blocks) {
-    const date = localDateFromIso(block.start)
-    const list = byDate.get(date) ?? []
-    list.push(block)
-    byDate.set(date, list)
-  }
-  for (const list of byDate.values()) {
-    const sorted = [...list].sort((a, b) => a.start.localeCompare(b.start))
-    for (let i = 0; i < sorted.length; i += 1) {
-      for (let j = i + 1; j < sorted.length; j += 1) {
-        if (new Date(sorted[j].start).getTime() >= new Date(sorted[i].end).getTime()) break
-        if (new Date(sorted[j].end).getTime() > new Date(sorted[i].start).getTime()) {
-          conflicts.add(sorted[i].id)
-          conflicts.add(sorted[j].id)
-        }
+  const sorted = blocks.filter((block) => !block.allDay).sort((a, b) => a.start.localeCompare(b.start))
+  for (let i = 0; i < sorted.length; i += 1) {
+    for (let j = i + 1; j < sorted.length; j += 1) {
+      if (Date.parse(sorted[j].start) >= Date.parse(sorted[i].end)) break
+      if (Date.parse(sorted[j].end) > Date.parse(sorted[i].start)) {
+        conflicts.add(sorted[i].id)
+        conflicts.add(sorted[j].id)
       }
     }
   }
@@ -72,12 +63,12 @@ export function remainingTaskMinutes(estimate: number | undefined, blocks: TimeB
   return Math.max(0, estimate - scheduledMinutesForTask(blocks, taskId))
 }
 
-export function occupiedMinutesInWindow(blocks: TimeBlockEntity[], date: LocalDate, startMinute = CALENDAR_START_MINUTE, endMinute = CALENDAR_END_MINUTE): number {
+export function occupiedMinutesInWindow(blocks: TimeBlockEntity[], date: LocalDate, startMinute = CALENDAR_START_MINUTE, endMinute = CALENDAR_END_MINUTE, timeZone = 'local'): number {
   const intervals = blocks
-    .filter((block) => localDateFromIso(block.start) === date)
+    .filter((block) => !block.allDay && blockTouchesDate(block, date, timeZone))
     .map((block) => [
-      Math.max(startMinute, minuteOfDayFromIso(block.start)),
-      Math.min(endMinute, minuteOfDayFromIso(block.end)),
+      Math.max(startMinute, blockStartMinuteForDate(block, date, timeZone)),
+      Math.min(endMinute, blockEndMinuteForDate(block, date, timeZone)),
     ] as const)
     .filter(([start, end]) => end > start)
     .sort((a, b) => a[0] - b[0])
@@ -96,8 +87,8 @@ export function occupiedMinutesInWindow(blocks: TimeBlockEntity[], date: LocalDa
   return total + currentEnd - currentStart
 }
 
-export function openMinutesInWindow(blocks: TimeBlockEntity[], date: LocalDate, startMinute = CALENDAR_START_MINUTE, endMinute = CALENDAR_END_MINUTE): number {
-  return Math.max(0, endMinute - startMinute - occupiedMinutesInWindow(blocks, date, startMinute, endMinute))
+export function openMinutesInWindow(blocks: TimeBlockEntity[], date: LocalDate, startMinute = CALENDAR_START_MINUTE, endMinute = CALENDAR_END_MINUTE, timeZone = 'local'): number {
+  return Math.max(0, endMinute - startMinute - occupiedMinutesInWindow(blocks, date, startMinute, endMinute, timeZone))
 }
 
 
