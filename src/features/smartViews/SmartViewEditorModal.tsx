@@ -44,7 +44,7 @@ const operators: Record<SmartField,SmartOperator[]> = {
 
 function defaultValue(field:SmartField,operator:SmartOperator): SmartFilterCondition['value'] {
   if (operator === 'exists' || operator === 'not-exists' || operator === 'today' || operator === 'tomorrow' || operator === 'overdue') return undefined
-  if (operator === 'between') return field === 'estimate' ? [30,120] : ['', '']
+  if (operator === 'between') return field === 'estimate' ? [30,120] as [number,number] : ['', ''] as [string,string]
   if (operator === 'within-next') return 7
   if (field === 'status') return operator === 'in' || operator === 'not-in' ? ['todo'] : 'todo'
   if (field === 'priority') return operator === 'in' || operator === 'not-in' ? ['high'] : 'high'
