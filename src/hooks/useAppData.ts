@@ -27,7 +27,7 @@ export function useAppData() {
     const [
       taskSnapshot, projectEntities, timeBlocks, allTimeBlocks,
       defaultCapacity, dailyPlan, dailyPlanItems, recurringSeries,
-      folders, lists, sections, tags,
+      folders, lists, sections, tags, allLists,
     ] = await Promise.all([
       // One Task table snapshot feeds Today, Next, Later, Inbox, projects and history.
       taskRepository.listSnapshot(),
@@ -42,6 +42,7 @@ export function useAppData() {
       organizationRepository.listLists(),
       organizationRepository.listSections(),
       organizationRepository.listTags(),
+      organizationRepository.listLists(true),
     ])
 
     const projects = buildProjectSummaries(projectEntities, taskSnapshot)
@@ -115,6 +116,7 @@ export function useAppData() {
       sections,
       tags,
       favoriteLists: lists.filter((list) => list.favorite),
+      archivedLists: allLists.filter((list) => list.archived),
       unlistedCount: roots.filter((task) => task.status === 'todo' && !task.listId).length,
       tagCounts: Object.fromEntries(tags.map((tag) => [tag.id, roots.filter((task) => task.status === 'todo' && task.tagIds?.includes(tag.id)).length])),
       listCounts: Object.fromEntries(lists.map((list) => [list.id, roots.filter((task) => task.status === 'todo' && task.listId === list.id).length])),
