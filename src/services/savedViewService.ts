@@ -1,7 +1,8 @@
 import { settingsRepository } from '../repositories/settingsRepository'
 import type { TaskPriority } from '../domain/models'
 import type {
-  SmartFilterCondition, SmartFilterGroup, SmartFilterNode, SmartGroupBy, SmartOperator,
+  SMART_FIELD_OPERATORS,
+  SmartFilterCondition, SmartFilterGroup, SmartFilterNode, SmartGroupBy,
   SmartScope, SmartSortField, SmartSortRule, SmartTaskView,
 } from '../features/smartViews/queryEngine'
 import type { UndoableMutation } from './undo'
@@ -36,11 +37,6 @@ const allowedFields = new Set([
   'text','status','priority','project','list','section','tag','planned','deadline',
   'recurring','readiness','estimate','reminder','pinned','completion',
 ])
-const allowedOperators = new Set([
-  'contains','not-contains','equals','is','is-not','in','not-in','exists','not-exists',
-  'has-any','has-all','has-none','on','before','after','on-or-before','on-or-after','between',
-  'today','tomorrow','within-next','overdue','lt','lte','gt','gte',
-])
 const allowedSortFields = new Set<SmartSortField>(['manual','planned','deadline','priority','estimate','title','created','updated'])
 const allowedGroups = new Set<SmartGroupBy>(['none','project','list','section','priority','planned','deadline','tag','status','readiness'])
 
@@ -66,8 +62,9 @@ function cleanValue(value: unknown): SmartFilterCondition['value'] {
 }
 
 function normalizeCondition(raw: any): SmartFilterCondition {
-  const field = allowedFields.has(raw?.field) ? raw.field : 'status'
-  const operator = allowedOperators.has(raw?.operator) ? raw.operator as SmartOperator : 'is'
+  const field = (allowedFields.has(raw?.field) ? raw.field : 'status') as keyof typeof SMART_FIELD_OPERATORS
+  const compatibleOperators = SMART_FIELD_OPERATORS[field]
+  const operator = compatibleOperators.includes(raw?.operator) ? raw.operator : compatibleOperators[0]
   return {
     id: typeof raw?.id === 'string' && raw.id ? raw.id : crypto.randomUUID(),
     type: 'condition',
