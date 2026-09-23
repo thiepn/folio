@@ -162,3 +162,27 @@ export function atTimeInZone(dateKey: LocalDate, minuteOfDay: number, timeZone: 
   if (firstForward !== undefined) return new Date(firstForward).toISOString()
   throw new Error(`Could not resolve ${dateKey} ${String(hour).padStart(2, '0')}:${String(minutePart).padStart(2, '0')} in ${timeZone}.`)
 }
+
+
+export function minuteOfDayInTimeZone(value: Date | string, timeZone: string): number {
+  const date = typeof value === 'string' ? new Date(value) : value
+  if (!timeZone || timeZone === 'local') return date.getHours() * 60 + date.getMinutes()
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return Number(values.hour) * 60 + Number(values.minute)
+}
+
+export function formatTimeInZone(value: Date | string, timeZone: string): string {
+  const date = typeof value === 'string' ? new Date(value) : value
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone: !timeZone || timeZone === 'local' ? undefined : timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date)
+}
