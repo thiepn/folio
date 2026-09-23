@@ -1,4 +1,4 @@
-export type NavView = 'today' | 'inbox' | 'planner' | 'projects' | 'lists' | 'habits' | 'review'
+export type NavView = 'today' | 'inbox' | 'planner' | 'projects' | 'lists' | 'notes' | 'habits' | 'review'
 export type AccentIntensity = 'subtle' | 'balanced' | 'vivid'
 export type Density = 'comfortable' | 'compact'
 
