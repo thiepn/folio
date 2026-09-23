@@ -1,5 +1,5 @@
 import { db } from '../db/database'
-import { localDateKey } from '../domain/date'
+import { dateKeyInTimeZone, localDateKey } from '../domain/date'
 import type { CalendarImportBatchEntity, CalendarImportEventRef, LocalDate, TimeBlockEntity } from '../domain/models'
 import { parseIcs, escapeIcsText, foldIcsLine, utcIcsDate, type ParsedIcsEvent } from '../features/interop/icsLogic'
 import { timeBlockRepository } from '../repositories/timeBlockRepository'
@@ -199,8 +199,9 @@ export async function exportCalendarIcs(options: CalendarExportOptions): Promise
     lines.push(`UID:timeblock-${block.id}@folio.local`)
     lines.push(`DTSTAMP:${stamp}`)
     if (block.allDay) {
-      const startDate = localDateKey(new Date(block.start)).replaceAll('-', '')
-      const endDate = localDateKey(new Date(block.end)).replaceAll('-', '')
+      const zone = block.timeZone ?? 'local'
+      const startDate = dateKeyInTimeZone(block.start, zone).replaceAll('-', '')
+      const endDate = dateKeyInTimeZone(block.end, zone).replaceAll('-', '')
       lines.push(`DTSTART;VALUE=DATE:${startDate}`)
       lines.push(`DTEND;VALUE=DATE:${endDate}`)
     } else {
