@@ -96,6 +96,28 @@ async function optionalFontResponse(request) {
   }
 }
 
+self.addEventListener('notificationclick', (event) => {
+  const occurrenceId = event.notification?.data?.occurrenceId;
+  const action = event.action || 'open';
+  event.notification?.close();
+  if (!occurrenceId) return;
+
+  event.waitUntil((async () => {
+    const target = new URL('./', self.registration.scope);
+    target.searchParams.set('reminderOccurrence', occurrenceId);
+    target.searchParams.set('reminderAction', action);
+
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const client = windows.find((item) => item.url.startsWith(self.registration.scope)) || windows[0];
+    if (client) {
+      if ('navigate' in client) await client.navigate(target.href);
+      await client.focus();
+      return;
+    }
+    await self.clients.openWindow(target.href);
+  })());
+});
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
