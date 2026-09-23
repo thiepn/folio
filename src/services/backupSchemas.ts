@@ -146,6 +146,14 @@ export const backupTagSchema = z.object({
   archived: z.boolean(), sortOrder: z.number(), createdAt: iso, updatedAt: iso,
 })
 
+export const backupNoteSchema = z.object({
+  id, title: z.string(), body: z.string(), sourceTaskId: id.optional(), archived: z.boolean().default(false), archivedAt: iso.optional(), createdAt: iso, updatedAt: iso,
+})
+export const backupAttachmentSchema = z.object({
+  id, ownerType: z.enum(['task','note']), ownerId: id, kind: z.enum(['image','audio','file','link']), name: z.string(), mimeType: z.string().optional(), size: z.number().nonnegative(),
+  url: z.string().optional(), width: z.number().int().positive().optional(), height: z.number().int().positive().optional(), durationSeconds: z.number().nonnegative().optional(), dataBase64: z.string().optional(), createdAt: iso, updatedAt: iso,
+})
+
 export const backupSettingSchema = z.object({ key: z.string().min(1), value: z.unknown(), updatedAt: iso })
 const provenanceType = z.enum(['project','task','habit','timeBlock','recurringSeries'])
 const snapshot = z.object({ type: z.enum(['project','task','habit','timeBlock','recurringSeries','dailyPlan','dailyPlanItem']), id, value: z.unknown() })
