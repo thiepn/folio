@@ -9,6 +9,17 @@ import { SmartViewGallery, SmartViewWorkspace } from '../smartViews/SmartViewWor
 import type { SmartTaskView } from '../smartViews/queryEngine'
 import type { SmartTaskViewInput } from '../../services/savedViewService'
 
+function sortTasks(tasks: TaskPreview[], mode: ListEntity['sortMode']) {
+  const rows=[...tasks]
+  if(mode==='planned') return rows.sort((a,b)=>(a.plannedDate??'9999').localeCompare(b.plannedDate??'9999')||a.title.localeCompare(b.title))
+  if(mode==='deadline') return rows.sort((a,b)=>(a.deadline??'9999').localeCompare(b.deadline??'9999')||a.title.localeCompare(b.title))
+  if(mode==='priority') { const rank={critical:0,high:1,normal:2}; return rows.sort((a,b)=>rank[a.priority]-rank[b.priority]||a.title.localeCompare(b.title)) }
+  if(mode==='title') return rows.sort((a,b)=>a.title.localeCompare(b.title))
+  if(mode==='created') return rows.sort((a,b)=>(a.createdAt??'').localeCompare(b.createdAt??''))
+  if(mode==='updated') return rows.sort((a,b)=>(b.updatedAt??'').localeCompare(a.updatedAt??''))
+  return rows
+}
+
 
 export function OrganizationView({
   projects, folders, archivedFolders, lists, archivedLists, sections, tags, archivedTags, tasks, smartTaskPool, smartViews, smartViewResults, listCounts, tagCounts, selectedListId,
