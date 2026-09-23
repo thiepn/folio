@@ -86,6 +86,32 @@ async function tick() {
         deliveryCount: occurrence.deliveryCount + (systemDelivered ? 1 : 0),
       })
     }
+
+    // If an item became due before notification permission was granted, keep
+    // the in-app due state but allow one later system-delivery attempt.
+    const undeliveredDue = (await reminderRepository.listOutstanding())
+      .filter((item) => item.status === 'due' && item.deliveryCount === 0)
+    for (const occurrence of undeliveredDue) {
+      const reminder = await reminderRepository.get(occurrence.reminderId)
+      if (!reminder?.enabled) continue
+      const suppression = await reminderSuppressionReason(occurrence)
+      if (suppression) {
+        await markSuppressed(occurrence, suppression)
+        continue
+      }
+      const copy = await dynamicReminderCopy(occurrence)
+      const delivered = await notificationService.show(occurrence, {
+        title: copy.title,
+        body: copy.body,
+        persistent: reminder.persistent,
+      })
+      if (delivered) await reminderRepository.updateOccurrence(occurrence.id, {
+        titleSnapshot: copy.title,
+        bodySnapshot: copy.body,
+        deliveredAt: new Date().toISOString(),
+        deliveryCount: 1,
+      })
+    }
     emit()
   } finally {
     ticking = false
