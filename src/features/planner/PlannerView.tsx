@@ -7,8 +7,6 @@ import { usePlannerData } from '../../hooks/usePlannerData'
 import { CalendarView } from './CalendarView'
 import { AdvancedPlanningView } from './AdvancedPlanningView'
 import { AgendaPlanner, DayPlanner, MonthPlanner, WeekPlannerV14 } from './PlannerOverhaulViews'
-import type { SavedTaskView } from './advancedPlanning'
-import type { UndoableMutation } from '../../services/undo'
 
 type PlannerTab = 'agenda' | 'day' | 'week' | 'month' | 'calendar' | 'advanced'
 
@@ -25,11 +23,9 @@ interface PlannerViewProps {
   onUpdateEvent: (id: string, title: string, date: LocalDate, startMinute: number, durationMinutes: number, details?: { description?: string; location?: string }) => void | Promise<void>
   onResizeBlock: (id: string, durationMinutes: number) => void | Promise<void>
   onDeleteBlock: (id: string) => void | Promise<void>
-  onSaveSavedView: (view: Omit<SavedTaskView, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => Promise<UndoableMutation>
-  onDeleteSavedView: (id: string) => Promise<UndoableMutation>
 }
 
-export function PlannerView({ today, onToggle, onOpen, onMoveDate, onSetCapacity, onAddForDate, onCreateTaskBlock, onCreateEvent, onUpdateBlock, onUpdateEvent, onResizeBlock, onDeleteBlock, onSaveSavedView, onDeleteSavedView }: PlannerViewProps) {
+export function PlannerView({ today, onToggle, onOpen, onMoveDate, onSetCapacity, onAddForDate, onCreateTaskBlock, onCreateEvent, onUpdateBlock, onUpdateEvent, onResizeBlock, onDeleteBlock }: PlannerViewProps) {
   const [tab, setTab] = useState<PlannerTab>('agenda')
   const [selectedDate, setSelectedDate] = useState<LocalDate>(today)
   const [weekStart, setWeekStart] = useState(() => startOfLocalWeek(today))
@@ -142,6 +138,6 @@ export function PlannerView({ today, onToggle, onOpen, onMoveDate, onSetCapacity
       onDeleteBlock={onDeleteBlock}
     /> : null}
 
-    {tab === 'advanced' ? <AdvancedPlanningView today={today} onOpenTask={onOpen} onToggleTask={onToggle} onSaveView={onSaveSavedView} onDeleteView={onDeleteSavedView} /> : null}
+    {tab === 'advanced' ? <AdvancedPlanningView today={today} onOpenTask={onOpen} /> : null}
   </>
 }
