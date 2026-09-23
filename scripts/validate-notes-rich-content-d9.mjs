@@ -38,7 +38,7 @@ check('safe renderer never uses raw HTML injection',renderer.includes('SafeMarkd
 check('renderer supports headings lists quotes code and checkboxes',['heading','<ul','<ol','<blockquote','<pre','markdown-checkbox'].every((token)=>renderer.includes(token)))
 check('Markdown editor exposes edit and reading modes',editor.includes("'edit' | 'read'")&&editor.includes('Reading'))
 check('task inspector uses rich Markdown and attachments',inspector.includes('<MarkdownEditor')&&inspector.includes('<AttachmentPanel')&&inspector.includes('createFromTask'))
-check('standalone Notes workspace exists',notes.includes('export function NotesView')&&notes.includes('Create inbox task'))
+check('standalone Notes workspace exists',notes.includes('export function NotesView')&&notes.includes('Note → inbox task'))
 check('desktop navigation exposes Notes',sidebar.includes("view: 'notes'"))
 check('App routes Notes workspace',app.includes("view === 'notes'")&&app.includes('<NotesView'))
 check('drag drop and paste attachments supported',attachments.includes('onDrop=')&&attachments.includes('onPaste='))
