@@ -492,6 +492,9 @@ function AppContent() {
     if (Object.prototype.hasOwnProperty.call(effective, 'status')) occurrenceChanges.status = effective.status
     if (Object.prototype.hasOwnProperty.call(effective, 'plannedDate')) occurrenceChanges.plannedDate = effective.plannedDate
     if (Object.prototype.hasOwnProperty.call(effective, 'deadline')) occurrenceChanges.deadline = effective.deadline
+    if (Object.prototype.hasOwnProperty.call(effective, 'timelineStart')) occurrenceChanges.timelineStart = effective.timelineStart
+    if (Object.prototype.hasOwnProperty.call(effective, 'timelineEnd')) occurrenceChanges.timelineEnd = effective.timelineEnd
+    if (Object.prototype.hasOwnProperty.call(effective, 'timelineMilestone')) occurrenceChanges.timelineMilestone = effective.timelineMilestone
     if (Object.prototype.hasOwnProperty.call(effective, 'blockedByTaskIds')) occurrenceChanges.blockedByTaskIds = effective.blockedByTaskIds
     if (Object.prototype.hasOwnProperty.call(effective, 'checklist')) occurrenceChanges.checklist = effective.checklist
     if (Object.prototype.hasOwnProperty.call(effective, 'progressMode')) occurrenceChanges.progressMode = effective.progressMode
@@ -1180,6 +1183,9 @@ function taskUpdateDiff(before: TaskPreview, changes: TaskUpdateInput): TaskUpda
   if (has('status') && changes.status !== before.status) diff.status = changes.status
   if (has('plannedDate') && normalized(changes.plannedDate) !== before.plannedDate) diff.plannedDate = changes.plannedDate
   if (has('deadline') && normalized(changes.deadline) !== before.deadline) diff.deadline = changes.deadline
+  if (has('timelineStart') && normalized(changes.timelineStart) !== before.timelineStart) diff.timelineStart = changes.timelineStart
+  if (has('timelineEnd') && normalized(changes.timelineEnd) !== before.timelineEnd) diff.timelineEnd = changes.timelineEnd
+  if (has('timelineMilestone') && changes.timelineMilestone !== Boolean(before.timelineMilestone)) diff.timelineMilestone = changes.timelineMilestone
   if (has('estimatedMinutes') && normalized(changes.estimatedMinutes) !== before.durationMinutes) diff.estimatedMinutes = changes.estimatedMinutes
   if (has('tags') && !sameValue(changes.tags ?? [], before.tags ?? [])) diff.tags = changes.tags
   if (has('tagIds') && !sameValue(changes.tagIds ?? [], before.tagIds ?? [])) diff.tagIds = changes.tagIds
@@ -1207,6 +1213,7 @@ function recurrenceOverrideDiff(before: TaskPreview, changes: TaskUpdateInput): 
   delete override.progressMode
   delete override.progressPercent
   delete override.comments
+  // Timeline spans are occurrence-specific; they never become recurring-template defaults.
   delete override.sortOrder
   delete override.parentTaskId
 
