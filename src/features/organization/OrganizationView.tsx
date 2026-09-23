@@ -4,31 +4,17 @@ import { TaskRow } from '../../components/ui/TaskRow'
 import type { FolderEntity, ListEntity, SectionEntity, TagEntity } from '../../domain/models'
 import type { TaskPreview } from '../../types/ui'
 import type { FolderUpdateInput, ListUpdateInput, TagUpdateInput } from '../../repositories/organizationRepository'
+import { SmartViewEditorModal } from '../smartViews/SmartViewEditorModal'
+import { SmartViewGallery, SmartViewWorkspace } from '../smartViews/SmartViewWorkspace'
+import type { SmartTaskView } from '../smartViews/queryEngine'
+import type { SmartTaskViewInput } from '../../services/savedViewService'
 
-type SmartId = '__all__' | '__unlisted__' | '__high__' | '__unscheduled__'
-
-function sortTasks(tasks: TaskPreview[], mode: ListEntity['sortMode']) {
-  const rows=[...tasks]
-  if(mode==='planned') return rows.sort((a,b)=>(a.plannedDate??'9999').localeCompare(b.plannedDate??'9999')||a.title.localeCompare(b.title))
-  if(mode==='deadline') return rows.sort((a,b)=>(a.deadline??'9999').localeCompare(b.deadline??'9999')||a.title.localeCompare(b.title))
-  if(mode==='priority') { const rank={critical:0,high:1,normal:2}; return rows.sort((a,b)=>rank[a.priority]-rank[b.priority]||a.title.localeCompare(b.title)) }
-  if(mode==='title') return rows.sort((a,b)=>a.title.localeCompare(b.title))
-  if(mode==='created') return rows.sort((a,b)=>(a.createdAt??'').localeCompare(b.createdAt??''))
-  if(mode==='updated') return rows.sort((a,b)=>(b.updatedAt??'').localeCompare(a.updatedAt??''))
-  return rows
-}
-
-function smartTasks(id: SmartId, tasks: TaskPreview[]) {
-  if(id==='__unlisted__') return tasks.filter((task)=>task.status!=='inbox'&&!task.listId)
-  if(id==='__high__') return tasks.filter((task)=>task.status==='todo'&&(task.priority==='critical'||task.priority==='high'))
-  if(id==='__unscheduled__') return tasks.filter((task)=>task.status==='todo'&&!task.plannedDate)
-  return tasks.filter((task)=>task.status!=='inbox'&&task.status!=='cancelled')
-}
 
 export function OrganizationView({
-  folders, archivedFolders, lists, archivedLists, sections, tags, archivedTags, tasks, listCounts, tagCounts, selectedListId,
+  folders, archivedFolders, lists, archivedLists, sections, tags, archivedTags, tasks, smartTaskPool, smartViews, smartViewResults, listCounts, tagCounts, selectedListId,
   onSelectList, onCreateFolder, onCreateList, onCreateSection, onCreateTag,
   onUpdateList, onUpdateFolder, onUpdateTag, onMergeTag, onArchiveSection,
+  onSaveSmartView, onDeleteSmartView, onDuplicateSmartView, onToggleSmartViewPin,
   onOpenTask, onToggleTask, onMoveTask, onAddTask,
 }: {
   folders: FolderEntity[]
@@ -39,6 +25,9 @@ export function OrganizationView({
   tags: TagEntity[]
   archivedTags: TagEntity[]
   tasks: TaskPreview[]
+  smartTaskPool: TaskPreview[]
+  smartViews: SmartTaskView[]
+  smartViewResults: Record<string, { count: number; taskIds: string[] }>
   listCounts: Record<string, number>
   tagCounts: Record<string, number>
   selectedListId: string | null
@@ -52,6 +41,10 @@ export function OrganizationView({
   onUpdateTag: (id: string, changes: TagUpdateInput) => Promise<void>
   onMergeTag: (sourceId: string, targetId: string) => Promise<void>
   onArchiveSection: (id: string) => Promise<void>
+  onSaveSmartView: (view: SmartTaskViewInput) => Promise<void>
+  onDeleteSmartView: (id: string) => Promise<void>
+  onDuplicateSmartView: (view: SmartTaskView) => Promise<void>
+  onToggleSmartViewPin: (id: string) => Promise<void>
   onOpenTask: (id: string) => void
   onToggleTask: (id: string) => void
   onMoveTask: (taskId: string, listId?: string, sectionId?: string) => Promise<void>
@@ -64,11 +57,15 @@ export function OrganizationView({
   const [newTagParent,setNewTagParent]=useState('')
   const [mergeSource,setMergeSource]=useState('')
   const [mergeTarget,setMergeTarget]=useState('')
+  const [smartEditorOpen,setSmartEditorOpen]=useState(false)
+  const [editingSmartViewId,setEditingSmartViewId]=useState<string|undefined>(undefined)
 
   const selectedList = lists.find((list)=>list.id===selectedListId)
   const selectedTagId = selectedListId?.startsWith('__tag__:') ? selectedListId.slice('__tag__:'.length) : undefined
   const selectedTag = selectedTagId ? tags.find((tag)=>tag.id===selectedTagId) : undefined
-  const smart = selectedListId && ['__all__','__unlisted__','__high__','__unscheduled__'].includes(selectedListId) ? selectedListId as SmartId : null
+  const selectedSmartViewId = selectedListId?.startsWith('__smart__:') ? selectedListId.slice('__smart__:'.length) : undefined
+  const selectedSmartView = selectedSmartViewId ? smartViews.find((view)=>view.id===selectedSmartViewId) : undefined
+  const editingSmartView = editingSmartViewId ? smartViews.find((view)=>view.id===editingSmartViewId && !view.builtin) : undefined
 
   const tagScopeIds = (rootId: string) => {
     const result = new Set<string>([rootId])
@@ -80,21 +77,47 @@ export function OrganizationView({
     return result
   }
 
-  if(selectedList || smart || selectedTag) {
+  if(selectedSmartView) {
+    const pool=new Map(smartTaskPool.map((task)=>[task.id,task]))
+    const result=smartViewResults[selectedSmartView.id]
+    const matches=(result?.taskIds??[]).map((id)=>pool.get(id)).filter((task):task is TaskPreview=>Boolean(task))
+    return <>
+      <SmartViewWorkspace
+        view={selectedSmartView}
+        tasks={matches}
+        onBack={()=>onSelectList(null)}
+        onOpenTask={onOpenTask}
+        onToggleTask={onToggleTask}
+        onEdit={()=>{setEditingSmartViewId(selectedSmartView.id);setSmartEditorOpen(true)}}
+        onDuplicate={()=>void onDuplicateSmartView(selectedSmartView)}
+        onDelete={()=>void onDeleteSmartView(selectedSmartView.id).then(()=>onSelectList(null))}
+        onTogglePin={()=>void onToggleSmartViewPin(selectedSmartView.id)}
+      />
+      <SmartViewEditorModal
+        open={smartEditorOpen}
+        view={editingSmartView}
+        projects={[]}
+        lists={lists}
+        sections={sections}
+        tags={tags}
+        onClose={()=>{setSmartEditorOpen(false);setEditingSmartViewId(undefined)}}
+        onSave={onSaveSmartView}
+      />
+    </>
+  }
+
+  if(selectedList || selectedTag) {
     const scopedTagIds = selectedTag ? tagScopeIds(selectedTag.id) : undefined
     return <ListWorkspace
-      key={selectedList?.id ?? smart ?? selectedTag?.id}
+      key={selectedList?.id ?? selectedTag?.id}
       list={selectedList}
-      smart={smart}
       titleOverride={selectedTag ? '#'+selectedTag.name : undefined}
       folders={folders}
       sections={sections.filter((section)=>section.listId===selectedList?.id)}
       tags={tags}
       tasks={selectedList
         ? tasks.filter((task)=>task.listId===selectedList.id)
-        : selectedTag
-          ? tasks.filter((task)=>task.status!=='inbox' && task.tagIds?.some((id)=>scopedTagIds?.has(id)))
-          : smartTasks(smart!,tasks)}
+        : tasks.filter((task)=>task.status!=='inbox' && task.tagIds?.some((id)=>scopedTagIds?.has(id)))}
       onBack={()=>onSelectList(null)}
       onUpdateList={onUpdateList}
       onCreateSection={onCreateSection}
@@ -116,12 +139,7 @@ export function OrganizationView({
       <Button variant="primary" onClick={()=>onAddTask()}>New task</Button>
     </header>
 
-    <section className="organization-smart">
-      <button onClick={()=>onSelectList('__all__')}><strong>All tasks</strong><span>{tasks.filter((task)=>task.status!=='inbox'&&task.status!=='cancelled').length}</span></button>
-      <button onClick={()=>onSelectList('__unlisted__')}><strong>No list</strong><span>{tasks.filter((task)=>task.status!=='inbox'&&!task.listId).length}</span></button>
-      <button onClick={()=>onSelectList('__high__')}><strong>High priority</strong><span>{tasks.filter((task)=>task.status==='todo'&&(task.priority==='critical'||task.priority==='high')).length}</span></button>
-      <button onClick={()=>onSelectList('__unscheduled__')}><strong>Unscheduled</strong><span>{tasks.filter((task)=>task.status==='todo'&&!task.plannedDate).length}</span></button>
-    </section>
+    <SmartViewGallery views={smartViews} results={smartViewResults} onOpen={(id)=>onSelectList('__smart__:'+id)} onCreate={()=>{setEditingSmartViewId(undefined);setSmartEditorOpen(true)}} />
 
     <section className="organization-panel">
       <div className="organization-panel__head"><div><span className="eyebrow">Lists</span><h2>Folders & lists</h2></div></div>
@@ -153,6 +171,17 @@ export function OrganizationView({
       {archivedLists.length ? <><div className="section-label">Lists</div><div className="organization-list-grid">{archivedLists.map((list)=><div className="organization-list-card" key={list.id}><button className="organization-list-card__open" onClick={()=>void onUpdateList(list.id,{archived:false})}><i style={{background:list.color??'var(--muted)'}}/><span><strong>{list.name}</strong><small>Restore list</small></span></button></div>)}</div></> : null}
       {archivedTags.length ? <><div className="section-label">Tags</div><div className="archived-tag-list">{archivedTags.map((tag)=><button key={tag.id} onClick={()=>void onUpdateTag(tag.id,{archived:false})}>#{tag.name} · Restore</button>)}</div></> : null}
     </section> : null}
+
+    <SmartViewEditorModal
+      open={smartEditorOpen}
+      view={editingSmartView}
+      projects={[]}
+      lists={lists}
+      sections={sections}
+      tags={tags}
+      onClose={()=>{setSmartEditorOpen(false);setEditingSmartViewId(undefined)}}
+      onSave={onSaveSmartView}
+    />
 
     <section className="organization-panel">
       <div className="organization-panel__head"><div><span className="eyebrow">Tags</span><h2>Global tag tree</h2></div></div>
@@ -191,8 +220,8 @@ function TagBranch({tag,byParent,counts,onUpdate,onOpen}:{tag:TagEntity;byParent
   </div>
 }
 
-function ListWorkspace({list,smart,titleOverride,folders,sections,tags,tasks,onBack,onUpdateList,onCreateSection,onArchiveSection,onOpenTask,onToggleTask,onMoveTask,onAddTask}:{
-  list?:ListEntity;smart:SmartId|null;titleOverride?:string;folders:FolderEntity[];sections:SectionEntity[];tags:TagEntity[];tasks:TaskPreview[];
+function ListWorkspace({list,titleOverride,folders,sections,tags,tasks,onBack,onUpdateList,onCreateSection,onArchiveSection,onOpenTask,onToggleTask,onMoveTask,onAddTask}:{
+  list?:ListEntity;titleOverride?:string;folders:FolderEntity[];sections:SectionEntity[];tags:TagEntity[];tasks:TaskPreview[];
   onBack:()=>void;onUpdateList:(id:string,changes:ListUpdateInput)=>Promise<void>;onCreateSection:(listId:string,name:string)=>Promise<void>;onArchiveSection:(id:string)=>Promise<void>;
   onOpenTask:(id:string)=>void;onToggleTask:(id:string)=>void;onMoveTask:(taskId:string,listId?:string,sectionId?:string)=>Promise<void>;onAddTask:(listId?:string,sectionId?:string)=>void
 }) {
@@ -202,7 +231,7 @@ function ListWorkspace({list,smart,titleOverride,folders,sections,tags,tasks,onB
   const [folderId,setFolderId]=useState(list?.folderId??'')
   const [color,setColor]=useState(list?.color??'#53657d')
   const [icon,setIcon]=useState(list?.icon??'')
-  const title=titleOverride??list?.name??({__all__:'All tasks',__unlisted__:'No list',__high__:'High priority',__unscheduled__:'Unscheduled'} as Record<SmartId,string>)[smart!]
+  const title=titleOverride??list?.name??'Tasks'
   const visible=useMemo(()=>sortTasks(tasks.filter((task)=>list?.showCompleted===false?!task.completed:true),list?.sortMode??'planned'),[tasks,list?.showCompleted,list?.sortMode])
   const groups=useMemo(()=>{
     const mode=list?.groupMode??'none'
