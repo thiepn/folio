@@ -356,8 +356,28 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
         } else {
           const value = op.value
           const projectId = resolveProject(createProjectIds, value.taskTemplate.projectRef, value.taskTemplate.projectId)
-          const series = makeSeriesEntity({ title: value.title, timezone: value.timezone, startDate: value.startDate, rule: value.rule, taskTemplate: { title: value.taskTemplate.title, description: value.taskTemplate.description, projectId, priority: value.taskTemplate.priority, estimatedMinutes: value.taskTemplate.estimatedMinutes, deadlineOffsetDays: value.taskTemplate.deadlineOffsetDays, startMinute: value.taskTemplate.startMinute, blockDurationMinutes: value.taskTemplate.blockDurationMinutes } }, crypto.randomUUID(), now)
-          const graph = materializeSeriesGraph(series, defaultMaterializationThrough(), now)
+          const series = makeSeriesEntity({
+            title: value.title,
+            timezone: value.timezone,
+            startDate: value.startDate,
+            rule: value.rule,
+            taskTemplate: {
+              title: value.taskTemplate.title,
+              description: value.taskTemplate.description,
+              projectId,
+              priority: value.taskTemplate.priority,
+              estimatedMinutes: value.taskTemplate.estimatedMinutes,
+              tags: value.taskTemplate.tags,
+              checklist: value.taskTemplate.checklist,
+              sourceUrl: value.taskTemplate.sourceUrl,
+              location: value.taskTemplate.location,
+              pinned: value.taskTemplate.pinned,
+              deadlineOffsetDays: value.taskTemplate.deadlineOffsetDays,
+              startMinute: value.taskTemplate.startMinute,
+              blockDurationMinutes: value.taskTemplate.blockDurationMinutes,
+            },
+          }, crypto.randomUUID(), now)
+          const graph = materializeSeriesGraph(series, defaultMaterializationThrough(dateKeyInTimeZone(new Date(), series.timezone)), now)
           touch('recurringSeries', graph.series.id); workspace.recurringSeries.set(graph.series.id, graph.series)
           for (const task of graph.tasks) { touch('task', task.id); workspace.tasks.set(task.id, task); markPlanDraft(workspace, touch, task.plannedDate, now) }
           for (const block of graph.timeBlocks) { touch('timeBlock', block.id); workspace.timeBlocks.set(block.id, block) }
