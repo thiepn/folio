@@ -27,7 +27,7 @@ export function useAppData() {
     const [
       taskSnapshot, projectEntities, timeBlocks, allTimeBlocks,
       defaultCapacity, dailyPlan, dailyPlanItems, recurringSeries,
-      folders, lists, sections, tags, allLists, allTags,
+      folders, lists, sections, tags, allFolders, allLists, allTags,
     ] = await Promise.all([
       // One Task table snapshot feeds Today, Next, Later, Inbox, projects and history.
       taskRepository.listSnapshot(),
@@ -42,6 +42,7 @@ export function useAppData() {
       organizationRepository.listLists(),
       organizationRepository.listSections(),
       organizationRepository.listTags(),
+      organizationRepository.listFolders(true),
       organizationRepository.listLists(true),
       organizationRepository.listTags(true),
     ])
@@ -117,6 +118,7 @@ export function useAppData() {
       sections,
       tags,
       favoriteLists: lists.filter((list) => list.favorite),
+      archivedFolders: allFolders.filter((folder) => folder.archived),
       archivedLists: allLists.filter((list) => list.archived),
       archivedTags: allTags.filter((tag) => tag.archived),
       unlistedCount: roots.filter((task) => task.status === 'todo' && !task.listId).length,
