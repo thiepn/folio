@@ -5,7 +5,7 @@ const now='2026-09-23T10:00:00.000Z'
 function task(id:string,partial:Partial<TaskEntity>={}):TaskEntity {
   return {
     id,title:id,description:'',priority:'normal',status:'todo',tags:[],tagIds:[],checklist:[],
-    progressMode:'auto',progressPercent:0,pinned:false,comments:[],activity:[],blockedByTaskIds:[],
+    progressMode:'auto',progressPercent:0,timelineMilestone:false,pinned:false,comments:[],activity:[],blockedByTaskIds:[],
     sortOrder:1,rescheduleCount:0,createdAt:now,updatedAt:now,...partial,
   }
 }
