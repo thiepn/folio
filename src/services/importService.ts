@@ -5,6 +5,7 @@ import type {
   ImportBatchEntity,
   PatchSnapshot,
   ProjectEntity,
+  TagEntity,
   RecurringSeriesEntity,
   TaskEntity,
 } from '../domain/models'
@@ -166,10 +167,22 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
     ...document.tasks.flatMap((item) => item.tags ?? []),
     ...document.recurringSeries.flatMap((item) => item.taskTemplate.tags ?? []),
   ]
-  const canonicalTags = allTagNames.length ? await organizationRepository.resolveTagNames(allTagNames) : []
-  const tagByName = new Map(canonicalTags.map((tag) => [tag.normalizedName, tag]))
+  const existingTags = await organizationRepository.listTags(true)
+  const tagByName = new Map(existingTags.map((tag) => [tag.normalizedName, tag]))
+  const newTags: TagEntity[] = []
+  for (const rawName of allTagNames) {
+    const name = rawName.trim().replace(/^#/, '').replace(/\s+/g, ' ')
+    const normalizedName = normalizeTagName(name)
+    if (!normalizedName || tagByName.has(normalizedName)) continue
+    const tag: TagEntity = {
+      id: crypto.randomUUID(), name, normalizedName, favorite: false, archived: false,
+      sortOrder: Date.now() + newTags.length, createdAt: now, updatedAt: now,
+    }
+    tagByName.set(normalizedName, tag)
+    newTags.push(tag)
+  }
   const canonicalizeTags = (names: string[] = []) => {
-    const rows = names.map((name) => tagByName.get(normalizeTagName(name))).filter(Boolean)
+    const rows = [...new Set(names.map(normalizeTagName))].map((name) => tagByName.get(name)).filter(Boolean)
     return { tags: rows.map((tag) => tag!.name), tagIds: rows.map((tag) => tag!.id) }
   }
 
@@ -259,7 +272,8 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
   ]
   const batch: ImportBatchEntity = { id: crypto.randomUUID(), title: document.title, source, status: 'applied', affectedEntities, createdSnapshots, priorDailyPlans, createdAt: now, updatedAt: now }
 
-  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.importBatches], async () => {
+  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.importBatches, db.tags], async () => {
+    if (newTags.length) await db.tags.bulkAdd(newTags)
     if (projects.length) await db.projects.bulkAdd(projects)
     if (allTasks.length) await db.tasks.bulkAdd(allTasks)
     if (habits.length) await db.habits.bulkAdd(habits)
