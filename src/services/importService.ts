@@ -199,7 +199,9 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
     return makeTaskEntity({
       title: item.title, description: item.description, projectId: resolveProject(document, projectIds, item.projectRef, item.projectId),
       listId: item.listId, sectionId: item.sectionId, parentTaskId: item.parentRef ? taskIds.get(item.parentRef) : undefined,
-      priority: item.priority, status: item.status, plannedDate: item.plannedDate, deadline: item.deadline, estimatedMinutes: item.estimatedMinutes,
+      priority: item.priority, status: item.status, plannedDate: item.plannedDate, deadline: item.deadline,
+      timelineStart: item.timelineStart, timelineEnd: item.timelineEnd, timelineMilestone: item.timelineMilestone,
+      estimatedMinutes: item.estimatedMinutes,
       tags: tagData.tags, tagIds: tagData.tagIds,
     }, taskIds.get(item.ref)!, now, Date.now() + index)
   })
