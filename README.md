@@ -6,7 +6,7 @@ A local-first personal productivity application with an editorial, low-noise int
 
 **Repository:** `thiepn/folio`
 
-**IndexedDB schema:** `v17`
+**IndexedDB schema:** `v18`
 
 **Status:** release-hardened · GitHub Pages ready
 
@@ -108,9 +108,17 @@ Recurring templates now also carry the D1 task context—tags, checklist structu
 
 See `docs/DATES_RECURRENCE_V2_D2.md`.
 
+## D3 — Reminders & Notification Engine
+
+Folio now has a durable reminder definition/occurrence engine rather than transient timers. Tasks support multiple planned-date, deadline, calendar-block-relative and exact-time reminders; recurring series can own reminder definitions that automatically follow their materialized task occurrences; fixed-schedule habits support reminder times; and the Reminder Center adds snooze, dismiss, due/upcoming views, system notification permission, daily-planning reminders and overdue summaries.
+
+Reminder occurrences remain in-app even when system-notification permission is unavailable. Browser/PWA notifications use the service worker when possible, with Snooze and Dismiss actions. The scheduler reconciles missed reminders on reopen/focus without replaying a backlog of recurring daily alerts. Schema v18 adds durable reminder definition and occurrence tables, with direct backup restore remaining compatible from v8 through v18.
+
+See `docs/REMINDERS_NOTIFICATION_ENGINE_D3.md`.
+
 ## Data and privacy
 
-Planner data is local-first in IndexedDB. The current database schema is **v17**. Full backups export schema v17, including Task Engine V2 and Recurrence Engine V2 state plus durable review records, and direct restore supports compatible backups from **v8 through v17**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
+Planner data is local-first in IndexedDB. The current database schema is **v18**. Full backups export schema v18, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, and durable review records; direct restore supports compatible backups from **v8 through v18**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
 
 Fresh installs begin with an empty personal workspace. Optional sample data can be loaded explicitly from Data & storage.
 
@@ -134,7 +142,7 @@ Direct dependency versions and `package-lock.json` are committed for repeatable 
 
 ## Release history
 
-The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v17 data model, and `validate:final` define the current source state.
+The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v18 data model, and `validate:final` define the current source state.
 
 ## v1.1.1 release hardening
 
