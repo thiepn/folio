@@ -1,18 +1,15 @@
-import { addLocalDays, localDateToDate } from '../domain/date'
+import { addLocalDays } from '../domain/date'
+import { normalizeTimelineSpan, shiftTimelineSpan, timelineDayOffset } from '../features/boards/boardTimelineLogic'
 import type { LocalDate } from '../domain/models'
 import { taskRepository } from '../repositories/taskRepository'
 import { recurrenceService } from './recurrenceService'
 import type { UndoableMutation } from './undo'
 
-function dayDifference(from: LocalDate, to: LocalDate) {
-  return Math.round((localDateToDate(to).getTime() - localDateToDate(from).getTime()) / 86_400_000)
-}
-
-function normalizedSpan(start?: LocalDate, end?: LocalDate, milestone = false) {
-  if (!start) return { timelineStart: null as LocalDate | null, timelineEnd: null as LocalDate | null, timelineMilestone: false }
-  const safeEnd = milestone ? start : (end ?? start)
-  if (safeEnd < start) throw new Error('Timeline end must not be before timeline start.')
-  return { timelineStart: start, timelineEnd: safeEnd, timelineMilestone: milestone }
+function taskChanges(start?: LocalDate, end?: LocalDate, milestone = false) {
+  const span = normalizeTimelineSpan(start, end, milestone)
+  return span
+    ? { timelineStart: span.start, timelineEnd: span.end, timelineMilestone: span.milestone }
+    : { timelineStart: null as LocalDate | null, timelineEnd: null as LocalDate | null, timelineMilestone: false }
 }
 
 async function updateWithOccurrence(taskId: string, changes: ReturnType<typeof normalizedSpan>): Promise<UndoableMutation> {
@@ -38,32 +35,32 @@ async function updateWithOccurrence(taskId: string, changes: ReturnType<typeof n
 
 export const timelineService = {
   async setSpan(taskId: string, start: LocalDate, end?: LocalDate, milestone = false) {
-    return updateWithOccurrence(taskId, normalizedSpan(start, end, milestone))
+    return updateWithOccurrence(taskId, taskChanges(start, end, milestone))
   },
 
   async clear(taskId: string) {
-    return updateWithOccurrence(taskId, normalizedSpan())
+    return updateWithOccurrence(taskId, taskChanges())
   },
 
   async shift(taskId: string, days: number) {
     const task = await taskRepository.get(taskId)
     if (!task?.timelineStart) throw new Error('Task is not placed on the timeline.')
-    const end = task.timelineEnd ?? task.timelineStart
-    const start = addLocalDays(task.timelineStart, days)
-    return updateWithOccurrence(taskId, normalizedSpan(start, addLocalDays(end, days), task.timelineMilestone))
+    const span = normalizeTimelineSpan(task.timelineStart, task.timelineEnd, task.timelineMilestone)!
+    const shifted = shiftTimelineSpan(span, days)
+    return updateWithOccurrence(taskId, taskChanges(shifted.start, shifted.end, shifted.milestone))
   },
 
   async resizeStart(taskId: string, start: LocalDate) {
     const task = await taskRepository.get(taskId)
     if (!task?.timelineStart) throw new Error('Task is not placed on the timeline.')
     const end = task.timelineMilestone ? start : (task.timelineEnd ?? task.timelineStart)
-    return updateWithOccurrence(taskId, normalizedSpan(start, end < start ? start : end, task.timelineMilestone))
+    return updateWithOccurrence(taskId, taskChanges(start, end < start ? start : end, task.timelineMilestone))
   },
 
   async resizeEnd(taskId: string, end: LocalDate) {
     const task = await taskRepository.get(taskId)
     if (!task?.timelineStart) throw new Error('Task is not placed on the timeline.')
-    return updateWithOccurrence(taskId, normalizedSpan(task.timelineStart, end < task.timelineStart ? task.timelineStart : end, task.timelineMilestone))
+    return updateWithOccurrence(taskId, taskChanges(task.timelineStart, end < task.timelineStart ? task.timelineStart : end, task.timelineMilestone))
   },
 
   async toggleMilestone(taskId: string) {
@@ -71,10 +68,10 @@ export const timelineService = {
     if (!task) throw new Error('Task not found.')
     const start = task.timelineStart ?? task.plannedDate ?? task.deadline
     if (!start) throw new Error('Choose a timeline date before making this a milestone.')
-    return updateWithOccurrence(taskId, normalizedSpan(start, task.timelineEnd, !task.timelineMilestone))
+    return updateWithOccurrence(taskId, taskChanges(start, task.timelineEnd, !task.timelineMilestone))
   },
 
   durationDays(taskId: string) {
-    return taskRepository.get(taskId).then((task) => task?.timelineStart ? dayDifference(task.timelineStart, task.timelineEnd ?? task.timelineStart) + 1 : 0)
+    return taskRepository.get(taskId).then((task) => task?.timelineStart ? timelineDayOffset(task.timelineStart, task.timelineEnd ?? task.timelineStart) + 1 : 0)
   },
 }
