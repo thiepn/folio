@@ -98,7 +98,7 @@ check('public import schema advertises D2 fields', publicImport.includes('"month
 check('public patch schema advertises D2 fields', publicPatch.includes('"monthlyMode"') && publicPatch.includes('"afterCompletionUnit"') && publicPatch.includes('"checklist"'))
 
 check('public v17 backup schema exists', exists('public/schema/folio-backup-v17.schema.json'))
-check('interop retains v17 restore compatibility', interop.includes('Schema v18 · complete planner state') && interop.includes('schema v8–v18'))
+check('interop retains v17 restore compatibility', interop.includes('Schema v19 · complete planner state') && interop.includes('schema v8–v19'))
 check('D2 stylesheet loaded', styles.includes("@import './recurrence-v2.css';"))
 check('D2 design document exists', exists('docs/DATES_RECURRENCE_V2_D2.md'))
 
