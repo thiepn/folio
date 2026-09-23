@@ -407,6 +407,56 @@
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 1000
+                      },
+                      "monthlyMode": {
+                        "enum": [
+                          "days",
+                          "ordinal-weekday",
+                          "last-day"
+                        ],
+                        "default": "days"
+                      },
+                      "monthDays": {
+                        "type": "array",
+                        "maxItems": 31,
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 31
+                        }
+                      },
+                      "ordinal": {
+                        "enum": [
+                          -1,
+                          1,
+                          2,
+                          3,
+                          4,
+                          5
+                        ]
+                      },
+                      "weekday": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      },
+                      "yearMonths": {
+                        "type": "array",
+                        "maxItems": 12,
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 12
+                        }
+                      },
+                      "afterCompletionUnit": {
+                        "enum": [
+                          "day",
+                          "week",
+                          "month",
+                          "year"
+                        ],
+                        "default": "day"
                       }
                     },
                     "required": [
@@ -460,6 +510,39 @@
                         "type": "integer",
                         "minimum": 15,
                         "maximum": 1440
+                      },
+                      "tags": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "default": [],
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 40
+                        }
+                      },
+                      "checklist": {
+                        "type": "array",
+                        "maxItems": 500,
+                        "default": [],
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        }
+                      },
+                      "sourceUrl": {
+                        "type": "string",
+                        "format": "uri",
+                        "maxLength": 2048
+                      },
+                      "location": {
+                        "type": "string",
+                        "maxLength": 500
+                      },
+                      "pinned": {
+                        "type": "boolean",
+                        "default": false
                       }
                     },
                     "required": [
@@ -919,6 +1002,56 @@
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 1000
+                      },
+                      "monthlyMode": {
+                        "enum": [
+                          "days",
+                          "ordinal-weekday",
+                          "last-day"
+                        ],
+                        "default": "days"
+                      },
+                      "monthDays": {
+                        "type": "array",
+                        "maxItems": 31,
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 31
+                        }
+                      },
+                      "ordinal": {
+                        "enum": [
+                          -1,
+                          1,
+                          2,
+                          3,
+                          4,
+                          5
+                        ]
+                      },
+                      "weekday": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      },
+                      "yearMonths": {
+                        "type": "array",
+                        "maxItems": 12,
+                        "items": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 12
+                        }
+                      },
+                      "afterCompletionUnit": {
+                        "enum": [
+                          "day",
+                          "week",
+                          "month",
+                          "year"
+                        ],
+                        "default": "day"
                       }
                     },
                     "required": [
@@ -1007,6 +1140,53 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "tags": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "default": [],
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 40
+                        }
+                      },
+                      "checklist": {
+                        "type": "array",
+                        "maxItems": 500,
+                        "default": [],
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        }
+                      },
+                      "sourceUrl": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uri",
+                            "maxLength": 2048
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "location": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "pinned": {
+                        "type": "boolean",
+                        "default": false
                       }
                     }
                   }
