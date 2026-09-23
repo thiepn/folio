@@ -4,6 +4,7 @@ import type { DailyPlanBucket, LocalDate, TaskEntity } from '../domain/models'
 import { dailyPlanRepository } from '../repositories/dailyPlanRepository'
 import { taskRepository } from '../repositories/taskRepository'
 import type { UndoableMutation } from './undo'
+import { recurrenceService } from './recurrenceService'
 
 function defaultBucket(task: TaskEntity): DailyPlanBucket {
   return task.priority === 'critical' || task.priority === 'high' ? 'must' : 'planned'
@@ -102,7 +103,7 @@ export const dailyPlanningService = {
       }
     })
 
-    return {
+    const planningUndo: UndoableMutation = {
       message: targetDate ? 'Task moved to another day' : 'Task moved to Later',
       undo: async () => {
         await db.transaction('rw', db.tasks, db.dailyPlanItems, db.dailyPlans, async () => {
@@ -121,6 +122,21 @@ export const dailyPlanningService = {
           }
         })
       },
+    }
+
+    if (!task.seriesId || !task.recurrenceDate) return planningUndo
+    try {
+      const exceptionUndo = await recurrenceService.recordOccurrenceException(taskId, { plannedDate: targetDate ?? null })
+      return {
+        message: planningUndo.message,
+        undo: async () => {
+          await exceptionUndo.undo()
+          await planningUndo.undo()
+        },
+      }
+    } catch (error) {
+      await planningUndo.undo()
+      throw error
     }
   },
 

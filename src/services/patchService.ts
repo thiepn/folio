@@ -1,5 +1,5 @@
 import { db } from '../db/database'
-import { addLocalDays, localDateKey } from '../domain/date'
+import { addLocalDays, atTimeInZone, dateKeyInTimeZone, localDateKey } from '../domain/date'
 import type {
   DailyPlanEntity,
   DailyPlanItemEntity,
@@ -86,19 +86,38 @@ function scheduleMatches(schedule: HabitEntity['schedule'], date: string) {
   return false
 }
 
+function hasOwn(value: object, key: string) {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
+function freshChecklist(items: string[], now: string) {
+  return items.map((text, index) => ({ id: crypto.randomUUID(), text, completed: false, sortOrder: index, createdAt: now, updatedAt: now }))
+}
+
+function reconcileChecklist(current: TaskEntity['checklist'], desired: string[], now: string) {
+  const currentText = current.map((item) => item.text)
+  return JSON.stringify(currentText) === JSON.stringify(desired) ? current : freshChecklist(desired, now)
+}
+
 function expectedSeriesFields(series: RecurringSeriesEntity, date: string) {
   const exception = series.exceptions[date] ?? {}
   const template = series.taskTemplate
+  const defaultDeadline = template.deadlineOffsetDays === undefined ? undefined : addLocalDays(date, template.deadlineOffsetDays)
   return {
     title: exception.title ?? template.title,
     description: exception.description ?? template.description,
-    projectId: Object.prototype.hasOwnProperty.call(exception, 'projectId') ? exception.projectId : template.projectId,
+    projectId: hasOwn(exception, 'projectId') ? (exception.projectId ?? undefined) : template.projectId,
     priority: exception.priority ?? template.priority,
-    estimatedMinutes: exception.estimatedMinutes ?? template.estimatedMinutes,
-    plannedDate: exception.plannedDate ?? date,
-    deadline: exception.deadline ?? (template.deadlineOffsetDays === undefined ? undefined : addLocalDays(date, template.deadlineOffsetDays)),
+    estimatedMinutes: hasOwn(exception, 'estimatedMinutes') ? (exception.estimatedMinutes ?? undefined) : template.estimatedMinutes,
+    tags: exception.tags ?? template.tags ?? [],
+    checklist: exception.checklist ?? template.checklist ?? [],
+    sourceUrl: hasOwn(exception, 'sourceUrl') ? (exception.sourceUrl ?? undefined) : template.sourceUrl,
+    location: hasOwn(exception, 'location') ? (exception.location ?? undefined) : template.location,
+    pinned: exception.pinned ?? template.pinned ?? false,
+    plannedDate: hasOwn(exception, 'plannedDate') ? (exception.plannedDate ?? undefined) : date,
+    deadline: hasOwn(exception, 'deadline') ? (exception.deadline ?? undefined) : defaultDeadline,
     startMinute: exception.startMinute ?? template.startMinute,
-    blockDurationMinutes: exception.blockDurationMinutes ?? template.blockDurationMinutes ?? (exception.estimatedMinutes ?? template.estimatedMinutes),
+    blockDurationMinutes: exception.blockDurationMinutes ?? template.blockDurationMinutes ?? (hasOwn(exception, 'estimatedMinutes') ? (exception.estimatedMinutes ?? undefined) : template.estimatedMinutes),
     skip: Boolean(exception.skip),
   }
 }
@@ -106,8 +125,8 @@ function expectedSeriesFields(series: RecurringSeriesEntity, date: string) {
 function cleanNullableTemplate(current: RecurringSeriesEntity['taskTemplate'], changes: any, projectIds: Map<string, string>) {
   if (!changes) return current
   const next: any = { ...current }
-  for (const field of ['title','description','priority'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field]
-  for (const field of ['estimatedMinutes','deadlineOffsetDays','startMinute','blockDurationMinutes'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field] ?? undefined
+  for (const field of ['title','description','priority','tags','checklist','pinned'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field]
+  for (const field of ['estimatedMinutes','sourceUrl','location','deadlineOffsetDays','startMinute','blockDurationMinutes'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field] ?? undefined
   if (changes.projectRef) next.projectId = projectIds.get(changes.projectRef)
   else if (Object.prototype.hasOwnProperty.call(changes, 'projectId')) next.projectId = changes.projectId ?? undefined
   return next
@@ -172,7 +191,23 @@ function upsertSeriesOccurrence(workspace: Workspace, touch: (type: SnapshotType
   }
   let task = existing
   if (!task) {
-    task = makeTaskEntity({ title: fields.title, description: fields.description, projectId: fields.projectId, priority: fields.priority, status: 'todo', plannedDate: fields.plannedDate, deadline: fields.deadline, estimatedMinutes: fields.estimatedMinutes, seriesId: series.id, recurrenceDate: date }, crypto.randomUUID(), now, Date.now())
+    task = makeTaskEntity({
+      title: fields.title,
+      description: fields.description,
+      projectId: fields.projectId,
+      priority: fields.priority,
+      status: 'todo',
+      plannedDate: fields.plannedDate,
+      deadline: fields.deadline,
+      estimatedMinutes: fields.estimatedMinutes,
+      tags: fields.tags,
+      checklist: freshChecklist(fields.checklist, now),
+      sourceUrl: fields.sourceUrl,
+      location: fields.location,
+      pinned: fields.pinned,
+      seriesId: series.id,
+      recurrenceDate: date,
+    }, crypto.randomUUID(), now, Date.now())
     touch('task', task.id)
     workspace.tasks.set(task.id, task)
   } else if (task.status !== 'completed') {
@@ -180,14 +215,37 @@ function upsertSeriesOccurrence(workspace: Workspace, touch: (type: SnapshotType
     markPlanDraft(workspace, touch, task.plannedDate, now)
     markPlanDraft(workspace, touch, fields.plannedDate, now)
     moveDailyPlanItem(workspace, touch, task.id, task.plannedDate, fields.plannedDate, now)
-    task = { ...task, title: fields.title, description: fields.description, projectId: fields.projectId, priority: fields.priority, estimatedMinutes: fields.estimatedMinutes, plannedDate: fields.plannedDate, deadline: fields.deadline, status: 'todo', updatedAt: now }
+    task = {
+      ...task,
+      title: fields.title,
+      description: fields.description,
+      projectId: fields.projectId,
+      priority: fields.priority,
+      estimatedMinutes: fields.estimatedMinutes,
+      tags: fields.tags,
+      checklist: reconcileChecklist(task.checklist ?? [], fields.checklist, now),
+      sourceUrl: fields.sourceUrl,
+      location: fields.location,
+      pinned: fields.pinned,
+      plannedDate: fields.plannedDate,
+      deadline: fields.deadline,
+      status: 'todo',
+      updatedAt: now,
+    }
     workspace.tasks.set(task.id, task)
   }
   if (task.status === 'completed') return
   const taskBlocks = [...workspace.timeBlocks.values()].filter((block) => block.taskId === task!.id)
   for (const block of taskBlocks) { touch('timeBlock', block.id); workspace.timeBlocks.delete(block.id) }
-  if (fields.startMinute !== undefined && fields.blockDurationMinutes) {
-    const block = makeTimeBlockEntity({ taskId: task.id, title: task.title, kind: 'task', start: isoAtMinute(fields.plannedDate, fields.startMinute), end: isoAtMinute(fields.plannedDate, fields.startMinute + fields.blockDurationMinutes) }, crypto.randomUUID(), now)
+  if (fields.startMinute !== undefined && fields.blockDurationMinutes && fields.plannedDate) {
+    const start = atTimeInZone(fields.plannedDate, fields.startMinute, series.timezone)
+    const block = makeTimeBlockEntity({
+      taskId: task.id,
+      title: task.title,
+      kind: 'task',
+      start,
+      end: new Date(new Date(start).getTime() + fields.blockDurationMinutes * 60_000).toISOString(),
+    }, crypto.randomUUID(), now)
     touch('timeBlock', block.id)
     workspace.timeBlocks.set(block.id, block)
   }
@@ -195,7 +253,7 @@ function upsertSeriesOccurrence(workspace: Workspace, touch: (type: SnapshotType
 }
 
 function reconcileSeries(workspace: Workspace, touch: (type: SnapshotType, id: string) => void, series: RecurringSeriesEntity, structural: boolean, now: string) {
-  const today = localDateKey()
+  const today = dateKeyInTimeZone(new Date(), series.timezone)
   const occurrences = [...workspace.tasks.values()].filter((task) => task.seriesId === series.id)
   if (series.status !== 'active') {
     for (const task of occurrences) if (task.status !== 'completed' && (task.recurrenceDate ?? '') >= today) {
@@ -214,7 +272,7 @@ function reconcileSeries(workspace: Workspace, touch: (type: SnapshotType, id: s
     return
   }
 
-  const through = series.materializedThrough ?? defaultMaterializationThrough()
+  const through = series.materializedThrough ?? defaultMaterializationThrough(today)
   const dates = calendarOccurrenceDates({ ...series, status: 'active' }, through)
   const allowed = new Set(dates)
   for (const task of occurrences) {
@@ -303,8 +361,28 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
         } else {
           const value = op.value
           const projectId = resolveProject(createProjectIds, value.taskTemplate.projectRef, value.taskTemplate.projectId)
-          const series = makeSeriesEntity({ title: value.title, timezone: value.timezone, startDate: value.startDate, rule: value.rule, taskTemplate: { title: value.taskTemplate.title, description: value.taskTemplate.description, projectId, priority: value.taskTemplate.priority, estimatedMinutes: value.taskTemplate.estimatedMinutes, deadlineOffsetDays: value.taskTemplate.deadlineOffsetDays, startMinute: value.taskTemplate.startMinute, blockDurationMinutes: value.taskTemplate.blockDurationMinutes } }, crypto.randomUUID(), now)
-          const graph = materializeSeriesGraph(series, defaultMaterializationThrough(), now)
+          const series = makeSeriesEntity({
+            title: value.title,
+            timezone: value.timezone,
+            startDate: value.startDate,
+            rule: value.rule,
+            taskTemplate: {
+              title: value.taskTemplate.title,
+              description: value.taskTemplate.description,
+              projectId,
+              priority: value.taskTemplate.priority,
+              estimatedMinutes: value.taskTemplate.estimatedMinutes,
+              tags: value.taskTemplate.tags,
+              checklist: value.taskTemplate.checklist,
+              sourceUrl: value.taskTemplate.sourceUrl,
+              location: value.taskTemplate.location,
+              pinned: value.taskTemplate.pinned,
+              deadlineOffsetDays: value.taskTemplate.deadlineOffsetDays,
+              startMinute: value.taskTemplate.startMinute,
+              blockDurationMinutes: value.taskTemplate.blockDurationMinutes,
+            },
+          }, crypto.randomUUID(), now)
+          const graph = materializeSeriesGraph(series, defaultMaterializationThrough(dateKeyInTimeZone(new Date(), series.timezone)), now)
           touch('recurringSeries', graph.series.id); workspace.recurringSeries.set(graph.series.id, graph.series)
           for (const task of graph.tasks) { touch('task', task.id); workspace.tasks.set(task.id, task); markPlanDraft(workspace, touch, task.plannedDate, now) }
           for (const block of graph.timeBlocks) { touch('timeBlock', block.id); workspace.timeBlocks.set(block.id, block) }

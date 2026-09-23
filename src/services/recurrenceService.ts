@@ -1,30 +1,46 @@
 import { db } from '../db/database'
-import { addLocalDays, atLocalTime, localDateKey } from '../domain/date'
+import { addLocalDays, atTimeInZone, dateKeyInTimeZone } from '../domain/date'
 import type { LocalDate, RecurringSeriesEntity, TaskEntity, TimeBlockEntity } from '../domain/models'
 import type { RecurringSeriesCreateInput, RecurringSeriesUpdateInput } from '../repositories/recurrenceRepository'
+import type { TaskUpdateInput } from '../repositories/taskRepository'
 import { recurrenceRepository } from '../repositories/recurrenceRepository'
 import { taskRepository } from '../repositories/taskRepository'
 import { timeBlockRepository } from '../repositories/timeBlockRepository'
 import { calendarOccurrenceDates, defaultMaterializationThrough, nextCompletionRelativeDate } from '../features/recurrence/recurrenceLogic'
 import type { UndoableMutation } from './undo'
 
-function isoAtMinute(date: LocalDate, minute: number) {
-  return atLocalTime(date, Math.floor(minute / 60), minute % 60)
+function hasOwn(value: object, key: string) {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
+function freshChecklist(items: string[], now = new Date().toISOString()) {
+  return items.map((text, index) => ({
+    id: crypto.randomUUID(),
+    text,
+    completed: false,
+    sortOrder: index,
+    createdAt: now,
+    updatedAt: now,
+  }))
 }
 
 function taskFields(series: RecurringSeriesEntity, recurrenceDate: LocalDate) {
   const exception = series.exceptions[recurrenceDate] ?? {}
   const template = series.taskTemplate
-  const plannedDate = exception.plannedDate ?? recurrenceDate
-  const deadline = exception.deadline ?? (template.deadlineOffsetDays !== undefined ? addLocalDays(recurrenceDate, template.deadlineOffsetDays) : undefined)
+  const defaultDeadline = template.deadlineOffsetDays !== undefined ? addLocalDays(recurrenceDate, template.deadlineOffsetDays) : undefined
   return {
     title: exception.title ?? template.title,
     description: exception.description ?? template.description,
-    projectId: Object.prototype.hasOwnProperty.call(exception, 'projectId') ? exception.projectId : template.projectId,
+    projectId: hasOwn(exception, 'projectId') ? (exception.projectId ?? undefined) : template.projectId,
     priority: exception.priority ?? template.priority,
-    estimatedMinutes: exception.estimatedMinutes ?? template.estimatedMinutes,
-    plannedDate,
-    deadline,
+    estimatedMinutes: hasOwn(exception, 'estimatedMinutes') ? (exception.estimatedMinutes ?? undefined) : template.estimatedMinutes,
+    tags: exception.tags ?? template.tags ?? [],
+    checklist: exception.checklist ?? template.checklist ?? [],
+    sourceUrl: hasOwn(exception, 'sourceUrl') ? (exception.sourceUrl ?? undefined) : template.sourceUrl,
+    location: hasOwn(exception, 'location') ? (exception.location ?? undefined) : template.location,
+    pinned: exception.pinned ?? template.pinned ?? false,
+    plannedDate: hasOwn(exception, 'plannedDate') ? (exception.plannedDate ?? undefined) : recurrenceDate,
+    deadline: hasOwn(exception, 'deadline') ? (exception.deadline ?? undefined) : defaultDeadline,
   }
 }
 
@@ -34,8 +50,10 @@ async function createOccurrence(series: RecurringSeriesEntity, recurrenceDate: L
   const existing = await recurrenceRepository.getOccurrence(series.id, recurrenceDate)
   if (existing) return { task: existing }
   const fields = taskFields(series, recurrenceDate)
+  const now = new Date().toISOString()
   const task = await taskRepository.create({
     ...fields,
+    checklist: freshChecklist(fields.checklist, now),
     status: 'todo',
     seriesId: series.id,
     recurrenceDate,
@@ -48,12 +66,13 @@ async function createOccurrence(series: RecurringSeriesEntity, recurrenceDate: L
   const duration = exception?.blockDurationMinutes ?? series.taskTemplate.blockDurationMinutes ?? fields.estimatedMinutes
   let block: TimeBlockEntity | undefined
   if (startMinute !== undefined && duration && fields.plannedDate) {
+    const start = atTimeInZone(fields.plannedDate, startMinute, series.timezone)
     block = await timeBlockRepository.create({
       taskId: task.id,
       title: task.title,
       kind: 'task',
-      start: isoAtMinute(fields.plannedDate, startMinute),
-      end: isoAtMinute(fields.plannedDate, Math.min(1439, startMinute + duration)),
+      start,
+      end: new Date(new Date(start).getTime() + duration * 60_000).toISOString(),
     })
   }
   return { task, block }
@@ -69,19 +88,24 @@ async function removeTasksAndBlocks(taskIds: string[]) {
   })
 }
 
-async function materializeSeriesInternal(series: RecurringSeriesEntity, through = defaultMaterializationThrough()): Promise<string[]> {
+function seriesMaterializationThrough(series: RecurringSeriesEntity) {
+  return defaultMaterializationThrough(dateKeyInTimeZone(new Date(), series.timezone))
+}
+
+async function materializeSeriesInternal(series: RecurringSeriesEntity, through?: LocalDate): Promise<string[]> {
   if (series.status !== 'active') return []
+  const targetThrough = through ?? seriesMaterializationThrough(series)
   const beforeIds = new Set((await recurrenceRepository.listOccurrences(series.id)).map((task) => task.id))
   if (series.rule.frequency === 'after-completion') {
     const occurrences = await recurrenceRepository.listOccurrences(series.id)
     if (!occurrences.length) await createOccurrence(series, series.startDate)
   } else {
-    const dates = calendarOccurrenceDates(series, through)
+    const dates = calendarOccurrenceDates(series, targetThrough)
     for (const date of dates) await createOccurrence(series, date)
   }
   const next = await recurrenceRepository.get(series.id)
   if (next) {
-    next.materializedThrough = through
+    next.materializedThrough = targetThrough
     next.updatedAt = new Date().toISOString()
     await recurrenceRepository.replace(next)
   }
@@ -102,6 +126,11 @@ async function applyTemplateChanges(task: TaskEntity, series: RecurringSeriesEnt
   if (changed.includes('projectId')) patch.projectId = fields.projectId
   if (changed.includes('priority')) patch.priority = fields.priority
   if (changed.includes('estimatedMinutes')) patch.estimatedMinutes = fields.estimatedMinutes
+  if (changed.includes('tags')) patch.tags = fields.tags
+  if (changed.includes('checklist')) patch.checklist = freshChecklist(fields.checklist)
+  if (changed.includes('sourceUrl')) patch.sourceUrl = fields.sourceUrl
+  if (changed.includes('location')) patch.location = fields.location
+  if (changed.includes('pinned')) patch.pinned = fields.pinned
   if (changed.includes('deadlineOffsetDays')) patch.deadline = fields.deadline
   if (Object.keys(patch).length) await db.tasks.update(task.id, { ...patch, updatedAt: new Date().toISOString() })
   if ((changed.includes('startMinute') || changed.includes('blockDurationMinutes')) && task.plannedDate) {
@@ -110,22 +139,26 @@ async function applyTemplateChanges(task: TaskEntity, series: RecurringSeriesEnt
     const duration = series.taskTemplate.blockDurationMinutes ?? fields.estimatedMinutes
     if (startMinute === undefined || !duration) {
       for (const block of blocks) await timeBlockRepository.remove(block.id)
-    } else if (blocks[0]) {
-      await timeBlockRepository.update(blocks[0].id, { title: fields.title, start: isoAtMinute(task.plannedDate, startMinute), end: isoAtMinute(task.plannedDate, Math.min(1439, startMinute + duration)) })
-      for (const extra of blocks.slice(1)) await timeBlockRepository.remove(extra.id)
     } else {
-      await timeBlockRepository.create({ taskId: task.id, title: fields.title, kind: 'task', start: isoAtMinute(task.plannedDate, startMinute), end: isoAtMinute(task.plannedDate, Math.min(1439, startMinute + duration)) })
+      const start = atTimeInZone(task.plannedDate, startMinute, series.timezone)
+      const end = new Date(new Date(start).getTime() + duration * 60_000).toISOString()
+      if (blocks[0]) {
+        await timeBlockRepository.update(blocks[0].id, { title: fields.title, start, end })
+        for (const extra of blocks.slice(1)) await timeBlockRepository.remove(extra.id)
+      } else {
+        await timeBlockRepository.create({ taskId: task.id, title: fields.title, kind: 'task', start, end })
+      }
     }
   }
 }
 
 export const recurrenceService = {
-  async materializeAll(through = defaultMaterializationThrough()): Promise<void> {
+  async materializeAll(through?: LocalDate): Promise<void> {
     const series = await recurrenceRepository.listActive()
     for (const item of series) await materializeSeriesInternal(item, through)
   },
 
-  async materialize(seriesId: string, through = defaultMaterializationThrough()): Promise<void> {
+  async materialize(seriesId: string, through?: LocalDate): Promise<void> {
     const series = await recurrenceRepository.get(seriesId)
     if (!series) throw new Error('Recurring series not found.')
     await materializeSeriesInternal(series, through)
@@ -148,7 +181,7 @@ export const recurrenceService = {
     if (!task) throw new Error('Task not found.')
     if (task.seriesId) throw new Error('Task already belongs to a recurring series.')
     const previous = { ...task }
-    const startDate = input.startDate ?? task.plannedDate ?? localDateKey()
+    const startDate = input.startDate ?? task.plannedDate ?? dateKeyInTimeZone(new Date(), input.timezone ?? 'local')
     const created = await recurrenceRepository.create({
       title: task.title,
       timezone: input.timezone,
@@ -160,6 +193,11 @@ export const recurrenceService = {
         projectId: task.projectId,
         priority: task.priority,
         estimatedMinutes: task.estimatedMinutes,
+        tags: task.tags ?? [],
+        checklist: (task.checklist ?? []).map((item) => item.text),
+        sourceUrl: task.sourceUrl,
+        location: task.location,
+        pinned: task.pinned ?? false,
         ...input.taskTemplate,
       },
     })
@@ -207,6 +245,38 @@ export const recurrenceService = {
     }
   },
 
+  async recordOccurrenceException(taskId: string, changes: TaskUpdateInput): Promise<UndoableMutation> {
+    const task = await taskRepository.get(taskId)
+    if (!task?.seriesId || !task.recurrenceDate) return { message: 'Occurrence unchanged', undo: async () => {} }
+    const series = await recurrenceRepository.get(task.seriesId)
+    if (!series) throw new Error('Recurring series not found.')
+
+    const previousSeries = structuredClone(series)
+    const current = { ...(series.exceptions[task.recurrenceDate] ?? {}) }
+
+    if (Object.prototype.hasOwnProperty.call(changes, 'title') && changes.title !== undefined) current.title = changes.title
+    if (Object.prototype.hasOwnProperty.call(changes, 'description') && changes.description !== undefined) current.description = changes.description
+    if (Object.prototype.hasOwnProperty.call(changes, 'projectId')) current.projectId = changes.projectId ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'priority') && changes.priority !== undefined) current.priority = changes.priority
+    if (Object.prototype.hasOwnProperty.call(changes, 'estimatedMinutes')) current.estimatedMinutes = changes.estimatedMinutes ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'tags') && changes.tags !== undefined) current.tags = changes.tags
+    if (Object.prototype.hasOwnProperty.call(changes, 'checklist') && changes.checklist !== undefined) current.checklist = changes.checklist.map((item) => item.text)
+    if (Object.prototype.hasOwnProperty.call(changes, 'sourceUrl')) current.sourceUrl = changes.sourceUrl ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'location')) current.location = changes.location ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'pinned') && changes.pinned !== undefined) current.pinned = changes.pinned
+    if (Object.prototype.hasOwnProperty.call(changes, 'plannedDate')) current.plannedDate = changes.plannedDate ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'deadline')) current.deadline = changes.deadline ?? null
+
+    series.exceptions = { ...series.exceptions, [task.recurrenceDate]: current }
+    series.updatedAt = new Date().toISOString()
+    await recurrenceRepository.replace(series)
+
+    return {
+      message: 'Occurrence override saved',
+      undo: async () => { await recurrenceRepository.replace(previousSeries) },
+    }
+  },
+
   async updateEntire(seriesId: string, input: RecurringSeriesUpdateInput): Promise<UndoableMutation> {
     const previousSeries = await recurrenceRepository.get(seriesId)
     if (!previousSeries) throw new Error('Recurring series not found.')
@@ -214,7 +284,7 @@ export const recurrenceService = {
     const previousBlocks = await timeBlockRepository.listForTaskIds(previousTasks.map((task) => task.id))
     const changed = changedTemplateFields(input.taskTemplate)
     const next = await recurrenceRepository.update(seriesId, input)
-    const through = next.materializedThrough ?? defaultMaterializationThrough()
+    const through = next.materializedThrough ?? seriesMaterializationThrough(next)
     const allowed = next.rule.frequency === 'after-completion' ? null : new Set(calendarOccurrenceDates(next, through))
     for (const task of await recurrenceRepository.listOccurrences(seriesId)) {
       if (!task.recurrenceDate || task.status === 'completed') continue
@@ -252,22 +322,36 @@ export const recurrenceService = {
     const oldSnapshot = structuredClone(previousSeries)
     const beforeDate = addLocalDays(pivot.recurrenceDate, -1)
     const oldRule = { ...previousSeries.rule, until: beforeDate, count: undefined }
-    await recurrenceRepository.update(previousSeries.id, { rule: oldRule })
+    const earlierExceptions = Object.fromEntries(Object.entries(previousSeries.exceptions).filter(([date]) => date < pivot.recurrenceDate!))
+    const futureExceptions = Object.fromEntries(Object.entries(previousSeries.exceptions).filter(([date]) => date >= pivot.recurrenceDate!))
+    await recurrenceRepository.replace({
+      ...previousSeries,
+      rule: oldRule,
+      exceptions: earlierExceptions,
+      updatedAt: new Date().toISOString(),
+    })
 
     const nextRule = input.rule ?? { ...previousSeries.rule, count: previousSeries.rule.count ? Math.max(1, previousSeries.rule.count - allOccurrences.filter((task) => (task.recurrenceDate ?? '') < pivot.recurrenceDate!).length) : undefined }
     const nextTemplate = { ...previousSeries.taskTemplate, ...(input.taskTemplate ?? {}) }
-    const nextSeries = await recurrenceRepository.create({
+    let nextSeries = await recurrenceRepository.create({
       title: input.title ?? previousSeries.title,
       timezone: previousSeries.timezone,
       startDate: pivot.recurrenceDate,
       rule: nextRule,
       taskTemplate: nextTemplate,
     })
+    const pivotException = { ...(futureExceptions[pivot.recurrenceDate] ?? {}) }
+    for (const field of changedTemplateFields(input.taskTemplate)) delete (pivotException as Record<string, unknown>)[field]
+    if (Object.keys(pivotException).length) futureExceptions[pivot.recurrenceDate] = pivotException
+    else delete futureExceptions[pivot.recurrenceDate]
+    nextSeries = { ...nextSeries, exceptions: futureExceptions, updatedAt: new Date().toISOString() }
+    await recurrenceRepository.replace(nextSeries)
     const now = new Date().toISOString()
     await db.transaction('rw', db.tasks, async () => {
       for (const task of future) await db.tasks.update(task.id, { seriesId: nextSeries.id, updatedAt: now })
     })
-    const nextAllowed = nextRule.frequency === 'after-completion' ? null : new Set(calendarOccurrenceDates({ ...nextSeries, taskTemplate: nextTemplate }, nextSeries.materializedThrough ?? defaultMaterializationThrough()))
+    const nextAllowed = nextRule.frequency === 'after-completion' ? null : new Set(calendarOccurrenceDates({ ...nextSeries, taskTemplate: nextTemplate }, nextSeries.materializedThrough ?? seriesMaterializationThrough(nextSeries)))
+    nextAllowed?.add(pivot.recurrenceDate)
     const changed = changedTemplateFields(input.taskTemplate)
     for (const task of await recurrenceRepository.listOccurrences(nextSeries.id)) {
       if (!task.recurrenceDate || task.status === 'completed') continue
@@ -293,9 +377,9 @@ export const recurrenceService = {
     const previous = await recurrenceRepository.get(seriesId)
     if (!previous) throw new Error('Recurring series not found.')
     const previousTasks = (await recurrenceRepository.listOccurrences(seriesId)).map((task) => ({ ...task }))
-    const today = localDateKey()
     const next = await recurrenceRepository.update(seriesId, { status })
-    const allowed = next.rule.frequency === 'after-completion' ? null : new Set(calendarOccurrenceDates(next, next.materializedThrough ?? defaultMaterializationThrough()))
+    const today = dateKeyInTimeZone(new Date(), next.timezone)
+    const allowed = next.rule.frequency === 'after-completion' ? null : new Set(calendarOccurrenceDates(next, next.materializedThrough ?? seriesMaterializationThrough(next)))
     for (const task of await recurrenceRepository.listOccurrences(seriesId)) {
       if (!task.recurrenceDate || task.recurrenceDate < today || task.status === 'completed') continue
       if (status !== 'active') {

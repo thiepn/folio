@@ -18,9 +18,19 @@ export const importRecurrenceRuleSchema = z.object({
   interval: z.number().int().min(1).max(365).default(1),
   weekdays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
   monthDay: z.number().int().min(1).max(31).optional(),
+  monthlyMode: z.enum(['days', 'ordinal-weekday', 'last-day']).default('days'),
+  monthDays: z.array(z.number().int().min(1).max(31)).max(31).optional(),
+  ordinal: z.union([z.literal(-1), z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional(),
+  weekday: z.number().int().min(0).max(6).optional(),
+  yearMonths: z.array(z.number().int().min(1).max(12)).max(12).optional(),
+  afterCompletionUnit: z.enum(['day', 'week', 'month', 'year']).default('day'),
   until: localDate.optional(),
   count: z.number().int().min(1).max(1000).optional(),
-}).strict()
+}).strict().superRefine((value, ctx) => {
+  if (value.until && value.count) ctx.addIssue({ code: 'custom', message: 'Use either until or count, not both.', path: ['until'] })
+  if (value.frequency === 'weekly' && (!value.weekdays || value.weekdays.length === 0)) ctx.addIssue({ code: 'custom', message: 'Weekly recurrence requires weekdays.', path: ['weekdays'] })
+  if (value.frequency === 'monthly' && value.monthlyMode === 'ordinal-weekday' && (value.ordinal === undefined || value.weekday === undefined)) ctx.addIssue({ code: 'custom', message: 'Ordinal monthly recurrence requires ordinal and weekday.', path: ['ordinal'] })
+})
 
 export const importProjectSchema = z.object({
   ref,
@@ -81,6 +91,11 @@ export const importSeriesSchema = z.object({
     projectId: z.string().min(1).optional(),
     priority: priority.default('normal'),
     estimatedMinutes: z.number().int().positive().max(1440).optional(),
+    tags: z.array(z.string().trim().min(1).max(40)).max(50).default([]),
+    checklist: z.array(z.string().trim().min(1).max(500)).max(500).default([]),
+    sourceUrl: z.string().trim().url().max(2048).optional(),
+    location: z.string().trim().max(500).optional(),
+    pinned: z.boolean().default(false),
     deadlineOffsetDays: z.number().int().min(0).max(3650).optional(),
     startMinute: z.number().int().min(0).max(1439).optional(),
     blockDurationMinutes: z.number().int().min(15).max(1440).optional(),

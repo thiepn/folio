@@ -84,3 +84,81 @@ export function weekdayShort(dateKey: LocalDate): string {
 export function dateTimeForDisplay(iso: string): string {
   return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso))
 }
+
+
+export function dateKeyInTimeZone(value: Date | string, timeZone: string): LocalDate {
+  const date = typeof value === 'string' ? new Date(value) : value
+  if (!timeZone || timeZone === 'local') return localDateKey(date)
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return `${values.year}-${values.month}-${values.day}`
+}
+
+function zonedParts(value: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(value)
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return {
+    year: Number(values.year),
+    month: Number(values.month),
+    day: Number(values.day),
+    hour: Number(values.hour),
+    minute: Number(values.minute),
+    second: Number(values.second),
+  }
+}
+
+/**
+ * Convert a wall-clock minute in an IANA time zone into an ISO instant.
+ * DST overlaps choose the earlier matching instant. DST gaps move forward
+ * to the first representable minute on the requested local date.
+ */
+export function atTimeInZone(dateKey: LocalDate, minuteOfDay: number, timeZone: string): string {
+  const minute = Math.max(0, Math.min(1439, Math.round(minuteOfDay)))
+  if (!timeZone || timeZone === 'local') return atLocalTime(dateKey, Math.floor(minute / 60), minute % 60)
+
+  const [year, month, day] = dateKey.split('-').map(Number)
+  const hour = Math.floor(minute / 60)
+  const minutePart = minute % 60
+  const desiredNaive = Date.UTC(year, month - 1, day, hour, minutePart, 0, 0)
+  let guess = desiredNaive
+
+  // Bring the instant close to the desired wall-clock representation.
+  for (let iteration = 0; iteration < 4; iteration += 1) {
+    const rendered = zonedParts(new Date(guess), timeZone)
+    const renderedNaive = Date.UTC(rendered.year, rendered.month - 1, rendered.day, rendered.hour, rendered.minute, 0, 0)
+    const delta = desiredNaive - renderedNaive
+    if (delta === 0) break
+    guess += delta
+  }
+
+  // Resolve DST overlap deterministically by choosing the earlier matching instant.
+  const searchStart = guess - 3 * 60 * 60 * 1000
+  const searchEnd = guess + 3 * 60 * 60 * 1000
+  let firstForward: number | undefined
+  for (let instant = searchStart; instant <= searchEnd; instant += 60_000) {
+    const rendered = zonedParts(new Date(instant), timeZone)
+    if (rendered.year !== year || rendered.month !== month || rendered.day !== day) continue
+    const renderedMinute = rendered.hour * 60 + rendered.minute
+    if (renderedMinute === minutePart + hour * 60) return new Date(instant).toISOString()
+    if (renderedMinute > minute && firstForward === undefined) firstForward = instant
+  }
+
+  // Non-existent local times during a spring-forward gap advance to the
+  // first valid wall-clock minute later that same local day.
+  if (firstForward !== undefined) return new Date(firstForward).toISOString()
+  throw new Error(`Could not resolve ${dateKey} ${String(hour).padStart(2, '0')}:${String(minutePart).padStart(2, '0')} in ${timeZone}.`)
+}

@@ -1,5 +1,5 @@
 import { db } from '../db/database'
-import { localDateKey, localDateToDate } from '../domain/date'
+import { atTimeInZone, dateKeyInTimeZone, localDateToDate } from '../domain/date'
 import type {
   DailyPlanEntity,
   ImportBatchEntity,
@@ -11,7 +11,6 @@ import type {
 import { importDocumentSchema } from '../features/import/importSchema'
 import { buildImportAnalysis, type ImportAnalysisContext } from '../features/import/importLogic'
 import type { ImportAnalysis, ImportDocumentV1 } from '../features/import/importTypes'
-import { isoAtMinute } from '../features/planner/calendarLogic'
 import { defaultMaterializationThrough } from '../features/recurrence/recurrenceLogic'
 import { importBatchRepository } from '../repositories/importBatchRepository'
 import { settingsRepository } from '../repositories/settingsRepository'
@@ -161,13 +160,40 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
   const explicitBlocks = document.timeBlocks.map((item) => {
     const taskId = item.taskRef ? taskIds.get(item.taskRef) : undefined
     const linkedTask = taskId ? tasks.find((task) => task.id === taskId) : undefined
-    return makeTimeBlockEntity({ taskId, title: item.kind === 'task' ? (linkedTask?.title ?? 'Task') : item.title!, kind: item.kind, start: isoAtMinute(item.date, item.startMinute), end: isoAtMinute(item.date, item.startMinute + item.durationMinutes) }, crypto.randomUUID(), now)
+    const start = atTimeInZone(item.date, item.startMinute, document.timezone)
+    return makeTimeBlockEntity({
+      taskId,
+      title: item.kind === 'task' ? (linkedTask?.title ?? 'Task') : item.title!,
+      kind: item.kind,
+      start,
+      end: new Date(new Date(start).getTime() + item.durationMinutes * 60_000).toISOString(),
+    }, crypto.randomUUID(), now)
   })
 
   const seriesGraphs = document.recurringSeries.map((item) => {
     const projectId = resolveProject(document, projectIds, item.taskTemplate.projectRef, item.taskTemplate.projectId)
-    const series = makeSeriesEntity({ title: item.title, timezone: item.timezone, startDate: item.startDate, rule: item.rule, taskTemplate: { title: item.taskTemplate.title, description: item.taskTemplate.description, projectId, priority: item.taskTemplate.priority, estimatedMinutes: item.taskTemplate.estimatedMinutes, deadlineOffsetDays: item.taskTemplate.deadlineOffsetDays, startMinute: item.taskTemplate.startMinute, blockDurationMinutes: item.taskTemplate.blockDurationMinutes } }, crypto.randomUUID(), now)
-    return materializeSeriesGraph(series, defaultMaterializationThrough(), now)
+    const series = makeSeriesEntity({
+      title: item.title,
+      timezone: item.timezone,
+      startDate: item.startDate,
+      rule: item.rule,
+      taskTemplate: {
+        title: item.taskTemplate.title,
+        description: item.taskTemplate.description,
+        projectId,
+        priority: item.taskTemplate.priority,
+        estimatedMinutes: item.taskTemplate.estimatedMinutes,
+        tags: item.taskTemplate.tags,
+        checklist: item.taskTemplate.checklist,
+        sourceUrl: item.taskTemplate.sourceUrl,
+        location: item.taskTemplate.location,
+        pinned: item.taskTemplate.pinned,
+        deadlineOffsetDays: item.taskTemplate.deadlineOffsetDays,
+        startMinute: item.taskTemplate.startMinute,
+        blockDurationMinutes: item.taskTemplate.blockDurationMinutes,
+      },
+    }, crypto.randomUUID(), now)
+    return materializeSeriesGraph(series, defaultMaterializationThrough(dateKeyInTimeZone(new Date(), item.timezone)), now)
   })
   const series = seriesGraphs.map((graph) => graph.series)
   const occurrenceTasks = seriesGraphs.flatMap((graph) => graph.tasks)
@@ -175,7 +201,7 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
   const allTasks = [...tasks, ...occurrenceTasks]
   const allBlocks = [...explicitBlocks, ...occurrenceBlocks]
 
-  const affectedDates = new Set<string>([...allTasks.map((task) => task.plannedDate).filter((date): date is string => Boolean(date)), ...allBlocks.map((block) => localDateKey(new Date(block.start)))])
+  const affectedDates = new Set<string>([...allTasks.map((task) => task.plannedDate).filter((date): date is string => Boolean(date)), ...allBlocks.map((block) => dateKeyInTimeZone(block.start, document.timezone))])
   const existingPlans = await db.dailyPlans.toArray()
   for (const habit of document.habits) {
     if (habit.kind !== 'duration' || !habit.countsTowardCapacity || habit.schedule.type === 'times-per-week') continue

@@ -24,7 +24,7 @@ const styles = read('src/styles/index.css')
 
 check('Task Engine V2 validator registered', pkg.scripts?.['validate:task-v2'] === 'node scripts/validate-task-engine-v2.mjs')
 check('release gate runs Task Engine V2 validation', pkg.scripts?.['release:verify']?.includes('validate:task-v2'))
-check('schema advanced to v16', /DATABASE_SCHEMA_VERSION\s*=\s*16\b/.test(database) && database.includes('this.version(16)'))
+check('Task Engine V2 remains schema-compatible', Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1] ?? 0) >= 16 && database.includes('this.version(16)'))
 check('v15 to v16 task migration registered', database.includes('migrateV15ToV16') && migration.includes("task.tags") && migration.includes("task.checklist") && migration.includes("task.comments"))
 check('task model has rich execution fields', ['tags: string[]','checklist: TaskChecklistItem[]','progressMode: TaskProgressMode','progressPercent: number','sourceUrl?: string','location?: string','pinned: boolean','comments: TaskComment[]','activity: TaskActivityEntry[]'].every((token) => models.includes(token)))
 check('task schemas validate rich execution fields', ['taskChecklistItemSchema','taskCommentSchema','taskProgressModeSchema','tags: taskTagsSchema','progressPercent: z.number().int().min(0).max(100)','sourceUrl: z.string().trim().url()','comments: z.array(taskCommentSchema)'].every((token) => schemas.includes(token)))
@@ -46,7 +46,7 @@ check('task inspector exposes comments and activity', inspector.includes('task-v
 check('task inspector exposes unlimited nested work', inspector.includes('unlimited depth') && inspector.includes('onOpenSubtask'))
 check('backup parser preserves Task V2 fields', ['tags: z.array(z.string()).default([])','checklist: z.array(backupTaskChecklistItemSchema).default([])','progressMode: z.enum([\'auto\',\'manual\']).default(\'auto\')','comments: z.array(backupTaskCommentSchema).default([])','activity: z.array(backupTaskActivitySchema).default([])'].every((token) => backupSchemas.includes(token)))
 check('public v16 backup schema exists', exists('public/schema/folio-backup-v16.schema.json'))
-check('interop advertises v8 through v16 restore', interop.includes('Schema v16 · complete planner state') && interop.includes('schema v8–v16'))
+check('interop retains v16 restore compatibility', interop.includes('Schema v17 · complete planner state') && interop.includes('schema v8–v17'))
 check('Task Engine V2 stylesheet loaded', styles.includes("@import './task-engine-v2.css';"))
 check('Task Engine V2 design document exists', exists('docs/TASK_ENGINE_V2_D1.md'))
 

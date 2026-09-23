@@ -35,11 +35,52 @@ export const backupTimeBlockSchema = z.object({ id, taskId: id.optional(), title
 export const backupDailyPlanSchema = z.object({ date: localDate, status: z.enum(['draft','committed']), capacityMinutes: z.number().int().positive().optional(), committedAt: iso.optional(), createdAt: iso, updatedAt: iso })
 export const backupDailyPlanItemSchema = z.object({ id, date: localDate, taskId: id, bucket: z.enum(['must','planned','optional']), sortOrder: z.number(), createdAt: iso, updatedAt: iso })
 export const backupFocusSchema = z.object({ id, taskId: id.optional(), taskTitleSnapshot: z.string().optional(), taskEstimateMinutesSnapshot: z.number().int().positive().optional(), projectIdSnapshot: id.optional(), projectNameSnapshot: z.string().optional(), mode: z.enum(['stopwatch','countdown']), targetSeconds: z.number().int().positive().optional(), plannedSeconds: z.number().int().positive().optional(), intention: z.string().optional(), note: z.string().optional(), startedAt: iso, resumedAt: iso.optional(), endedAt: iso.optional(), durationSeconds: z.number().nonnegative(), status: z.enum(['running','paused','finished','cancelled']), createdAt: iso, updatedAt: iso })
+const backupRecurrenceExceptionSchema = z.object({
+  skip: z.boolean().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  projectId: id.nullable().optional(),
+  priority: priority.optional(),
+  estimatedMinutes: z.number().int().positive().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  checklist: z.array(z.string()).optional(),
+  sourceUrl: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
+  pinned: z.boolean().optional(),
+  plannedDate: localDate.nullable().optional(),
+  deadline: localDate.nullable().optional(),
+  startMinute: z.number().int().min(0).max(1439).optional(),
+  blockDurationMinutes: z.number().int().positive().optional(),
+})
 export const backupSeriesSchema = z.object({
   id, title: z.string(), timezone: z.string(), status: z.enum(['active','paused','archived']), startDate: localDate,
-  rule: z.object({ frequency: z.enum(['daily','weekly','monthly','yearly','after-completion']), interval: z.number().int().positive(), weekdays: z.array(z.number().int().min(0).max(6)).optional(), monthDay: z.number().int().min(1).max(31).optional(), until: localDate.optional(), count: z.number().int().positive().optional() }),
-  taskTemplate: z.object({ title: z.string(), description: z.string(), projectId: id.optional(), priority, estimatedMinutes: z.number().int().positive().optional(), deadlineOffsetDays: z.number().int().nonnegative().optional(), startMinute: z.number().int().min(0).max(1439).optional(), blockDurationMinutes: z.number().int().positive().optional() }),
-  exceptions: z.record(z.string(), z.unknown()), materializedThrough: localDate.optional(), createdAt: iso, updatedAt: iso,
+  rule: z.object({
+    frequency: z.enum(['daily','weekly','monthly','yearly','after-completion']),
+    interval: z.number().int().positive(),
+    weekdays: z.array(z.number().int().min(0).max(6)).optional(),
+    monthDay: z.number().int().min(1).max(31).optional(),
+    monthlyMode: z.enum(['days','ordinal-weekday','last-day']).default('days'),
+    monthDays: z.array(z.number().int().min(1).max(31)).optional(),
+    ordinal: z.union([z.literal(-1),z.literal(1),z.literal(2),z.literal(3),z.literal(4),z.literal(5)]).optional(),
+    weekday: z.number().int().min(0).max(6).optional(),
+    yearMonths: z.array(z.number().int().min(1).max(12)).optional(),
+    afterCompletionUnit: z.enum(['day','week','month','year']).default('day'),
+    until: localDate.optional(),
+    count: z.number().int().positive().optional(),
+  }),
+  taskTemplate: z.object({
+    title: z.string(), description: z.string(), projectId: id.optional(), priority,
+    estimatedMinutes: z.number().int().positive().optional(),
+    tags: z.array(z.string()).default([]),
+    checklist: z.array(z.string()).default([]),
+    sourceUrl: z.string().optional(),
+    location: z.string().optional(),
+    pinned: z.boolean().default(false),
+    deadlineOffsetDays: z.number().int().nonnegative().optional(),
+    startMinute: z.number().int().min(0).max(1439).optional(),
+    blockDurationMinutes: z.number().int().positive().optional(),
+  }),
+  exceptions: z.record(z.string(), backupRecurrenceExceptionSchema), materializedThrough: localDate.optional(), createdAt: iso, updatedAt: iso,
 })
 export const backupSettingSchema = z.object({ key: z.string().min(1), value: z.unknown(), updatedAt: iso })
 const provenanceType = z.enum(['project','task','habit','timeBlock','recurringSeries'])

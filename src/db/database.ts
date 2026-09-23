@@ -30,9 +30,10 @@ import { migrateV12ToV13 } from '../migrations/v12ToV13'
 import { migrateV13ToV14 } from '../migrations/v13ToV14'
 import { migrateV14ToV15 } from '../migrations/v14ToV15'
 import { migrateV15ToV16 } from '../migrations/v15ToV16'
+import { migrateV16ToV17 } from '../migrations/v16ToV17'
 
 export const DATABASE_NAME = 'folio'
-export const DATABASE_SCHEMA_VERSION = 16
+export const DATABASE_SCHEMA_VERSION = 17
 
 export class ProductivityDatabase extends Dexie {
   tasks!: Table<TaskEntity, string>
@@ -281,6 +282,23 @@ export class ProductivityDatabase extends Dexie {
       calendarImportBatches: '&id,createdAt,status,source',
       reviewRecords: '&id,kind,periodStart,periodEnd,updatedAt,[kind+periodStart]',
     }).upgrade(migrateV15ToV16)
+
+    this.version(17).stores({
+      tasks: '&id,status,plannedDate,deadline,projectId,parentTaskId,seriesId,recurrenceDate,*blockedByTaskIds,*tags,pinned,deletedAt,updatedAt,[status+plannedDate],[seriesId+recurrenceDate]',
+      projects: '&id,name,type,status,deadline,archived,favorite,updatedAt,[archived+favorite]',
+      habits: '&id,sortOrder,updatedAt',
+      habitEntries: '&id,habitId,date,status,updatedAt,[habitId+date],[habitId+status]',
+      timeBlocks: '&id,taskId,start,end,kind,updatedAt',
+      dailyPlans: '&date,status,updatedAt',
+      dailyPlanItems: '&id,date,taskId,bucket,updatedAt,[date+bucket],[date+taskId]',
+      focusSessions: '&id,taskId,projectIdSnapshot,startedAt,endedAt,status,[status+startedAt]',
+      recurringSeries: '&id,status,startDate,timezone,updatedAt,[status+startDate]',
+      settings: '&key,updatedAt',
+      importBatches: '&id,createdAt,status,source',
+      patchBatches: '&id,createdAt,status,source',
+      calendarImportBatches: '&id,createdAt,status,source',
+      reviewRecords: '&id,kind,periodStart,periodEnd,updatedAt,[kind+periodStart]',
+    }).upgrade(migrateV16ToV17)
   }
 }
 
