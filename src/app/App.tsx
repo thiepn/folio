@@ -885,6 +885,7 @@ function AppContent() {
             archivedLists={data.archivedLists}
             sections={data.sections}
             tags={data.tags}
+            archivedTags={data.archivedTags}
             tasks={data.allTasks}
             listCounts={data.listCounts}
             tagCounts={data.tagCounts}
