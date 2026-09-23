@@ -923,7 +923,7 @@ function AppContent() {
       <PwaStatusBanner />
       <BackupReminderBanner />
       <RuntimeIssueBanner onOpenData={() => setDataOpen(true)} />
-      <MobileNav active={view} onNavigate={navigate} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo')} onMore={() => setMobileMoreOpen(true)} />
+      <MobileNav active={view} onNavigate={navigate} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo', '', view === 'inbox' ? undefined : data.today, view === 'lists' && selectedListId && !selectedListId.startsWith('__') ? selectedListId : '')} onMore={() => setMobileMoreOpen(true)} />
       <MobileMoreSheet
         open={mobileMoreOpen}
         active={view}
