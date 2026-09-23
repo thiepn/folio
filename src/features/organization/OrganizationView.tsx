@@ -105,6 +105,9 @@ export function OrganizationView({
       <SmartViewWorkspace
         view={selectedSmartView}
         tasks={matches}
+        today={today}
+        lists={lists}
+        projects={projects}
         onBack={()=>onSelectList(null)}
         onOpenTask={onOpenTask}
         onToggleTask={onToggleTask}
@@ -112,6 +115,9 @@ export function OrganizationView({
         onDuplicate={()=>void onDuplicateSmartView(selectedSmartView)}
         onDelete={()=>void onDeleteSmartView(selectedSmartView.id).then(()=>onSelectList(null))}
         onTogglePin={()=>void onToggleSmartViewPin(selectedSmartView.id)}
+        onBoardDrop={(taskId,target)=>onBoardDrop(taskId,target)}
+        onTimelineSetSpan={onTimelineSetSpan}
+        onTimelineClear={onTimelineClear}
       />
       <SmartViewEditorModal
         open={smartEditorOpen}
