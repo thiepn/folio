@@ -57,7 +57,7 @@ import { reviewRecordService } from '../services/reviewRecordService'
 import { reminderService } from '../services/reminderService'
 import { createCapturedBatch, createCapturedItem } from '../services/captureService'
 import type { UndoableMutation } from '../services/undo'
-import type { TaskCreateInput, TaskUpdateInput } from '../repositories/taskRepository'
+import type { TaskUpdateInput } from '../repositories/taskRepository'
 import type { ProjectCreateInput, ProjectUpdateInput } from '../repositories/projectRepository'
 import type { RecurringSeriesUpdateInput } from '../repositories/recurrenceRepository'
 import type { HabitCreateInput, HabitUpdateInput } from '../repositories/habitRepository'
@@ -1139,11 +1139,6 @@ function recurrenceRule(value: RecurrenceEditorValue) {
     until: value.until,
     count: value.count,
   }
-}
-
-function localDayDifference(from: string, to: string) {
-  const [fy, fm, fd] = from.split('-').map(Number), [ty, tm, td] = to.split('-').map(Number)
-  return Math.round((new Date(ty, tm - 1, td, 12).getTime() - new Date(fy, fm - 1, fd, 12).getTime()) / 86_400_000)
 }
 
 function BootState() {
