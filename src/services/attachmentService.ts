@@ -37,6 +37,29 @@ async function imageMetadata(file: File) {
   } catch { return {} }
 }
 
+async function audioMetadata(file: File): Promise<{ durationSeconds?: number }> {
+  if (!file.type.startsWith('audio/') || typeof document === 'undefined') return {}
+  return new Promise((resolve) => {
+    const audio = document.createElement('audio')
+    const url = URL.createObjectURL(file)
+    let settled = false
+    const finish = (result: { durationSeconds?: number }) => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timeout)
+      audio.removeAttribute('src')
+      audio.load()
+      URL.revokeObjectURL(url)
+      resolve(result)
+    }
+    const timeout = window.setTimeout(() => finish({}), 5000)
+    audio.preload = 'metadata'
+    audio.onloadedmetadata = () => finish(Number.isFinite(audio.duration) ? { durationSeconds: audio.duration } : {})
+    audio.onerror = () => finish({})
+    audio.src = url
+  })
+}
+
 function safeLink(value: string) {
   const url = new URL(value)
   if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Link attachments must use http:// or https://.')
@@ -78,10 +101,10 @@ export const attachmentService = {
     for (const file of files) {
       await assertQuota(file.size)
       const now = new Date().toISOString()
-      const dimensions = await imageMetadata(file)
+      const [dimensions, audio] = await Promise.all([imageMetadata(file), audioMetadata(file)])
       const row: AttachmentEntity = {
         id: crypto.randomUUID(), ownerType, ownerId, kind: fileKind(file), name: file.name || 'Attachment', mimeType: file.type || 'application/octet-stream', size: file.size,
-        blob: file, ...dimensions, createdAt: now, updatedAt: now,
+        blob: file, ...dimensions, ...audio, createdAt: now, updatedAt: now,
       }
       await db.attachments.add(row)
       added.push(row)
