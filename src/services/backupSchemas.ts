@@ -11,7 +11,7 @@ const backupTaskCommentSchema = z.object({ id, body: z.string(), createdAt: iso,
 const backupTaskActivitySchema = z.object({ id, kind: z.enum(['created','updated','completed','reopened','subtask','comment','restored','duplicated']), label: z.string(), at: iso })
 export const backupTaskSchema = z.object({
   id, title: z.string(), description: z.string(), projectId: id.optional(), listId: id.optional(), sectionId: id.optional(), parentTaskId: id.optional(), priority, status,
-  lastOpenStatus: z.enum(['inbox','todo']).optional(), plannedDate: localDate.optional(), deadline: localDate.optional(), estimatedMinutes: z.number().int().positive().optional(),
+  lastOpenStatus: z.enum(['inbox','todo']).optional(), plannedDate: localDate.optional(), deadline: localDate.optional(), timelineStart: localDate.optional(), timelineEnd: localDate.optional(), timelineMilestone: z.boolean().default(false), estimatedMinutes: z.number().int().positive().optional(),
   tags: z.array(z.string()).default([]), tagIds: z.array(id).default([]), checklist: z.array(backupTaskChecklistItemSchema).default([]), progressMode: z.enum(['auto','manual']).default('auto'), progressPercent: z.number().int().min(0).max(100).default(0),
   sourceUrl: z.string().optional(), location: z.string().optional(), pinned: z.boolean().default(false), comments: z.array(backupTaskCommentSchema).default([]), activity: z.array(backupTaskActivitySchema).default([]),
   seriesId: id.optional(), recurrenceDate: localDate.optional(), blockedByTaskIds: z.array(id).default([]), sortOrder: z.number(), rescheduleCount: z.number().int().nonnegative(), createdAt: iso, updatedAt: iso, completedAt: iso.optional(), deletedAt: iso.optional(),
@@ -52,6 +52,9 @@ const backupRecurrenceExceptionSchema = z.object({
   pinned: z.boolean().optional(),
   plannedDate: localDate.nullable().optional(),
   deadline: localDate.nullable().optional(),
+  timelineStart: localDate.nullable().optional(),
+  timelineEnd: localDate.nullable().optional(),
+  timelineMilestone: z.boolean().optional(),
   startMinute: z.number().int().min(0).max(1439).optional(),
   blockDurationMinutes: z.number().int().positive().optional(),
 })
