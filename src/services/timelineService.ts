@@ -1,4 +1,3 @@
-import { addLocalDays } from '../domain/date'
 import { normalizeTimelineSpan, shiftTimelineSpan, timelineDayOffset } from '../features/boards/boardTimelineLogic'
 import type { LocalDate } from '../domain/models'
 import { taskRepository } from '../repositories/taskRepository'
@@ -12,7 +11,7 @@ function taskChanges(start?: LocalDate, end?: LocalDate, milestone = false) {
     : { timelineStart: null as LocalDate | null, timelineEnd: null as LocalDate | null, timelineMilestone: false }
 }
 
-async function updateWithOccurrence(taskId: string, changes: ReturnType<typeof normalizedSpan>): Promise<UndoableMutation> {
+async function updateWithOccurrence(taskId: string, changes: ReturnType<typeof taskChanges>): Promise<UndoableMutation> {
   const task = await taskRepository.get(taskId)
   if (!task) throw new Error('Task not found.')
   const before = { ...task }
