@@ -7,8 +7,8 @@ import { recurrenceService } from './recurrenceService'
 
 export type UndoableTaskMutation = UndoableMutation
 
-async function descendants(id: string): Promise<TaskEntity[]> {
-  const all = (await db.tasks.toArray()).filter((task) => !task.deletedAt)
+async function descendants(id: string, includeDeleted = false): Promise<TaskEntity[]> {
+  const all = (await db.tasks.toArray()).filter((task) => includeDeleted || !task.deletedAt)
   const byParent = new Map<string, TaskEntity[]>()
   for (const task of all) {
     if (!task.parentTaskId) continue
@@ -209,11 +209,15 @@ export const taskService = {
   async restore(id: string): Promise<UndoableTaskMutation> {
     const task = await taskRepository.get(id)
     if (!task) throw new Error('Task not found.')
-    const children = await descendants(id)
+    const children = await descendants(id, true)
     const previous = [task, ...children].map((item) => ({ ...item }))
     const now = new Date().toISOString()
     await db.transaction('rw', db.tasks, async () => {
-      await Promise.all(previous.map((item) => db.tasks.update(item.id, { deletedAt: undefined, updatedAt: now })))
+      await Promise.all(previous.map((item) => db.tasks.update(item.id, {
+        deletedAt: undefined,
+        activity: appendTaskActivity(item, 'restored', 'Task restored', now),
+        updatedAt: now,
+      })))
     })
     return {
       message: 'Task restored',
