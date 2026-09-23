@@ -239,6 +239,7 @@ export const reminderService = {
   async requestPermission() {
     const permission = await notificationService.requestPermission()
     emit()
+    if (permission === 'granted') await tick()
     return permission
   },
 
@@ -257,7 +258,7 @@ export const reminderService = {
     return {
       dailyPlanning: { enabled: Boolean(planning?.enabled), minuteOfDay: planning?.minuteOfDay ?? DEFAULT_DAILY_PLANNING_MINUTE },
       overdueSummary: { enabled: Boolean(overdue?.enabled), minuteOfDay: overdue?.minuteOfDay ?? DEFAULT_OVERDUE_MINUTE },
-      defaultSnoozeMinutes: await this.getDefaultSnoozeMinutes(),
+      defaultSnoozeMinutes: await settingsRepository.get<number>('notifications.defaultSnoozeMinutes', DEFAULT_SNOOZE_MINUTES),
     }
   },
 
