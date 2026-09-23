@@ -6,6 +6,7 @@ import { timeBlockRepository } from '../repositories/timeBlockRepository'
 import { settingsRepository } from '../repositories/settingsRepository'
 import { dailyPlanRepository } from '../repositories/dailyPlanRepository'
 import { recurrenceRepository } from '../repositories/recurrenceRepository'
+import { organizationRepository } from '../repositories/organizationRepository'
 import { taskToPreview, timeBlockToPreview } from '../adapters/uiAdapters'
 import type { DailyPlanBucket, TaskEntity } from '../domain/models'
 
@@ -26,6 +27,7 @@ export function useAppData() {
     const [
       taskSnapshot, projectEntities, timeBlocks, allTimeBlocks,
       defaultCapacity, dailyPlan, dailyPlanItems, recurringSeries,
+      folders, lists, sections, tags,
     ] = await Promise.all([
       // One Task table snapshot feeds Today, Next, Later, Inbox, projects and history.
       taskRepository.listSnapshot(),
@@ -36,11 +38,19 @@ export function useAppData() {
       dailyPlanRepository.get(today),
       dailyPlanRepository.listItems(today),
       recurrenceRepository.listAll(),
+      organizationRepository.listFolders(),
+      organizationRepository.listLists(),
+      organizationRepository.listSections(),
+      organizationRepository.listTags(),
     ])
 
     const projects = buildProjectSummaries(projectEntities, taskSnapshot)
     const allProjectSummaries = buildProjectSummaries(projectEntities, taskSnapshot, true)
     const projectMap = new Map(projectEntities.map((project) => [project.id, project]))
+    const listMap = new Map(lists.map((list) => [list.id, list]))
+    const sectionMap = new Map(sections.map((section) => [section.id, section]))
+    const tagMap = new Map(tags.map((tag) => [tag.id, tag]))
+    const organizationMaps = { lists: listMap, sections: sectionMap, tags: tagMap }
 
     const activeTasks = taskSnapshot.filter(active)
     const roots = activeTasks.filter(root)
@@ -52,7 +62,7 @@ export function useAppData() {
       childMap.set(task.parentTaskId, list)
     }
     const taskMap = new Map(activeTasks.map((task) => [task.id, task]))
-    const preview = (task: TaskEntity) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap)
+    const preview = (task: TaskEntity) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap, organizationMaps)
 
     const todayTasks = roots.filter((task) => task.plannedDate === today && (task.status === 'todo' || task.status === 'completed')).sort(byOrder)
     const nextTasks = roots.filter((task) => task.status === 'todo' && task.plannedDate === tomorrow).sort(byOrder)
@@ -87,8 +97,8 @@ export function useAppData() {
       inboxTasks: inboxTasks.map(preview),
       openTasks: openTasks.map(preview),
       allTasks: roots.map(preview),
-      subtasks: activeTasks.filter((task) => Boolean(task.parentTaskId)).map((task) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap)),
-      trashTasks: trashTasks.map((task) => taskToPreview(task, projectMap, [], taskMap)),
+      subtasks: activeTasks.filter((task) => Boolean(task.parentTaskId)).map((task) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap, organizationMaps)),
+      trashTasks: trashTasks.map((task) => taskToPreview(task, projectMap, [], taskMap, organizationMaps)),
       projects,
       archivedProjects: allProjectSummaries.filter((project) => project.archived),
       favoriteProjects: projects.filter((project) => project.favorite),
@@ -100,6 +110,14 @@ export function useAppData() {
       dailyPlanStatus: dailyPlan?.status ?? 'draft',
       dailyPlanCommittedAt: dailyPlan?.committedAt,
       recurringSeries,
+      folders,
+      lists,
+      sections,
+      tags,
+      favoriteLists: lists.filter((list) => list.favorite),
+      unlistedCount: roots.filter((task) => task.status === 'todo' && !task.listId).length,
+      tagCounts: Object.fromEntries(tags.map((tag) => [tag.id, roots.filter((task) => task.status === 'todo' && task.tagIds?.includes(tag.id)).length])),
+      listCounts: Object.fromEntries(lists.map((list) => [list.id, roots.filter((task) => task.status === 'todo' && task.listId === list.id).length])),
     }
   }, [today, tomorrow])
 }
