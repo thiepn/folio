@@ -20,7 +20,7 @@ export interface CaptureList {
 
 export type CaptureTokenKind =
   | 'planned' | 'deadline' | 'duration' | 'time' | 'priority'
-  | 'project' | 'tag' | 'status' | 'recurrence' | 'reminder'
+  | 'project' | 'list' | 'tag' | 'status' | 'recurrence' | 'reminder'
 
 export interface RecognizedCaptureToken {
   kind: CaptureTokenKind
@@ -497,8 +497,29 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
   const recognized: RecognizedCaptureToken[] = []
   const warnings: CaptureWarning[] = []
 
+  // Explicit list selectors: ^Personal, list:Admin, list:"Deep Work".
+  const explicitLists = [...working.matchAll(/(?:^|\s)(?:\^|list:)(?:"([^"]+)"|'([^']+)'|([^\s#~^]+))/gi)]
+  let listApplied = false
+  for (const match of explicitLists.reverse()) {
+    const query = match[1] ?? match[2] ?? match[3] ?? ''
+    const resolved = resolveList(query, lists)
+    if (resolved.kind === 'match') {
+      if (!listApplied) {
+        listId = resolved.list.id
+        listName = resolved.list.name
+        recognized.unshift({ kind: 'list', source: match[0].trim(), label: resolved.list.name })
+        listApplied = true
+      }
+      working = removeSpan(working, match.index!, match.index! + match[0].length)
+    } else if (resolved.kind === 'ambiguous') {
+      warnings.push({ code: 'ambiguous-list', message: match[0].trim() + ' matches multiple lists: ' + resolved.candidates.map((list) => list.name).join(', ') + '.' })
+    } else {
+      warnings.push({ code: 'unknown-list', message: match[0].trim() + ' does not match an active list.' })
+    }
+  }
+
   // Explicit project selectors: ~Analysis, project:Analysis, project:"Analysis III".
-  const explicitProjects = [...working.matchAll(/(?:^|\s)(?:~|project:|list:)(?:"([^"]+)"|'([^']+)'|([^\s#~]+))/gi)]
+  const explicitProjects = [...working.matchAll(/(?:^|\s)(?:~|project:)(?:"([^"]+)"|'([^']+)'|([^\s#~^]+))/gi)]
   let projectApplied = false
   for (const match of explicitProjects.reverse()) {
     const query = match[1] ?? match[2] ?? match[3] ?? ''
