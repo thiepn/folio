@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { TaskRow } from '../../components/ui/TaskRow'
+import { Tabs } from '../../components/ui/Tabs'
 import type { FolderEntity, ListEntity, SectionEntity, TagEntity } from '../../domain/models'
 import type { TaskPreview } from '../../types/ui'
 import type { FolderUpdateInput, ListUpdateInput, TagUpdateInput } from '../../repositories/organizationRepository'
@@ -8,6 +9,8 @@ import { SmartViewEditorModal } from '../smartViews/SmartViewEditorModal'
 import { SmartViewGallery, SmartViewWorkspace } from '../smartViews/SmartViewWorkspace'
 import type { SmartTaskView } from '../smartViews/queryEngine'
 import type { SmartTaskViewInput } from '../../services/savedViewService'
+import { KanbanBoard, type KanbanDropTarget } from '../boards/KanbanBoard'
+import { TimelineView } from '../boards/TimelineView'
 
 function sortTasks(tasks: TaskPreview[], mode: ListEntity['sortMode']) {
   const rows=[...tasks]
@@ -26,6 +29,7 @@ export function OrganizationView({
   onSelectList, onCreateFolder, onCreateList, onCreateSection, onCreateTag,
   onUpdateList, onUpdateFolder, onUpdateTag, onMergeTag, onArchiveSection,
   onSaveSmartView, onDeleteSmartView, onDuplicateSmartView, onToggleSmartViewPin,
+  onBoardDrop, onTimelineSetSpan, onTimelineClear,
   onOpenTask, onToggleTask, onMoveTask, onAddTask,
 }: {
   projects: Array<{id:string;name:string}>
@@ -57,6 +61,9 @@ export function OrganizationView({
   onDeleteSmartView: (id: string) => Promise<void>
   onDuplicateSmartView: (view: SmartTaskView) => Promise<void>
   onToggleSmartViewPin: (id: string) => Promise<void>
+  onBoardDrop: (taskId:string,target:KanbanDropTarget,context?:{listId?:string})=>Promise<void>
+  onTimelineSetSpan: (taskId:string,start:string,end:string,milestone:boolean)=>Promise<void>
+  onTimelineClear: (taskId:string)=>Promise<void>
   onOpenTask: (id: string) => void
   onToggleTask: (id: string) => void
   onMoveTask: (taskId: string, listId?: string, sectionId?: string) => Promise<void>
@@ -124,6 +131,8 @@ export function OrganizationView({
       key={selectedList?.id ?? selectedTag?.id}
       list={selectedList}
       titleOverride={selectedTag ? '#'+selectedTag.name : undefined}
+      projects={projects}
+      allLists={lists}
       folders={folders}
       sections={sections.filter((section)=>section.listId===selectedList?.id)}
       tags={tags}
@@ -137,6 +146,9 @@ export function OrganizationView({
       onOpenTask={onOpenTask}
       onToggleTask={onToggleTask}
       onMoveTask={onMoveTask}
+      onBoardDrop={(taskId,target)=>onBoardDrop(taskId,target,{listId:selectedList?.id})}
+      onTimelineSetSpan={onTimelineSetSpan}
+      onTimelineClear={onTimelineClear}
       onAddTask={onAddTask}
     />
   }
@@ -232,12 +244,15 @@ function TagBranch({tag,byParent,counts,onUpdate,onOpen}:{tag:TagEntity;byParent
   </div>
 }
 
-function ListWorkspace({list,titleOverride,folders,sections,tags,tasks,onBack,onUpdateList,onCreateSection,onArchiveSection,onOpenTask,onToggleTask,onMoveTask,onAddTask}:{
-  list?:ListEntity;titleOverride?:string;folders:FolderEntity[];sections:SectionEntity[];tags:TagEntity[];tasks:TaskPreview[];
+function ListWorkspace({list,titleOverride,projects,allLists,folders,sections,tags,tasks,onBack,onUpdateList,onCreateSection,onArchiveSection,onOpenTask,onToggleTask,onMoveTask,onBoardDrop,onTimelineSetSpan,onTimelineClear,onAddTask}:{
+  list?:ListEntity;titleOverride?:string;projects:Array<{id:string;name:string}>;allLists:ListEntity[];folders:FolderEntity[];sections:SectionEntity[];tags:TagEntity[];tasks:TaskPreview[];
   onBack:()=>void;onUpdateList:(id:string,changes:ListUpdateInput)=>Promise<void>;onCreateSection:(listId:string,name:string)=>Promise<void>;onArchiveSection:(id:string)=>Promise<void>;
-  onOpenTask:(id:string)=>void;onToggleTask:(id:string)=>void;onMoveTask:(taskId:string,listId?:string,sectionId?:string)=>Promise<void>;onAddTask:(listId?:string,sectionId?:string)=>void
+  onOpenTask:(id:string)=>void;onToggleTask:(id:string)=>void;onMoveTask:(taskId:string,listId?:string,sectionId?:string)=>Promise<void>;
+  onBoardDrop:(taskId:string,target:KanbanDropTarget)=>Promise<void>;onTimelineSetSpan:(taskId:string,start:string,end:string,milestone:boolean)=>Promise<void>;onTimelineClear:(taskId:string)=>Promise<void>;
+  onAddTask:(listId?:string,sectionId?:string)=>void
 }) {
   const [sectionName,setSectionName]=useState('')
+  const [workspaceMode,setWorkspaceMode]=useState<'list'|'board'|'timeline'>('list')
   const [name,setName]=useState(list?.name??'')
   const [description,setDescription]=useState(list?.description??'')
   const [folderId,setFolderId]=useState(list?.folderId??'')
@@ -274,7 +289,9 @@ function ListWorkspace({list,titleOverride,folders,sections,tags,tasks,onBack,on
       <div><button className="text-action" onClick={onBack}>← Lists & tags</button><h1>{title}</h1><p>{list?.description||'A focused task collection.'}</p></div>
       <div>{list?<Button onClick={()=>void onUpdateList(list.id,{favorite:!list.favorite})}>{list.favorite?'Unfavorite':'Favorite'}</Button>:null}<Button variant="primary" onClick={()=>onAddTask(list?.id)}>Add task</Button></div>
     </header>
-    {list?<section className="list-metadata-editor">
+    <Tabs value={workspaceMode} tabs={[{value:'list',label:'List'},{value:'board',label:'Board'},{value:'timeline',label:'Timeline'}]} onChange={setWorkspaceMode} />
+
+    {list&&workspaceMode==='list'?<section className="list-metadata-editor">
       <label><span>Name</span><input value={name} onChange={(e)=>setName(e.target.value)}/></label>
       <label><span>Description</span><input value={description} onChange={(e)=>setDescription(e.target.value)}/></label>
       <label><span>Folder</span><select value={folderId} onChange={(e)=>setFolderId(e.target.value)}><option value="">Root</option>{folders.map((folder)=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
@@ -282,14 +299,38 @@ function ListWorkspace({list,titleOverride,folders,sections,tags,tasks,onBack,on
       <label><span>Icon</span><input value={icon} maxLength={24} onChange={(e)=>setIcon(e.target.value)} placeholder="Optional"/></label>
       <Button disabled={!name.trim()} onClick={()=>void onUpdateList(list.id,{name:name.trim(),description,folderId:folderId||null,color,icon:icon.trim()||undefined})}>Save list</Button>
     </section>:null}
-    {list?<section className="list-controls">
+    {list&&workspaceMode==='list'?<section className="list-controls">
       <label><span>Sort</span><select value={list.sortMode} onChange={(e)=>void onUpdateList(list.id,{sortMode:e.target.value as ListEntity['sortMode']})}><option value="manual">Manual</option><option value="planned">Planned date</option><option value="deadline">Deadline</option><option value="priority">Priority</option><option value="title">Title</option><option value="created">Created</option><option value="updated">Recently updated</option></select></label>
       <label><span>Group</span><select value={list.groupMode} onChange={(e)=>void onUpdateList(list.id,{groupMode:e.target.value as ListEntity['groupMode']})}><option value="section">Sections</option><option value="none">None</option><option value="planned">Scheduling</option><option value="priority">Priority</option><option value="tag">Tag</option></select></label>
       <label className="list-toggle"><input type="checkbox" checked={list.showCompleted} onChange={(e)=>void onUpdateList(list.id,{showCompleted:e.target.checked})}/><span>Show completed</span></label>
       <Button onClick={()=>void onUpdateList(list.id,{archived:true})}>Archive list</Button>
     </section>:null}
-    {list?<form className="section-create" onSubmit={(e)=>{e.preventDefault();if(sectionName.trim())void onCreateSection(list.id,sectionName.trim()).then(()=>setSectionName(''))}}><input value={sectionName} onChange={(e)=>setSectionName(e.target.value)} placeholder="New section"/><Button type="submit" disabled={!sectionName.trim()}>Add section</Button></form>:null}
-    <div className="list-groups">
+    {list&&workspaceMode==='list'?<form className="section-create" onSubmit={(e)=>{e.preventDefault();if(sectionName.trim())void onCreateSection(list.id,sectionName.trim()).then(()=>setSectionName(''))}}><input value={sectionName} onChange={(e)=>setSectionName(e.target.value)} placeholder="New section"/><Button type="submit" disabled={!sectionName.trim()}>Add section</Button></form>:null}
+    {workspaceMode==='board'?<KanbanBoard
+      tasks={tasks}
+      listId={list?.id}
+      sections={sections}
+      lists={allLists}
+      projects={projects}
+      mode={list?'section':'status'}
+      allowedModes={list?['section','priority','status']:['status','priority','list','project']}
+      onOpenTask={onOpenTask}
+      onToggleTask={onToggleTask}
+      onDropTask={onBoardDrop}
+      onAddColumn={list?(name)=>onCreateSection(list.id,name):undefined}
+    />:null}
+
+    {workspaceMode==='timeline'?<TimelineView
+      tasks={tasks}
+      today={new Date().toISOString().slice(0,10)}
+      title={title}
+      onOpenTask={onOpenTask}
+      onToggleTask={onToggleTask}
+      onSetSpan={onTimelineSetSpan}
+      onClearSpan={onTimelineClear}
+    />:null}
+
+    {workspaceMode==='list'?<div className="list-groups">
       {groups.map((group)=><section className="list-group" key={group.key}>
         <header><div><span className="eyebrow">{group.label}</span><strong>{group.tasks.length}</strong></div>{list&&group.key!=='__none__'&&sections.some((section)=>section.id===group.key)?<button className="text-action" onClick={()=>void onArchiveSection(group.key)}>Archive section</button>:null}</header>
         <div className="task-list">{group.tasks.map((task)=><div className="organized-task" key={task.id}><TaskRow task={task} onToggle={onToggleTask} onOpen={onOpenTask}/>{list?<select aria-label={'Move '+task.title+' to section'} value={task.sectionId??''} onChange={(e)=>void onMoveTask(task.id,list.id,e.target.value||undefined)}><option value="">No section</option>{sections.map((section)=><option key={section.id} value={section.id}>{section.name}</option>)}</select>:null}</div>)}</div>
