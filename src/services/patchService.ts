@@ -19,6 +19,7 @@ import { durationMinutes, isoAtMinute, localDateFromIso, minuteOfDayFromIso } fr
 import { calendarOccurrenceDates, defaultMaterializationThrough } from '../features/recurrence/recurrenceLogic'
 import { patchBatchRepository } from '../repositories/patchBatchRepository'
 import { settingsRepository } from '../repositories/settingsRepository'
+import { normalizeTagName, organizationRepository } from '../repositories/organizationRepository'
 import { makeHabitEntity, makeProjectEntity, makeSeriesEntity, makeTaskEntity, makeTimeBlockEntity } from './entityFactory'
 import { materializeSeriesGraph } from './recurrenceGraph'
 import type { UndoableMutation } from './undo'
@@ -107,9 +108,12 @@ function expectedSeriesFields(series: RecurringSeriesEntity, date: string) {
     title: exception.title ?? template.title,
     description: exception.description ?? template.description,
     projectId: hasOwn(exception, 'projectId') ? (exception.projectId ?? undefined) : template.projectId,
+    listId: hasOwn(exception, 'listId') ? (exception.listId ?? undefined) : template.listId,
+    sectionId: hasOwn(exception, 'sectionId') ? (exception.sectionId ?? undefined) : template.sectionId,
     priority: exception.priority ?? template.priority,
     estimatedMinutes: hasOwn(exception, 'estimatedMinutes') ? (exception.estimatedMinutes ?? undefined) : template.estimatedMinutes,
     tags: exception.tags ?? template.tags ?? [],
+    tagIds: exception.tagIds ?? template.tagIds ?? [],
     checklist: exception.checklist ?? template.checklist ?? [],
     sourceUrl: hasOwn(exception, 'sourceUrl') ? (exception.sourceUrl ?? undefined) : template.sourceUrl,
     location: hasOwn(exception, 'location') ? (exception.location ?? undefined) : template.location,
@@ -122,11 +126,17 @@ function expectedSeriesFields(series: RecurringSeriesEntity, date: string) {
   }
 }
 
-function cleanNullableTemplate(current: RecurringSeriesEntity['taskTemplate'], changes: any, projectIds: Map<string, string>) {
+function cleanNullableTemplate(
+  current: RecurringSeriesEntity['taskTemplate'],
+  changes: any,
+  projectIds: Map<string, string>,
+  canonicalizeTags: (names: string[]) => { tags: string[]; tagIds: string[] },
+) {
   if (!changes) return current
   const next: any = { ...current }
-  for (const field of ['title','description','priority','tags','checklist','pinned'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field]
-  for (const field of ['estimatedMinutes','sourceUrl','location','deadlineOffsetDays','startMinute','blockDurationMinutes'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field] ?? undefined
+  for (const field of ['title','description','priority','checklist','pinned'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field]
+  for (const field of ['estimatedMinutes','sourceUrl','location','deadlineOffsetDays','startMinute','blockDurationMinutes','listId','sectionId'] as const) if (Object.prototype.hasOwnProperty.call(changes, field)) next[field] = changes[field] ?? undefined
+  if (Object.prototype.hasOwnProperty.call(changes, 'tags')) Object.assign(next, canonicalizeTags(changes.tags ?? []))
   if (changes.projectRef) next.projectId = projectIds.get(changes.projectRef)
   else if (Object.prototype.hasOwnProperty.call(changes, 'projectId')) next.projectId = changes.projectId ?? undefined
   return next
@@ -310,6 +320,36 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
   if (analysis.destructiveCount && !options.confirmDestructive) throw new Error('This patch contains DELETE operations. Confirm destructive changes before Apply.')
   const document = analysis.document
   const now = new Date().toISOString()
+
+  const [availableLists, availableSections] = await Promise.all([
+    organizationRepository.listLists(true),
+    organizationRepository.listSections(true),
+  ])
+  const availableListIds = new Set(availableLists.map((list) => list.id))
+  const availableSectionById = new Map(availableSections.map((section) => [section.id, section]))
+  const validatePlacement = (listId?: string, sectionId?: string) => {
+    if (listId && !availableListIds.has(listId)) throw new Error(`Patch references missing list ${listId}.`)
+    if (sectionId) {
+      const section = availableSectionById.get(sectionId)
+      if (!section) throw new Error(`Patch references missing section ${sectionId}.`)
+      if (!listId || section.listId !== listId) throw new Error(`Patch section ${sectionId} does not belong to list ${listId ?? 'none'}.`)
+    }
+  }
+
+  const patchTagNames = document.operations.flatMap((op: any) => {
+    if (op.op === 'create' && op.entity === 'task') return op.value.tags ?? []
+    if (op.op === 'create' && op.entity === 'recurringSeries') return op.value.taskTemplate.tags ?? []
+    if (op.op === 'update' && op.entity === 'task') return op.changes.tags ?? []
+    if (op.op === 'update' && op.entity === 'recurringSeries') return op.changes.taskTemplate?.tags ?? []
+    return []
+  })
+  const canonicalTags = patchTagNames.length ? await organizationRepository.resolveTagNames(patchTagNames) : []
+  const tagByName = new Map(canonicalTags.map((tag) => [tag.normalizedName, tag]))
+  const canonicalizeTags = (names: string[] = []) => {
+    const rows = names.map((name) => tagByName.get(normalizeTagName(name))).filter(Boolean)
+    return { tags: rows.map((tag) => tag!.name), tagIds: rows.map((tag) => tag!.id) }
+  }
+
   let createdBatchId = ''
 
   await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.dailyPlanItems, db.patchBatches], async () => {
@@ -342,7 +382,13 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
           const value: any = op.value
           const projectId = resolveProject(createProjectIds, value.projectRef, value.projectId)
           const parentTaskId = value.parentRef ? createTaskIds.get(value.parentRef) : value.parentId
-          const entity = makeTaskEntity({ title: value.title, description: value.description, projectId, parentTaskId, priority: value.priority, status: value.status, plannedDate: value.plannedDate, deadline: value.deadline, estimatedMinutes: value.estimatedMinutes }, createTaskIds.get(value.ref)!, now, Date.now() + index)
+          validatePlacement(value.listId, value.sectionId)
+          const tagData = canonicalizeTags(value.tags ?? [])
+          const entity = makeTaskEntity({
+            title: value.title, description: value.description, projectId, listId: value.listId, sectionId: value.sectionId, parentTaskId,
+            priority: value.priority, status: value.status, plannedDate: value.plannedDate, deadline: value.deadline, estimatedMinutes: value.estimatedMinutes,
+            tags: tagData.tags, tagIds: tagData.tagIds,
+          }, createTaskIds.get(value.ref)!, now, Date.now() + index)
           touch('task', entity.id); workspace.tasks.set(entity.id, entity); markPlanDraft(workspace, touch, entity.plannedDate, now)
           operationSummaries.push({ operationId: `op-${index + 1}`, op: 'create', entity: 'task', targetId: entity.id, label: entity.title })
         } else if (op.entity === 'habit') {
@@ -361,6 +407,8 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
         } else {
           const value = op.value
           const projectId = resolveProject(createProjectIds, value.taskTemplate.projectRef, value.taskTemplate.projectId)
+          validatePlacement(value.taskTemplate.listId, value.taskTemplate.sectionId)
+          const tagData = canonicalizeTags(value.taskTemplate.tags ?? [])
           const series = makeSeriesEntity({
             title: value.title,
             timezone: value.timezone,
@@ -370,9 +418,12 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
               title: value.taskTemplate.title,
               description: value.taskTemplate.description,
               projectId,
+              listId: value.taskTemplate.listId,
+              sectionId: value.taskTemplate.sectionId,
               priority: value.taskTemplate.priority,
               estimatedMinutes: value.taskTemplate.estimatedMinutes,
-              tags: value.taskTemplate.tags,
+              tags: tagData.tags,
+              tagIds: tagData.tagIds,
               checklist: value.taskTemplate.checklist,
               sourceUrl: value.taskTemplate.sourceUrl,
               location: value.taskTemplate.location,
@@ -417,18 +468,26 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
         const current = workspace.tasks.get(op.id)!; const changes: any = op.changes; touch('task', op.id)
         const nextStatus = changes.status ?? current.status
         const projectId = changes.projectRef ? createProjectIds.get(changes.projectRef) : Object.prototype.hasOwnProperty.call(changes, 'projectId') ? (changes.projectId ?? undefined) : current.projectId
+        const listId = nextStatus === 'inbox' ? undefined : Object.prototype.hasOwnProperty.call(changes, 'listId') ? (changes.listId ?? undefined) : current.listId
+        const sectionId = nextStatus === 'inbox' ? undefined : Object.prototype.hasOwnProperty.call(changes, 'sectionId') ? (changes.sectionId ?? undefined) : current.sectionId
+        validatePlacement(listId, sectionId)
+        const tagData = Object.prototype.hasOwnProperty.call(changes, 'tags') ? canonicalizeTags(changes.tags ?? []) : { tags: current.tags ?? [], tagIds: current.tagIds ?? [] }
         const plannedDate = nextStatus === 'inbox' ? undefined : Object.prototype.hasOwnProperty.call(changes, 'plannedDate') ? (changes.plannedDate ?? undefined) : current.plannedDate
         const next: TaskEntity = {
           ...current,
           title: changes.title ?? current.title,
           description: changes.description ?? current.description,
           projectId: nextStatus === 'inbox' ? undefined : projectId,
+          listId,
+          sectionId,
           priority: changes.priority ?? current.priority,
           status: nextStatus,
           lastOpenStatus: nextStatus === 'inbox' || nextStatus === 'todo' ? nextStatus : current.lastOpenStatus,
           plannedDate,
           deadline: Object.prototype.hasOwnProperty.call(changes, 'deadline') ? (changes.deadline ?? undefined) : current.deadline,
           estimatedMinutes: Object.prototype.hasOwnProperty.call(changes, 'estimatedMinutes') ? (changes.estimatedMinutes ?? undefined) : current.estimatedMinutes,
+          tags: tagData.tags,
+          tagIds: tagData.tagIds,
           blockedByTaskIds: current.blockedByTaskIds ?? [],
           rescheduleCount: current.rescheduleCount + (plannedDate !== current.plannedDate && current.plannedDate ? 1 : 0),
           updatedAt: now,
@@ -454,7 +513,9 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
       } else {
         const current = workspace.recurringSeries.get(op.id)!; const changes: any = op.changes; touch('recurringSeries', op.id)
         const structural = Boolean(changes.startDate || changes.rule || changes.taskTemplate)
-        const next: RecurringSeriesEntity = { ...current, title: changes.title ?? current.title, status: changes.status ?? current.status, startDate: changes.startDate ?? current.startDate, rule: changes.rule ?? current.rule, taskTemplate: cleanNullableTemplate(current.taskTemplate, changes.taskTemplate, createProjectIds), updatedAt: now }
+        const taskTemplate = cleanNullableTemplate(current.taskTemplate, changes.taskTemplate, createProjectIds, canonicalizeTags)
+        validatePlacement(taskTemplate.listId, taskTemplate.sectionId)
+        const next: RecurringSeriesEntity = { ...current, title: changes.title ?? current.title, status: changes.status ?? current.status, startDate: changes.startDate ?? current.startDate, rule: changes.rule ?? current.rule, taskTemplate, updatedAt: now }
         workspace.recurringSeries.set(op.id, next); reconcileSeries(workspace, touch, next, structural || Boolean(changes.status), now)
         operationSummaries.push({ operationId: `op-${index + 1}`, op: 'update', entity: 'recurringSeries', targetId: op.id, label: current.title })
       }
