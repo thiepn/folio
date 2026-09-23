@@ -118,7 +118,7 @@ check('reminder center exposes system settings', center.includes('Daily planning
 check('reminder center explains browser boundary', center.includes('fully terminates the app') && center.includes('Missed reminders are surfaced immediately'))
 check('reminder center requests permission from user action', center.includes('Enable notifications') && center.includes('requestPermission'))
 
-check('topbar reminder button exists', topbar.includes("icon="bell"") && topbar.includes('reminderCount'))
+check('topbar reminder button exists', topbar.includes('icon="bell"') && topbar.includes('reminderCount'))
 check('bell icon exists', icon.includes("bell:"))
 check('mobile reminder access exists', app.includes('mobile-reminder-button'))
 check('command palette reminder access exists', app.includes("label: 'Reminders & notifications'"))
