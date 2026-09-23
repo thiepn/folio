@@ -44,9 +44,14 @@ const habitChanges = z.object({
 
 const timeBlockChanges = z.object({
   title: z.string().trim().min(1).max(300).optional(),
+  description: z.string().trim().max(4000).nullable().optional(),
+  location: z.string().trim().max(500).nullable().optional(),
   date: localDate.optional(),
   startMinute: z.number().int().min(0).max(1439).optional(),
   durationMinutes: z.number().int().min(15).max(1440).optional(),
+  allDay: z.boolean().optional(),
+  endDateExclusive: localDate.optional(),
+  timeZone: z.string().trim().min(1).max(100).optional(),
 }).strict()
 
 const seriesTemplateChanges = z.object({
