@@ -2,6 +2,7 @@ import { Icon, type IconName } from '../ui/Icon'
 import type { NavView } from '../../types/ui'
 import type { ProjectSummary } from '../../repositories/projectRepository'
 import type { ListEntity, TagEntity } from '../../domain/models'
+import type { SmartTaskView } from '../../features/smartViews/queryEngine'
 
 const nav: { view: NavView; label: string; icon: IconName }[] = [
   { view: 'today', label: 'Today', icon: 'home' },
@@ -13,16 +14,18 @@ const nav: { view: NavView; label: string; icon: IconName }[] = [
   { view: 'review', label: 'Review', icon: 'review' },
 ]
 
-export function Sidebar({ active, inboxCount, favoriteProjects, favoriteLists, favoriteTags, onNavigate, onOpenProject, onOpenList, onOpenTag, onAppearance, onData }: {
+export function Sidebar({ active, inboxCount, favoriteProjects, favoriteLists, favoriteTags, pinnedSmartViews, onNavigate, onOpenProject, onOpenList, onOpenTag, onOpenSmartView, onAppearance, onData }: {
   active: NavView
   inboxCount: number
   favoriteProjects: ProjectSummary[]
   favoriteLists: ListEntity[]
   favoriteTags: TagEntity[]
+  pinnedSmartViews: SmartTaskView[]
   onNavigate: (view: NavView) => void
   onOpenProject: (id: string) => void
   onOpenList: (id: string) => void
   onOpenTag: (id: string) => void
+  onOpenSmartView: (id: string) => void
   onAppearance: () => void
   onData: () => void
 }) {
@@ -47,8 +50,9 @@ export function Sidebar({ active, inboxCount, favoriteProjects, favoriteLists, f
         <div className="favorite-list favorite-list--buttons">
           {favoriteLists.length ? <div className="sidebar-favorite-group"><small>Lists</small>{favoriteLists.slice(0,4).map((list)=><button key={list.id} onClick={()=>onOpenList(list.id)}><i style={{background:list.color??'var(--accent)'}}/><span>{list.name}</span></button>)}</div>:null}
           {favoriteProjects.length ? <div className="sidebar-favorite-group"><small>Projects</small>{favoriteProjects.slice(0,4).map((project) => <button key={project.id} onClick={() => onOpenProject(project.id)}><i style={{ background: project.color ?? 'var(--accent)' }} /><span>{project.name}</span></button>)}</div> : null}
+          {pinnedSmartViews.length ? <div className="sidebar-favorite-group"><small>Smart Views</small>{pinnedSmartViews.slice(0,6).map((view)=><button key={view.id} onClick={()=>onOpenSmartView(view.id)}><i style={{background:view.color??'var(--accent)'}}/><span>{view.icon?view.icon+' ':''}{view.name}</span></button>)}</div>:null}
           {favoriteTags.length ? <div className="sidebar-favorite-group"><small>Tags</small>{favoriteTags.slice(0,4).map((tag)=><button key={tag.id} onClick={()=>onOpenTag(tag.id)}><i style={{background:tag.color??'var(--muted-2)'}}/><span>#{tag.name}</span></button>)}</div>:null}
-          {!favoriteProjects.length && !favoriteLists.length && !favoriteTags.length ? <span className="favorite-empty">Favorite a list, project, or tag to pin it here.</span>:null}
+          {!favoriteProjects.length && !favoriteLists.length && !favoriteTags.length && !pinnedSmartViews.length ? <span className="favorite-empty">Favorite a list, project, or tag—or pin a Smart View.</span>:null}
         </div>
       </section>
 
