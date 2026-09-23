@@ -352,26 +352,12 @@
                     "maximum": 1440
                   },
                   "description": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 4000
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": "string",
+                    "maxLength": 4000
                   },
                   "location": {
-                    "anyOf": [
-                      {
-                        "type": "string",
-                        "maxLength": 500
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                    "type": "string",
+                    "maxLength": 500
                   },
                   "allDay": {
                     "type": "boolean"
