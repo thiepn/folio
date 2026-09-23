@@ -1019,6 +1019,9 @@ function AppContent() {
         task={selectedTask}
         subtasks={selectedSubtasks}
         projects={[...data.projects, ...data.archivedProjects]}
+        lists={data.lists}
+        sections={data.sections}
+        tags={data.tags}
         dependencyCandidates={data.allTasks}
         series={selectedSeries}
         focusSeconds={selectedTask ? focusData?.taskTotals[selectedTask.id] ?? 0 : 0}
