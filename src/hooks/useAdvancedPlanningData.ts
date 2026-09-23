@@ -5,19 +5,18 @@ import { projectRepository } from '../repositories/projectRepository'
 import { habitRepository } from '../repositories/habitRepository'
 import { dailyPlanRepository } from '../repositories/dailyPlanRepository'
 import { settingsRepository } from '../repositories/settingsRepository'
-import { buildDeadlinePressure, buildForecast, buildProjectPlanningSummaries, type SavedTaskView } from '../features/planner/advancedPlanning'
+import { buildDeadlinePressure, buildForecast, buildProjectPlanningSummaries } from '../features/planner/advancedPlanning'
 import { taskToPreview } from '../adapters/uiAdapters'
 
 export function useAdvancedPlanningData(today: string) {
   return useLiveQuery(async () => {
     const through = addLocalDays(today, 41)
-    const [tasks, projects, habits, plans, defaultCapacity, savedViews] = await Promise.all([
+    const [tasks, projects, habits, plans, defaultCapacity] = await Promise.all([
       taskRepository.listRootTasks(),
       projectRepository.listActive(),
       habitRepository.listActive(),
       dailyPlanRepository.listRange(today, through),
       settingsRepository.getDailyCapacityMinutes(),
-      settingsRepository.get<SavedTaskView[]>('planning.savedViews', []),
     ])
     const capacities = new Map(plans.map((plan) => [plan.date, plan.capacityMinutes ?? defaultCapacity]))
     const projectMap = new Map(projects.map((project) => [project.id, project]))
@@ -29,7 +28,6 @@ export function useAdvancedPlanningData(today: string) {
       projects,
       habits,
       defaultCapacity,
-      savedViews: Array.isArray(savedViews) ? savedViews : [],
       forecast,
       deadlinePressure: buildDeadlinePressure(tasks, today),
       projectSummaries: buildProjectPlanningSummaries(tasks, projects, today),
