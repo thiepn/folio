@@ -1,10 +1,16 @@
 import { dateTimeForDisplay, localDateKey, relativeDateLabel } from '../domain/date'
-import type { ProjectEntity, TaskEntity, TimeBlockEntity } from '../domain/models'
+import type { ListEntity, ProjectEntity, SectionEntity, TagEntity, TaskEntity, TimeBlockEntity } from '../domain/models'
 import { habitScheduleLabel } from '../domain/habit'
 import type { HabitWithEntry } from '../repositories/habitRepository'
 import type { HabitPreview, SchedulePreview, TaskPreview } from '../types/ui'
 
-export function taskToPreview(task: TaskEntity, projects: Map<string, ProjectEntity>, children: TaskEntity[] = [], tasks?: Map<string, TaskEntity>): TaskPreview {
+export function taskToPreview(
+  task: TaskEntity,
+  projects: Map<string, ProjectEntity>,
+  children: TaskEntity[] = [],
+  tasks?: Map<string, TaskEntity>,
+  organization?: { lists: Map<string, ListEntity>; sections: Map<string, SectionEntity>; tags: Map<string, TagEntity> },
+): TaskPreview {
   const checklist = task.checklist ?? []
   const progressUnits = children.length + checklist.length
   const completedUnits = children.filter((child) => child.status === 'completed').length + checklist.filter((item) => item.completed).length
@@ -15,10 +21,17 @@ export function taskToPreview(task: TaskEntity, projects: Map<string, ProjectEnt
     description: task.description,
     project: task.projectId ? projects.get(task.projectId)?.name : undefined,
     projectId: task.projectId,
+    list: task.listId ? organization?.lists.get(task.listId)?.name : undefined,
+    listId: task.listId,
+    section: task.sectionId ? organization?.sections.get(task.sectionId)?.name : undefined,
+    sectionId: task.sectionId,
     parentTaskId: task.parentTaskId,
     meta: relativeDateLabel(task.deadline),
     durationMinutes: task.estimatedMinutes,
-    tags: task.tags ?? [],
+    tags: task.tagIds?.length
+      ? task.tagIds.map((id) => organization?.tags.get(id)?.name).filter((name): name is string => Boolean(name))
+      : (task.tags ?? []),
+    tagIds: task.tagIds ?? [],
     checklist,
     progressMode: task.progressMode ?? 'auto',
     progressPercent: task.progressMode === 'manual' ? (task.progressPercent ?? 0) : automaticProgress,
