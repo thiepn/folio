@@ -14,6 +14,7 @@ import { PlanDayModal } from '../features/today/PlanDayModal'
 import { InboxView } from '../features/inbox/InboxView'
 import { PlannerView } from '../features/planner/PlannerView'
 import { ProjectsView } from '../features/projects/ProjectsView'
+import { OrganizationView } from '../features/organization/OrganizationView'
 import { ProjectDetailView } from '../features/projects/ProjectDetailView'
 import { ProjectEditorModal } from '../features/projects/ProjectEditorModal'
 import { ArchivedProjectsDrawer } from '../features/projects/ArchivedProjectsDrawer'
@@ -56,6 +57,7 @@ import { savedViewService } from '../services/savedViewService'
 import { reviewRecordService } from '../services/reviewRecordService'
 import { reminderService } from '../services/reminderService'
 import { createCapturedBatch, createCapturedItem } from '../services/captureService'
+import { organizationService } from '../services/organizationService'
 import type { UndoableMutation } from '../services/undo'
 import type { TaskUpdateInput } from '../repositories/taskRepository'
 import type { ProjectCreateInput, ProjectUpdateInput } from '../repositories/projectRepository'
@@ -74,7 +76,7 @@ import { currentTaskId, focusRelativeTask } from '../features/power/taskKeyboard
 import { LEGACY_LAST_VIEW_KEY } from '../legacy/compat'
 
 const LAST_VIEW_KEY = 'folio:last-view:v1'
-const NAV_VIEWS: NavView[] = ['today', 'inbox', 'planner', 'projects', 'habits', 'review']
+const NAV_VIEWS: NavView[] = ['today', 'inbox', 'planner', 'projects', 'lists', 'habits', 'review']
 
 function initialView(): NavView {
   try {
@@ -109,6 +111,7 @@ function AppContent() {
   const [addDefaultProjectId, setAddDefaultProjectId] = useState('')
   const [addDefaultPlannedDate, setAddDefaultPlannedDate] = useState<string | undefined>(undefined)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [selectedListId, setSelectedListId] = useState<string | null>(null)
   const [projectEditorOpen, setProjectEditorOpen] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
   const [archivedProjectsOpen, setArchivedProjectsOpen] = useState(false)
@@ -148,7 +151,7 @@ function AppContent() {
   const dailyWrapUpKey = `daily.wrapup.${data?.today ?? localDateKey()}`
   const dailyWrapUp = useLiveQuery(() => settingsRepository.get<string>(dailyWrapUpKey, ''), [dailyWrapUpKey], '') ?? ''
   const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])
-  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', planner: 'Planner', projects: 'Projects', habits: 'Habits', review: 'Review' }[view]), [view])
+  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', planner: 'Planner', projects: 'Projects', lists: 'Lists', habits: 'Habits', review: 'Review' }[view]), [view])
 
   const selectedTask = useMemo(() => data?.allTasks.find((task) => task.id === selectedTaskId) ?? data?.subtasks.find((task) => task.id === selectedTaskId) ?? null, [data?.allTasks, data?.subtasks, selectedTaskId])
   const selectedSeries = useMemo(() => selectedTask?.seriesId ? data?.recurringSeries.find((series) => series.id === selectedTask.seriesId) ?? null : null, [data?.recurringSeries, selectedTask])
@@ -581,6 +584,7 @@ function AppContent() {
     setSelectedHabitId(null)
     selection.clear()
     if (next !== 'projects') setSelectedProjectId(null)
+    if (next !== 'lists') setSelectedListId(null)
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
     window.requestAnimationFrame(() => mainRef.current?.focus({ preventScroll: true }))
@@ -649,6 +653,7 @@ function AppContent() {
       { id: 'nav-inbox', group: 'Navigate', label: 'Go to Inbox', run: () => navigate('inbox') },
       { id: 'nav-planner', group: 'Navigate', label: 'Go to Planner', keywords: 'week calendar upcoming', run: () => navigate('planner') },
       { id: 'nav-projects', group: 'Navigate', label: 'Go to Projects', run: () => navigate('projects') },
+      { id: 'nav-lists', group: 'Navigate', label: 'Go to Lists & Tags', keywords: 'lists folders sections tags organize', run: () => navigate('lists') },
       { id: 'nav-habits', group: 'Navigate', label: 'Go to Habits', run: () => navigate('habits') },
       { id: 'nav-review', group: 'Navigate', label: 'Go to Review', run: () => navigate('review') },
       { id: 'capture', group: 'Create', label: 'New task', shortcut: shortcuts.quickAdd, keywords: 'quick add capture create task n', note: 'Capture a task without leaving this view', run: () => openAdd(view === 'inbox' ? 'inbox' : 'todo', view === 'projects' && selectedProjectId && selectedProjectId !== '__unassigned__' ? selectedProjectId : '', view === 'inbox' ? undefined : data?.today) },
@@ -740,12 +745,16 @@ function AppContent() {
 
   const topbarTitle = view === 'projects' && selectedProjectId
     ? selectedProjectId === '__unassigned__' ? 'No project' : selectedProject?.name ?? 'Projects'
-    : viewAnnouncement
+    : view === 'lists' && selectedListId
+      ? data.lists.find((list) => list.id === selectedListId)?.name ?? (selectedListId === '__all__' ? 'All tasks' : selectedListId === '__unlisted__' ? 'No list' : selectedListId === '__high__' ? 'High priority' : selectedListId === '__unscheduled__' ? 'Unscheduled' : 'Lists')
+      : viewAnnouncement
   const topbarMeta = view === 'today'
     ? new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date())
     : view === 'inbox' ? `${data.inboxTasks.length} unprocessed`
       : view === 'projects' && selectedProjectId ? `${selectedProject?.openTaskCount ?? data.unassignedCount} open tasks`
         : view === 'projects' ? `${data.projects.length} active projects`
+          : view === 'lists' && selectedListId ? `${selectedListId.startsWith('__') ? 'Smart collection' : (data.listCounts[selectedListId] ?? 0) + ' open tasks'}`
+            : view === 'lists' ? `${data.lists.length} active lists · ${data.tags.length} tags`
           : view === 'habits' ? `${habitData.dueToday} due today`
             : view === 'review' ? 'Review, learn, replan'
               : 'Plan time, deadlines, and capacity'
@@ -754,7 +763,7 @@ function AppContent() {
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{viewAnnouncement} view</div>
-      <Sidebar active={view} inboxCount={data.inboxTasks.length} favoriteProjects={data.favoriteProjects} onNavigate={navigate} onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }} onAppearance={() => setAppearanceOpen(true)} onData={() => setDataOpen(true)} />
+      <Sidebar active={view} inboxCount={data.inboxTasks.length} favoriteProjects={data.favoriteProjects} favoriteLists={data.favoriteLists} onNavigate={navigate} onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }} onOpenList={(id) => { navigate('lists'); setSelectedListId(id) }} onAppearance={() => setAppearanceOpen(true)} onData={() => setDataOpen(true)} />
       <div className="workspace">
         <div className="mobile-topbar">
           <span>{`Folio · ${viewAnnouncement}`}</span>
@@ -832,6 +841,29 @@ function AppContent() {
             onToggleMilestone={selectedProject ? (milestoneId) => void projectService.toggleMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
             onRemoveMilestone={selectedProject ? (milestoneId) => void projectService.removeMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
           /> : <ProjectsView projects={data.projects} unassignedCount={data.unassignedCount} onCreate={() => { setEditingProjectId(null); setProjectEditorOpen(true) }} onOpen={setSelectedProjectId} onArchived={() => setArchivedProjectsOpen(true)} />) : null}
+          {view === 'lists' ? <OrganizationView
+            folders={data.folders}
+            lists={data.lists}
+            sections={data.sections}
+            tags={data.tags}
+            tasks={data.allTasks}
+            listCounts={data.listCounts}
+            tagCounts={data.tagCounts}
+            selectedListId={selectedListId}
+            onSelectList={setSelectedListId}
+            onCreateFolder={async (name) => { const { undo } = await organizationService.createFolder({ name }); registerUndo(undo) }}
+            onCreateList={async (name, folderId) => { const { undo } = await organizationService.createList({ name, folderId }); registerUndo(undo) }}
+            onCreateSection={async (listId, name) => { const { undo } = await organizationService.createSection({ listId, name }); registerUndo(undo) }}
+            onCreateTag={async (name, parentTagId) => { const { undo } = await organizationService.createTag({ name, parentTagId }); registerUndo(undo) }}
+            onUpdateList={async (id, changes) => registerUndo(await organizationService.updateList(id, changes))}
+            onUpdateFolder={async (id, changes) => registerUndo(await organizationService.updateFolder(id, changes))}
+            onUpdateTag={async (id, changes) => registerUndo(await organizationService.updateTag(id, changes))}
+            onArchiveSection={async (id) => registerUndo(await organizationService.archiveSection(id, true))}
+            onOpenTask={setSelectedTaskId}
+            onToggleTask={(id) => void toggleTask(id)}
+            onMoveTask={async (taskId, listId, sectionId) => registerUndo(await organizationService.moveTask(taskId, listId, sectionId))}
+            onAddTask={(listId) => openAdd('todo', '', data.today, listId)}
+          /> : null}
           {view === 'habits' ? <HabitsView habits={habitData.habits} weeklyAdherence={habitData.weeklyAdherence} dueToday={habitData.dueToday} longestStreak={habitData.longestStreak} pausedCount={habitData.pausedCount} onCreate={() => { setEditingHabitId(null); setHabitEditorOpen(true) }} onArchived={() => setArchivedHabitsOpen(true)} onOpen={setSelectedHabitId} onToggle={(id) => void toggleHabit(id)} onIncrement={(id, minutes) => void incrementHabit(id, minutes)} /> : null}
           {view === 'review' ? <ReviewView
             snapshot={reviewData}
