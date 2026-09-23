@@ -3,7 +3,7 @@ import { buildDeadlinePressure, buildForecast, filterTasksForSavedView, taskIsBl
 import { wouldCreateDependencyCycle } from './dependencyLogic'
 
 const now = '2026-08-21T08:00:00.000Z'
-const task = (id: string, partial: Partial<TaskEntity> = {}): TaskEntity => ({ id, title: id, description: '', priority: 'normal', status: 'todo', tags: [], checklist: [], progressMode: 'auto', progressPercent: 0, pinned: false, comments: [], activity: [], blockedByTaskIds: [], sortOrder: 1, rescheduleCount: 0, createdAt: now, updatedAt: now, ...partial })
+const task = (id: string, partial: Partial<TaskEntity> = {}): TaskEntity => ({ id, title: id, description: '', priority: 'normal', status: 'todo', tags: [], tagIds: [], checklist: [], progressMode: 'auto', progressPercent: 0, pinned: false, comments: [], activity: [], blockedByTaskIds: [], sortOrder: 1, rescheduleCount: 0, createdAt: now, updatedAt: now, ...partial })
 
 export function validateAdvancedPlanningCases() {
   const failures: string[] = []
