@@ -79,7 +79,7 @@
 
 .folder-card > header {
   display: grid;
-  grid-template-columns: auto minmax(0,1fr) auto;
+  grid-template-columns: auto minmax(0,1fr) auto auto;
   gap: var(--space-2);
   align-items: center;
   min-height: 42px;
@@ -143,7 +143,7 @@
 
 .tag-row {
   display: grid;
-  grid-template-columns: minmax(0,1fr) auto auto;
+  grid-template-columns: minmax(0,1fr) auto auto auto;
   gap: var(--space-2);
   align-items: center;
   min-height: 38px;
@@ -227,6 +227,68 @@
   letter-spacing: .08em;
 }
 
+
+
+.tag-merge-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--surface-input);
+}
+
+.tag-merge-row > span {
+  color: var(--muted-2);
+  font: 9px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.archived-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.archived-tag-list button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-input);
+  color: var(--muted);
+  font: 9px var(--font-mono);
+}
+
+.list-metadata-editor {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr minmax(120px,.8fr) 72px minmax(100px,.6fr) auto;
+  gap: var(--space-2);
+  align-items: end;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--surface-input);
+}
+
+.list-metadata-editor label {
+  display: grid;
+  gap: 5px;
+}
+
+.list-metadata-editor label > span {
+  color: var(--muted-2);
+  font: 8px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.list-metadata-editor input[type="color"] {
+  width: 100%;
+  min-height: 36px;
+  padding: 3px;
+}
+
 @media (max-width: 760px) {
   .organization-smart { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .organization-smart button:nth-child(2) { border-right: 0; }
@@ -234,7 +296,9 @@
   .organization-create-grid { grid-template-columns: 1fr; }
   .organization-create-grid form:nth-child(2),
   .tag-create-row,
+  .tag-merge-row,
   .section-create { grid-template-columns: 1fr; }
+  .list-metadata-editor { grid-template-columns: 1fr 1fr; }
   .organization-list-grid { grid-template-columns: 1fr; }
   .organization-list-card:nth-child(odd) { border-right: 0; }
   .list-controls { grid-template-columns: 1fr 1fr; }
