@@ -16,7 +16,7 @@ type TaskSort = 'manual' | 'priority' | 'deadline' | 'planned'
 const tabs = [{ value: 'tasks', label: 'Tasks' }, { value: 'board', label: 'Board' }, { value: 'timeline', label: 'Timeline' }, { value: 'schedule', label: 'Schedule' }, { value: 'activity', label: 'Activity' }] as const
 
 export function ProjectDetailView({
-  project, unassigned = false, tasks, schedule, lists = [], focusThisWeekSeconds = 0,
+  project, unassigned = false, tasks, schedule, lists = [], today, focusThisWeekSeconds = 0,
   onBack, onTaskOpen, onTaskToggle, onTaskMove, onTaskFocus, onAddTask, onEdit, onToggleFavorite, onArchive,
   onBoardDrop, onTimelineSetSpan, onTimelineClear,
   onSetNextAction, onAddMilestone, onToggleMilestone, onRemoveMilestone,
@@ -26,6 +26,7 @@ export function ProjectDetailView({
   tasks: TaskPreview[]
   schedule: SchedulePreview[]
   lists?: Array<{id:string;name:string}>
+  today: string
   focusThisWeekSeconds?: number
   onBack: () => void
   onTaskOpen: (id: string) => void
@@ -192,7 +193,7 @@ export function ProjectDetailView({
 
     {tab === 'timeline' ? <TimelineView
       tasks={tasks}
-      today={new Date().toISOString().slice(0,10)}
+      today={today}
       title={unassigned?'No project':project?.name??'Project'}
       milestones={(project?.milestones??[]).map((milestone)=>({id:milestone.id,title:milestone.title,dueDate:milestone.dueDate,completed:Boolean(milestone.completedAt)}))}
       onOpenTask={onTaskOpen}
