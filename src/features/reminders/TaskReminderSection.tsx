@@ -63,7 +63,7 @@ export function TaskReminderSection({ task }: { task: TaskPreview }) {
     setSaving(true)
     try {
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local'
-      const ownerType = scope === 'series' && task.seriesId ? 'series' as const : 'task' as const
+      const ownerType = kind !== 'exact' && scope === 'series' && task.seriesId ? 'series' as const : 'task' as const
       const ownerId = ownerType === 'series' ? task.seriesId! : task.id
       if (kind === 'exact') {
         await reminderService.create({
@@ -122,7 +122,7 @@ export function TaskReminderSection({ task }: { task: TaskPreview }) {
       </div>
 
       <div className="task-reminder-builder">
-        {task.seriesId ? <label className="field"><span>Scope</span><select value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="task">This occurrence only</option><option value="series">Entire recurring series</option></select></label> : null}
+        {task.seriesId && kind !== 'exact' ? <label className="field"><span>Scope</span><select value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="task">This occurrence only</option><option value="series">Entire recurring series</option></select></label> : null}
         <label className="field"><span>Alert me</span><select value={kind} onChange={(event) => setKind(event.target.value as TriggerKind)}><option value="planned">Around planned day</option><option value="deadline">Around deadline</option><option value="block-start">Before calendar block</option><option value="exact">At exact date & time</option></select></label>
 
         {kind === 'planned' || kind === 'deadline' ? <div className="task-reminder-grid">
@@ -130,7 +130,7 @@ export function TaskReminderSection({ task }: { task: TaskPreview }) {
           <label className="field"><span>Time</span><input type="time" value={time} onChange={(event) => setTime(event.target.value)} /></label>
         </div> : null}
         {kind === 'block-start' ? <label className="field"><span>Minutes before start</span><input type="number" min="0" max="43200" value={minutesBefore} onChange={(event) => setMinutesBefore(Number(event.target.value))} /></label> : null}
-        {kind === 'exact' ? <label className="field"><span>Exact time</span><input type="datetime-local" value={absolute} onChange={(event) => setAbsolute(event.target.value)} /></label> : null}
+        {kind === 'exact' ? <label className="field"><span>Exact time</span><input type="datetime-local" value={absolute} onChange={(event) => setAbsolute(event.target.value)} /><small>An exact timestamp belongs to this occurrence only; use planned/deadline/block reminders for a recurring series.</small></label> : null}
         <label className="check-field"><input type="checkbox" checked={persistent} onChange={(event) => setPersistent(event.target.checked)} /><span>Keep system notification visible when supported</span></label>
         {error ? <div className="form-error">{error}</div> : null}
         <Button onClick={() => void add()} disabled={saving}>{saving ? 'Adding…' : 'Add reminder'}</Button>
