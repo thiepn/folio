@@ -1,6 +1,7 @@
 import { db } from '../db/database'
 import type { LocalDate } from '../domain/models'
 import { localDateKey } from '../domain/date'
+import { serializeAttachment } from './attachmentService'
 
 export interface SelectiveExportOptions {
   projectId?: string
@@ -24,8 +25,8 @@ function inRange(date: string | undefined, from?: string, through?: string) {
 
 export async function createSelectiveExport(options: SelectiveExportOptions): Promise<SelectiveExportEnvelope> {
   if (options.fromDate && options.throughDate && options.throughDate < options.fromDate) throw new Error('Selective export end date must not be before start date.')
-  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries] = await Promise.all([
-    db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(), db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(),
+  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, notes, attachments] = await Promise.all([
+    db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(), db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(), db.notes.toArray(), db.attachments.toArray(),
   ])
 
   if (options.projectId && !projects.some((project) => project.id === options.projectId)) throw new Error('Selected export Project no longer exists.')
@@ -68,6 +69,11 @@ export async function createSelectiveExport(options: SelectiveExportOptions): Pr
   const selectedHabitIds = new Set(selectedHabitEntries.map((entry) => entry.habitId))
   const selectedHabits = options.projectId ? [] : habits.filter((habit) => !hasDateFilter || selectedHabitIds.has(habit.id))
 
+  const selectedNotes = notes.filter((note) => note.sourceTaskId ? selectedTaskIds.has(note.sourceTaskId) : !options.projectId && !hasDateFilter)
+  const selectedNoteIds = new Set(selectedNotes.map((note) => note.id))
+  const selectedAttachments = attachments.filter((attachment) => attachment.ownerType === 'task' ? selectedTaskIds.has(attachment.ownerId) : selectedNoteIds.has(attachment.ownerId))
+  const portableAttachments = await Promise.all(selectedAttachments.map(serializeAttachment))
+
   return {
     format: 'folio-selection',
     version: 1,
@@ -83,6 +89,8 @@ export async function createSelectiveExport(options: SelectiveExportOptions): Pr
       focusSessions: selectedFocus,
       habits: selectedHabits,
       habitEntries: selectedHabitEntries,
+      notes: selectedNotes,
+      attachments: portableAttachments,
     },
   }
 }
