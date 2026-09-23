@@ -94,6 +94,11 @@ function freshChecklist(items: string[], now: string) {
   return items.map((text, index) => ({ id: crypto.randomUUID(), text, completed: false, sortOrder: index, createdAt: now, updatedAt: now }))
 }
 
+function reconcileChecklist(current: TaskEntity['checklist'], desired: string[], now: string) {
+  const currentText = current.map((item) => item.text)
+  return JSON.stringify(currentText) === JSON.stringify(desired) ? current : freshChecklist(desired, now)
+}
+
 function expectedSeriesFields(series: RecurringSeriesEntity, date: string) {
   const exception = series.exceptions[date] ?? {}
   const template = series.taskTemplate
@@ -196,7 +201,7 @@ function upsertSeriesOccurrence(workspace: Workspace, touch: (type: SnapshotType
       deadline: fields.deadline,
       estimatedMinutes: fields.estimatedMinutes,
       tags: fields.tags,
-      checklist: freshChecklist(fields.checklist, now),
+      checklist: reconcileChecklist(task.checklist ?? [], fields.checklist, now),
       sourceUrl: fields.sourceUrl,
       location: fields.location,
       pinned: fields.pinned,
