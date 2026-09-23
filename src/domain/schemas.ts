@@ -414,7 +414,7 @@ export const recurringSeriesCreateSchema = z.object({
   rule: recurrenceRuleSchema,
   taskTemplate: z.object({
     title: z.string().trim().min(1).max(300),
-    description: z.string().max(20_000).default(''),
+    description: z.string().max(100_000).default(''),
     projectId: z.string().optional(),
     listId: z.string().optional(),
     sectionId: z.string().optional(),
