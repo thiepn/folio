@@ -610,12 +610,23 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
     if (parsedDates.length > 1) warnings.push({ code: 'conflicting-date', message: `Multiple planned-date phrases were found. ${dateLabel(selected.date, today)} will be used.` })
   }
 
-  // Validate reminder anchors after the task dates/time are known.
-  for (const reminder of reminders) {
-    if (reminder.kind === 'time-block' && startMinute === undefined) warnings.push({ code: 'invalid-reminder', message: 'A “before start” reminder needs an exact start time or calendar block.' })
-    if (reminder.kind === 'task-date' && reminder.taskDateField === 'deadline' && !deadline) warnings.push({ code: 'invalid-reminder', message: 'A deadline reminder needs a deadline.' })
-    if (reminder.kind === 'task-date' && reminder.taskDateField === 'plannedDate' && !plannedDate) warnings.push({ code: 'invalid-reminder', message: 'A planned-day reminder needs a planned date.' })
-  }
+  // Validate reminder anchors after the task dates/time are known. Invalid
+  // reminder phrases stay visible as warnings but are not executed.
+  reminders = reminders.filter((reminder) => {
+    if (reminder.kind === 'time-block' && startMinute === undefined) {
+      warnings.push({ code: 'invalid-reminder', message: 'A “before start” reminder needs an exact start time or calendar block.' })
+      return false
+    }
+    if (reminder.kind === 'task-date' && reminder.taskDateField === 'deadline' && !deadline) {
+      warnings.push({ code: 'invalid-reminder', message: 'A deadline reminder needs a deadline.' })
+      return false
+    }
+    if (reminder.kind === 'task-date' && reminder.taskDateField === 'plannedDate' && !plannedDate) {
+      warnings.push({ code: 'invalid-reminder', message: 'A planned-day reminder needs a planned date.' })
+      return false
+    }
+    return true
+  })
 
   if (recurrence && reminders.some((reminder) => reminder.kind === 'absolute')) {
     warnings.push({ code: 'ambiguous-reminder', message: 'Exact-date reminders apply only to the first captured occurrence. Use a planned/deadline/start-relative reminder to repeat with the series.' })
