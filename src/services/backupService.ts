@@ -150,6 +150,9 @@ function upgradeBackupOrganizationV19(backup: BackupEnvelope) {
   for (const series of backup.data.recurringSeries) {
     series.taskTemplate.tagIds = idsFor(series.taskTemplate.tags)
     for (const [date, exception] of Object.entries(series.exceptions ?? {})) {
+      if (exception.timelineEnd && !exception.timelineStart) throw new Error(`Recurring series “${series.title}” exception ${date} has a timeline end without a start.`)
+      if (exception.timelineStart && exception.timelineEnd && exception.timelineEnd < exception.timelineStart) throw new Error(`Recurring series “${series.title}” exception ${date} has an invalid timeline span.`)
+      if (exception.timelineMilestone && exception.timelineStart && exception.timelineEnd && exception.timelineEnd !== exception.timelineStart) throw new Error(`Recurring series “${series.title}” exception ${date} milestone spans multiple days.`)
       series.exceptions[date] = { ...exception, tagIds: idsFor(exception.tags ?? []) }
     }
   }
@@ -230,6 +233,9 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
 
   const warnings: string[] = []
   for (const task of data.tasks) {
+    if (task.timelineEnd && !task.timelineStart) throw new Error(`Task “${task.title}” has a timeline end without a start.`)
+    if (task.timelineStart && task.timelineEnd && task.timelineEnd < task.timelineStart) throw new Error(`Task “${task.title}” has an invalid timeline span.`)
+    if (task.timelineMilestone && task.timelineStart && task.timelineEnd && task.timelineEnd !== task.timelineStart) throw new Error(`Task “${task.title}” milestone spans multiple days.`)
     if (task.projectId && !projectIds.has(task.projectId)) throw new Error(`Task “${task.title}” references a missing project.`)
     if (task.listId && !listIds.has(task.listId)) throw new Error(`Task “${task.title}” references a missing list.`)
     if (task.sectionId && !sectionIds.has(task.sectionId)) throw new Error(`Task “${task.title}” references a missing section.`)
