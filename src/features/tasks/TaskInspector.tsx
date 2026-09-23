@@ -253,13 +253,13 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
 
       <section className="task-v2-context-section">
         <div className="task-section-head"><div><div className="eyebrow">Context</div><span>Keep execution details with the task.</span></div></div>
-        <label className="field"><span>Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="university, deep-work, admin" /><small>Comma-separated for now; D5 will add the global tag system.</small></label>
+        <label className="field"><span>Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="university, deep-work, admin" /><small>Comma-separated names are resolved into the global tag registry.</small></label>
         <div className="task-property-grid">
           <label className="field"><span>URL</span><input type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="https://…" /></label>
           <label className="field"><span>Location</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Library, campus, home…" /></label>
         </div>
         {parseTags(tags).length ? <div className="task-tag-list">{parseTags(tags).map((tag) => <span key={tag}>#{tag}</span>)}</div> : null}
-        {knownTags.length ? <div className="task-known-tags"><span>Known tags</span><div>{knownTags.filter((tag)=>!tag.archived).slice(0,18).map((tag)=>{const selected=parseTags(tags).some((value)=>value.toLowerCase()===tag.name.toLowerCase());return <button type="button" className={selected?'is-selected':''} key={tag.id} onClick={()=>{const current=parseTags(tags);setTags(selected?current.filter((value)=>value.toLowerCase()!==tag.name.toLowerCase()):[...current,tag.name].join(', '))}}>{'#'+tag.name}</button>})}</div></div>:null}
+        {knownTags.length ? <div className="task-known-tags"><span>Known tags</span><div>{knownTags.filter((tag)=>!tag.archived).slice(0,18).map((tag)=>{const selected=parseTags(tags).some((value)=>value.toLowerCase()===tag.name.toLowerCase());return <button type="button" className={selected?'is-selected':''} key={tag.id} onClick={()=>{const current=parseTags(tags);const next=selected?current.filter((value)=>value.toLowerCase()!==tag.name.toLowerCase()):[...current,tag.name];setTags(next.join(', '))}}>{'#'+tag.name}</button>})}</div></div>:null}
       </section>
 
       <section className="task-v2-progress-section">
