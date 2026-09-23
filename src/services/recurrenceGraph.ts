@@ -1,7 +1,6 @@
-import { addLocalDays } from '../domain/date'
+import { addLocalDays, atTimeInZone } from '../domain/date'
 import type { LocalDate, RecurringSeriesEntity, TaskEntity, TimeBlockEntity } from '../domain/models'
 import { calendarOccurrenceDates, defaultMaterializationThrough } from '../features/recurrence/recurrenceLogic'
-import { isoAtMinute } from '../features/planner/calendarLogic'
 import { makeTaskEntity, makeTimeBlockEntity } from './entityFactory'
 
 export interface MaterializedSeriesGraph {
@@ -12,6 +11,17 @@ export interface MaterializedSeriesGraph {
 
 function deadlineFor(series: RecurringSeriesEntity, date: LocalDate) {
   return series.taskTemplate.deadlineOffsetDays === undefined ? undefined : addLocalDays(date, series.taskTemplate.deadlineOffsetDays)
+}
+
+function freshChecklist(items: string[], now: string) {
+  return items.map((text, index) => ({
+    id: crypto.randomUUID(),
+    text,
+    completed: false,
+    sortOrder: index,
+    createdAt: now,
+    updatedAt: now,
+  }))
 }
 
 export function materializeSeriesGraph(seriesInput: RecurringSeriesEntity, through = defaultMaterializationThrough(), now = new Date().toISOString()): MaterializedSeriesGraph {
@@ -33,6 +43,11 @@ export function materializeSeriesGraph(seriesInput: RecurringSeriesEntity, throu
       plannedDate: date,
       deadline: deadlineFor(series, date),
       estimatedMinutes: series.taskTemplate.estimatedMinutes,
+      tags: series.taskTemplate.tags ?? [],
+      checklist: freshChecklist(series.taskTemplate.checklist ?? [], now),
+      sourceUrl: series.taskTemplate.sourceUrl,
+      location: series.taskTemplate.location,
+      pinned: series.taskTemplate.pinned ?? false,
       seriesId: series.id,
       recurrenceDate: date,
     }, crypto.randomUUID(), now, Date.now() + index)
@@ -41,12 +56,13 @@ export function materializeSeriesGraph(seriesInput: RecurringSeriesEntity, throu
     const startMinute = series.taskTemplate.startMinute
     const duration = series.taskTemplate.blockDurationMinutes ?? series.taskTemplate.estimatedMinutes
     if (startMinute !== undefined && duration) {
+      const start = atTimeInZone(date, startMinute, series.timezone)
       timeBlocks.push(makeTimeBlockEntity({
         taskId: task.id,
         title: task.title,
         kind: 'task',
-        start: isoAtMinute(date, startMinute),
-        end: isoAtMinute(date, startMinute + duration),
+        start,
+        end: new Date(new Date(start).getTime() + duration * 60_000).toISOString(),
       }, crypto.randomUUID(), now))
     }
   }
