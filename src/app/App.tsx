@@ -772,7 +772,7 @@ function AppContent() {
     <div className="app-shell">
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{viewAnnouncement} view</div>
-      <Sidebar active={view} inboxCount={data.inboxTasks.length} favoriteProjects={data.favoriteProjects} favoriteLists={data.favoriteLists} onNavigate={navigate} onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }} onOpenList={(id) => { navigate('lists'); setSelectedListId(id) }} onAppearance={() => setAppearanceOpen(true)} onData={() => setDataOpen(true)} />
+      <Sidebar active={view} inboxCount={data.inboxTasks.length} favoriteProjects={data.favoriteProjects} favoriteLists={data.favoriteLists} favoriteTags={data.favoriteTags} onNavigate={navigate} onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }} onOpenList={(id) => { navigate('lists'); setSelectedListId(id) }} onOpenTag={(id) => { navigate('lists'); setSelectedListId('__tag__:'+id) }} onAppearance={() => setAppearanceOpen(true)} onData={() => setDataOpen(true)} />
       <div className="workspace">
         <div className="mobile-topbar">
           <span>{`Folio · ${viewAnnouncement}`}</span>
