@@ -240,6 +240,38 @@ export const recurrenceService = {
     }
   },
 
+  async recordOccurrenceException(taskId: string, changes: TaskUpdateInput): Promise<UndoableMutation> {
+    const task = await taskRepository.get(taskId)
+    if (!task?.seriesId || !task.recurrenceDate) return { message: 'Occurrence unchanged', undo: async () => {} }
+    const series = await recurrenceRepository.get(task.seriesId)
+    if (!series) throw new Error('Recurring series not found.')
+
+    const previousSeries = structuredClone(series)
+    const current = { ...(series.exceptions[task.recurrenceDate] ?? {}) }
+
+    if (Object.prototype.hasOwnProperty.call(changes, 'title') && changes.title !== undefined) current.title = changes.title
+    if (Object.prototype.hasOwnProperty.call(changes, 'description') && changes.description !== undefined) current.description = changes.description
+    if (Object.prototype.hasOwnProperty.call(changes, 'projectId')) current.projectId = changes.projectId ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'priority') && changes.priority !== undefined) current.priority = changes.priority
+    if (Object.prototype.hasOwnProperty.call(changes, 'estimatedMinutes')) current.estimatedMinutes = changes.estimatedMinutes ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'tags') && changes.tags !== undefined) current.tags = changes.tags
+    if (Object.prototype.hasOwnProperty.call(changes, 'checklist') && changes.checklist !== undefined) current.checklist = changes.checklist.map((item) => item.text)
+    if (Object.prototype.hasOwnProperty.call(changes, 'sourceUrl')) current.sourceUrl = changes.sourceUrl ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'location')) current.location = changes.location ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'pinned') && changes.pinned !== undefined) current.pinned = changes.pinned
+    if (Object.prototype.hasOwnProperty.call(changes, 'plannedDate')) current.plannedDate = changes.plannedDate ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'deadline')) current.deadline = changes.deadline ?? null
+
+    series.exceptions = { ...series.exceptions, [task.recurrenceDate]: current }
+    series.updatedAt = new Date().toISOString()
+    await recurrenceRepository.replace(series)
+
+    return {
+      message: 'Occurrence override saved',
+      undo: async () => { await recurrenceRepository.replace(previousSeries) },
+    }
+  },
+
   async updateEntire(seriesId: string, input: RecurringSeriesUpdateInput): Promise<UndoableMutation> {
     const previousSeries = await recurrenceRepository.get(seriesId)
     if (!previousSeries) throw new Error('Recurring series not found.')
