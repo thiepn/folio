@@ -262,7 +262,7 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
         <label className="task-pin-toggle"><input type="checkbox" checked={pinned} onChange={(event) => setPinned(event.target.checked)} /><span>Pin</span></label>
       </div>
       <section className="task-rich-content-section">
-        <div className="task-section-head"><div><div className="eyebrow">Rich content</div><span>Markdown content stays part of the task and is indexed for search.</span></div><Button onClick={() => void createStandaloneNote()}>Create standalone note</Button></div>
+        <div className="task-section-head"><div><div className="eyebrow">Rich content</div><span>Markdown content stays part of the task and is indexed for search.</span></div><Button onClick={() => void createStandaloneNote()}>Task → standalone note</Button></div>
         <MarkdownEditor value={description} onChange={setDescription} label="Task notes · Markdown" placeholder="Context, acceptance criteria, research, links, code, or an embedded checklist." />
         <AttachmentPanel ownerType="task" ownerId={task.id} />
         {contentMessage ? <div className="note-message">{contentMessage}</div> : null}
