@@ -20,11 +20,11 @@ async function resolveOrganization(input: { listId?: string | null; sectionId?: 
   const sectionId = input.sectionId === null ? undefined : input.sectionId
   if (listId) {
     const list = await organizationRepository.getList(listId)
-    if (!list || list.archived) throw new Error('List not found.')
+    if (!list) throw new Error('List not found.')
   }
   if (sectionId) {
     const section = await organizationRepository.getSection(sectionId)
-    if (!section || section.archived) throw new Error('Section not found.')
+    if (!section) throw new Error('Section not found.')
     if (!listId || section.listId !== listId) throw new Error('Section does not belong to the selected list.')
   }
   return { listId, sectionId }
