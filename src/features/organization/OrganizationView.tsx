@@ -25,7 +25,7 @@ function smartTasks(id: SmartId, tasks: TaskPreview[]) {
 }
 
 export function OrganizationView({
-  folders, lists, archivedLists, sections, tags, tasks, listCounts, tagCounts, selectedListId,
+  folders, lists, archivedLists, sections, tags, archivedTags, tasks, listCounts, tagCounts, selectedListId,
   onSelectList, onCreateFolder, onCreateList, onCreateSection, onCreateTag,
   onUpdateList, onUpdateFolder, onUpdateTag, onArchiveSection,
   onOpenTask, onToggleTask, onMoveTask, onAddTask,
@@ -35,6 +35,7 @@ export function OrganizationView({
   archivedLists: ListEntity[]
   sections: SectionEntity[]
   tags: TagEntity[]
+  archivedTags: TagEntity[]
   tasks: TaskPreview[]
   listCounts: Record<string, number>
   tagCounts: Record<string, number>
@@ -60,15 +61,35 @@ export function OrganizationView({
   const [newTagParent,setNewTagParent]=useState('')
 
   const selectedList = lists.find((list)=>list.id===selectedListId)
-  const smart = selectedListId?.startsWith('__') ? selectedListId as SmartId : null
+  const selectedTagId = selectedListId?.startsWith('__tag__:') ? selectedListId.slice('__tag__:'.length) : undefined
+  const selectedTag = selectedTagId ? tags.find((tag)=>tag.id===selectedTagId) : undefined
+  const smart = selectedListId && ['__all__','__unlisted__','__high__','__unscheduled__'].includes(selectedListId) ? selectedListId as SmartId : null
 
-  if(selectedList || smart) {
+  const tagScopeIds = (rootId: string) => {
+    const result = new Set<string>([rootId])
+    let changed = true
+    while (changed) {
+      changed = false
+      for (const tag of tags) if (tag.parentTagId && result.has(tag.parentTagId) && !result.has(tag.id)) { result.add(tag.id); changed = true }
+    }
+    return result
+  }
+
+  if(selectedList || smart || selectedTag) {
+    const scopedTagIds = selectedTag ? tagScopeIds(selectedTag.id) : undefined
     return <ListWorkspace
+      key={selectedList?.id ?? smart ?? selectedTag?.id}
       list={selectedList}
       smart={smart}
+      titleOverride={selectedTag ? '#'+selectedTag.name : undefined}
+      folders={folders}
       sections={sections.filter((section)=>section.listId===selectedList?.id)}
       tags={tags}
-      tasks={selectedList ? tasks.filter((task)=>task.listId===selectedList.id) : smartTasks(smart!,tasks)}
+      tasks={selectedList
+        ? tasks.filter((task)=>task.listId===selectedList.id)
+        : selectedTag
+          ? tasks.filter((task)=>task.status!=='inbox' && task.tagIds?.some((id)=>scopedTagIds?.has(id)))
+          : smartTasks(smart!,tasks)}
       onBack={()=>onSelectList(null)}
       onUpdateList={onUpdateList}
       onCreateSection={onCreateSection}
@@ -121,9 +142,10 @@ export function OrganizationView({
       </div>
     </section>
 
-    {archivedLists.length ? <section className="organization-panel">
-      <div className="organization-panel__head"><div><span className="eyebrow">Archive</span><h2>Archived lists</h2></div></div>
-      <div className="organization-list-grid">{archivedLists.map((list)=><div className="organization-list-card" key={list.id}><button className="organization-list-card__open" onClick={()=>void onUpdateList(list.id,{archived:false})}><i style={{background:list.color??'var(--muted)'}}/><span><strong>{list.name}</strong><small>Restore list</small></span></button></div>)}</div>
+    {(archivedLists.length || archivedTags.length) ? <section className="organization-panel">
+      <div className="organization-panel__head"><div><span className="eyebrow">Archive</span><h2>Archived organization</h2></div></div>
+      {archivedLists.length ? <><div className="section-label">Lists</div><div className="organization-list-grid">{archivedLists.map((list)=><div className="organization-list-card" key={list.id}><button className="organization-list-card__open" onClick={()=>void onUpdateList(list.id,{archived:false})}><i style={{background:list.color??'var(--muted)'}}/><span><strong>{list.name}</strong><small>Restore list</small></span></button></div>)}</div></> : null}
+      {archivedTags.length ? <><div className="section-label">Tags</div><div className="archived-tag-list">{archivedTags.map((tag)=><button key={tag.id} onClick={()=>void onUpdateTag(tag.id,{archived:false})}>#{tag.name} · Restore</button>)}</div></> : null}
     </section> : null}
 
     <section className="organization-panel">
@@ -134,7 +156,7 @@ export function OrganizationView({
         <Button type="submit" disabled={!newTag.trim()}>Add tag</Button>
       </form>
       <div className="tag-tree">
-        {(tagsByParent.get(undefined)??[]).map((tag)=><TagBranch key={tag.id} tag={tag} byParent={tagsByParent} counts={tagCounts} onUpdate={onUpdateTag}/>)}
+        {(tagsByParent.get(undefined)??[]).map((tag)=><TagBranch key={tag.id} tag={tag} byParent={tagsByParent} counts={tagCounts} onUpdate={onUpdateTag} onOpen={(id)=>onSelectList('__tag__:'+id)}/>)}
         {!tags.length?<div className="empty-state">Tags captured through Quick Add will appear here automatically.</div>:null}
       </div>
     </section>
@@ -149,21 +171,26 @@ function ListButtons({lists,counts,onSelect,onUpdate}:{lists:ListEntity[];counts
   </div>)}</div>
 }
 
-function TagBranch({tag,byParent,counts,onUpdate}:{tag:TagEntity;byParent:Map<string|undefined,TagEntity[]>;counts:Record<string,number>;onUpdate:(id:string,changes:Partial<TagEntity>)=>Promise<void>}) {
+function TagBranch({tag,byParent,counts,onUpdate,onOpen}:{tag:TagEntity;byParent:Map<string|undefined,TagEntity[]>;counts:Record<string,number>;onUpdate:(id:string,changes:Partial<TagEntity>)=>Promise<void>;onOpen:(id:string)=>void}) {
   const children=byParent.get(tag.id)??[]
   return <div className="tag-branch">
-    <div className="tag-row"><span className="tag-row__name">#{tag.name}</span><span>{counts[tag.id]??0}</span><button className={tag.favorite?'is-favorite':''} onClick={()=>void onUpdate(tag.id,{favorite:!tag.favorite})}>★</button></div>
-    {children.length?<div className="tag-children">{children.map((child)=><TagBranch key={child.id} tag={child} byParent={byParent} counts={counts} onUpdate={onUpdate}/>)}</div>:null}
+    <div className="tag-row"><button className="tag-row__name" onClick={()=>onOpen(tag.id)}>#{tag.name}</button><span>{counts[tag.id]??0}</span><button className={tag.favorite?'is-favorite':''} aria-label={tag.favorite?'Unfavorite tag':'Favorite tag'} onClick={()=>void onUpdate(tag.id,{favorite:!tag.favorite})}>★</button><button aria-label={'Archive #'+tag.name} onClick={()=>void onUpdate(tag.id,{archived:true})}>×</button></div>
+    {children.length?<div className="tag-children">{children.map((child)=><TagBranch key={child.id} tag={child} byParent={byParent} counts={counts} onUpdate={onUpdate} onOpen={onOpen}/>)}</div>:null}
   </div>
 }
 
-function ListWorkspace({list,smart,sections,tags,tasks,onBack,onUpdateList,onCreateSection,onArchiveSection,onOpenTask,onToggleTask,onMoveTask,onAddTask}:{
-  list?:ListEntity;smart:SmartId|null;sections:SectionEntity[];tags:TagEntity[];tasks:TaskPreview[];
+function ListWorkspace({list,smart,titleOverride,folders,sections,tags,tasks,onBack,onUpdateList,onCreateSection,onArchiveSection,onOpenTask,onToggleTask,onMoveTask,onAddTask}:{
+  list?:ListEntity;smart:SmartId|null;titleOverride?:string;folders:FolderEntity[];sections:SectionEntity[];tags:TagEntity[];tasks:TaskPreview[];
   onBack:()=>void;onUpdateList:(id:string,changes:Partial<ListEntity>)=>Promise<void>;onCreateSection:(listId:string,name:string)=>Promise<void>;onArchiveSection:(id:string)=>Promise<void>;
   onOpenTask:(id:string)=>void;onToggleTask:(id:string)=>void;onMoveTask:(taskId:string,listId?:string,sectionId?:string)=>Promise<void>;onAddTask:(listId?:string,sectionId?:string)=>void
 }) {
   const [sectionName,setSectionName]=useState('')
-  const title=list?.name??({__all__:'All tasks',__unlisted__:'No list',__high__:'High priority',__unscheduled__:'Unscheduled'} as Record<SmartId,string>)[smart!]
+  const [name,setName]=useState(list?.name??'')
+  const [description,setDescription]=useState(list?.description??'')
+  const [folderId,setFolderId]=useState(list?.folderId??'')
+  const [color,setColor]=useState(list?.color??'#53657d')
+  const [icon,setIcon]=useState(list?.icon??'')
+  const title=titleOverride??list?.name??({__all__:'All tasks',__unlisted__:'No list',__high__:'High priority',__unscheduled__:'Unscheduled'} as Record<SmartId,string>)[smart!]
   const visible=useMemo(()=>sortTasks(tasks.filter((task)=>list?.showCompleted===false?!task.completed:true),list?.sortMode??'planned'),[tasks,list?.showCompleted,list?.sortMode])
   const groups=useMemo(()=>{
     const mode=list?.groupMode??'none'
@@ -193,6 +220,14 @@ function ListWorkspace({list,smart,sections,tags,tasks,onBack,onUpdateList,onCre
       <div><button className="text-action" onClick={onBack}>← Lists & tags</button><h1>{title}</h1><p>{list?.description||'A focused task collection.'}</p></div>
       <div>{list?<Button onClick={()=>void onUpdateList(list.id,{favorite:!list.favorite})}>{list.favorite?'Unfavorite':'Favorite'}</Button>:null}<Button variant="primary" onClick={()=>onAddTask(list?.id)}>Add task</Button></div>
     </header>
+    {list?<section className="list-metadata-editor">
+      <label><span>Name</span><input value={name} onChange={(e)=>setName(e.target.value)}/></label>
+      <label><span>Description</span><input value={description} onChange={(e)=>setDescription(e.target.value)}/></label>
+      <label><span>Folder</span><select value={folderId} onChange={(e)=>setFolderId(e.target.value)}><option value="">Root</option>{folders.map((folder)=><option key={folder.id} value={folder.id}>{folder.name}</option>)}</select></label>
+      <label><span>Accent</span><input type="color" value={color} onChange={(e)=>setColor(e.target.value)}/></label>
+      <label><span>Icon</span><input value={icon} maxLength={24} onChange={(e)=>setIcon(e.target.value)} placeholder="Optional"/></label>
+      <Button disabled={!name.trim()} onClick={()=>void onUpdateList(list.id,{name:name.trim(),description,folderId:folderId||null,color,icon:icon.trim()||undefined})}>Save list</Button>
+    </section>:null}
     {list?<section className="list-controls">
       <label><span>Sort</span><select value={list.sortMode} onChange={(e)=>void onUpdateList(list.id,{sortMode:e.target.value as ListEntity['sortMode']})}><option value="manual">Manual</option><option value="planned">Planned date</option><option value="deadline">Deadline</option><option value="priority">Priority</option><option value="title">Title</option><option value="created">Created</option><option value="updated">Recently updated</option></select></label>
       <label><span>Group</span><select value={list.groupMode} onChange={(e)=>void onUpdateList(list.id,{groupMode:e.target.value as ListEntity['groupMode']})}><option value="section">Sections</option><option value="none">None</option><option value="planned">Scheduling</option><option value="priority">Priority</option><option value="tag">Tag</option></select></label>
