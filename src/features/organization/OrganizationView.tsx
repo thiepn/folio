@@ -25,12 +25,13 @@ function smartTasks(id: SmartId, tasks: TaskPreview[]) {
 }
 
 export function OrganizationView({
-  folders, lists, archivedLists, sections, tags, archivedTags, tasks, listCounts, tagCounts, selectedListId,
+  folders, archivedFolders, lists, archivedLists, sections, tags, archivedTags, tasks, listCounts, tagCounts, selectedListId,
   onSelectList, onCreateFolder, onCreateList, onCreateSection, onCreateTag,
-  onUpdateList, onUpdateFolder, onUpdateTag, onArchiveSection,
+  onUpdateList, onUpdateFolder, onUpdateTag, onMergeTag, onArchiveSection,
   onOpenTask, onToggleTask, onMoveTask, onAddTask,
 }: {
   folders: FolderEntity[]
+  archivedFolders: FolderEntity[]
   lists: ListEntity[]
   archivedLists: ListEntity[]
   sections: SectionEntity[]
@@ -48,6 +49,7 @@ export function OrganizationView({
   onUpdateList: (id: string, changes: Partial<ListEntity>) => Promise<void>
   onUpdateFolder: (id: string, changes: Partial<FolderEntity>) => Promise<void>
   onUpdateTag: (id: string, changes: Partial<TagEntity>) => Promise<void>
+  onMergeTag: (sourceId: string, targetId: string) => Promise<void>
   onArchiveSection: (id: string) => Promise<void>
   onOpenTask: (id: string) => void
   onToggleTask: (id: string) => void
@@ -59,6 +61,8 @@ export function OrganizationView({
   const [newListFolder,setNewListFolder]=useState('')
   const [newTag,setNewTag]=useState('')
   const [newTagParent,setNewTagParent]=useState('')
+  const [mergeSource,setMergeSource]=useState('')
+  const [mergeTarget,setMergeTarget]=useState('')
 
   const selectedList = lists.find((list)=>list.id===selectedListId)
   const selectedTagId = selectedListId?.startsWith('__tag__:') ? selectedListId.slice('__tag__:'.length) : undefined
@@ -135,15 +139,16 @@ export function OrganizationView({
         {folders.map((folder)=>{
           const childLists=lists.filter((list)=>list.folderId===folder.id)
           return <section className="folder-card" key={folder.id}>
-            <header><button className="folder-collapse" onClick={()=>void onUpdateFolder(folder.id,{collapsed:!folder.collapsed})}>{folder.collapsed?'▸':'▾'}</button><strong>{folder.name}</strong><span>{childLists.length} list{childLists.length===1?'':'s'}</span></header>
+            <header><button className="folder-collapse" onClick={()=>void onUpdateFolder(folder.id,{collapsed:!folder.collapsed})}>{folder.collapsed?'▸':'▾'}</button><strong>{folder.name}</strong><span>{childLists.length} list{childLists.length===1?'':'s'}</span><button className="text-action" onClick={()=>void onUpdateFolder(folder.id,{archived:true})}>Archive</button></header>
             {!folder.collapsed?<ListButtons lists={childLists} counts={listCounts} onSelect={onSelectList} onUpdate={onUpdateList}/>:null}
           </section>
         })}
       </div>
     </section>
 
-    {(archivedLists.length || archivedTags.length) ? <section className="organization-panel">
+    {(archivedFolders.length || archivedLists.length || archivedTags.length) ? <section className="organization-panel">
       <div className="organization-panel__head"><div><span className="eyebrow">Archive</span><h2>Archived organization</h2></div></div>
+      {archivedFolders.length ? <><div className="section-label">Folders</div><div className="archived-tag-list">{archivedFolders.map((folder)=><button key={folder.id} onClick={()=>void onUpdateFolder(folder.id,{archived:false})}>{folder.name} · Restore</button>)}</div></> : null}
       {archivedLists.length ? <><div className="section-label">Lists</div><div className="organization-list-grid">{archivedLists.map((list)=><div className="organization-list-card" key={list.id}><button className="organization-list-card__open" onClick={()=>void onUpdateList(list.id,{archived:false})}><i style={{background:list.color??'var(--muted)'}}/><span><strong>{list.name}</strong><small>Restore list</small></span></button></div>)}</div></> : null}
       {archivedTags.length ? <><div className="section-label">Tags</div><div className="archived-tag-list">{archivedTags.map((tag)=><button key={tag.id} onClick={()=>void onUpdateTag(tag.id,{archived:false})}>#{tag.name} · Restore</button>)}</div></> : null}
     </section> : null}
@@ -154,6 +159,12 @@ export function OrganizationView({
         <input value={newTag} onChange={(e)=>setNewTag(e.target.value)} placeholder="New tag" />
         <select value={newTagParent} onChange={(e)=>setNewTagParent(e.target.value)}><option value="">Top level</option>{tags.map((tag)=><option key={tag.id} value={tag.id}>#{tag.name}</option>)}</select>
         <Button type="submit" disabled={!newTag.trim()}>Add tag</Button>
+      </form>
+      <form className="tag-merge-row" onSubmit={(e)=>{e.preventDefault();if(mergeSource&&mergeTarget&&mergeSource!==mergeTarget)void onMergeTag(mergeSource,mergeTarget).then(()=>{setMergeSource('');setMergeTarget('')})}}>
+        <select value={mergeSource} onChange={(e)=>setMergeSource(e.target.value)}><option value="">Merge tag…</option>{tags.map((tag)=><option key={tag.id} value={tag.id}>#{tag.name}</option>)}</select>
+        <span>into</span>
+        <select value={mergeTarget} onChange={(e)=>setMergeTarget(e.target.value)}><option value="">Target tag…</option>{tags.filter((tag)=>tag.id!==mergeSource).map((tag)=><option key={tag.id} value={tag.id}>#{tag.name}</option>)}</select>
+        <Button type="submit" disabled={!mergeSource||!mergeTarget||mergeSource===mergeTarget}>Merge</Button>
       </form>
       <div className="tag-tree">
         {(tagsByParent.get(undefined)??[]).map((tag)=><TagBranch key={tag.id} tag={tag} byParent={tagsByParent} counts={tagCounts} onUpdate={onUpdateTag} onOpen={(id)=>onSelectList('__tag__:'+id)}/>)}
