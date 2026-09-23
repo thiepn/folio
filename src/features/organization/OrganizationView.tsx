@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button'
 import { TaskRow } from '../../components/ui/TaskRow'
 import type { FolderEntity, ListEntity, SectionEntity, TagEntity } from '../../domain/models'
 import type { TaskPreview } from '../../types/ui'
+import type { FolderUpdateInput, ListUpdateInput, TagUpdateInput } from '../../repositories/organizationRepository'
 
 type SmartId = '__all__' | '__unlisted__' | '__high__' | '__unscheduled__'
 
@@ -46,9 +47,9 @@ export function OrganizationView({
   onCreateList: (name: string, folderId?: string) => Promise<void>
   onCreateSection: (listId: string, name: string) => Promise<void>
   onCreateTag: (name: string, parentTagId?: string) => Promise<void>
-  onUpdateList: (id: string, changes: Partial<ListEntity>) => Promise<void>
-  onUpdateFolder: (id: string, changes: Partial<FolderEntity>) => Promise<void>
-  onUpdateTag: (id: string, changes: Partial<TagEntity>) => Promise<void>
+  onUpdateList: (id: string, changes: ListUpdateInput) => Promise<void>
+  onUpdateFolder: (id: string, changes: FolderUpdateInput) => Promise<void>
+  onUpdateTag: (id: string, changes: TagUpdateInput) => Promise<void>
   onMergeTag: (sourceId: string, targetId: string) => Promise<void>
   onArchiveSection: (id: string) => Promise<void>
   onOpenTask: (id: string) => void
@@ -174,7 +175,7 @@ export function OrganizationView({
   </div>
 }
 
-function ListButtons({lists,counts,onSelect,onUpdate}:{lists:ListEntity[];counts:Record<string,number>;onSelect:(id:string)=>void;onUpdate:(id:string,changes:Partial<ListEntity>)=>Promise<void>}) {
+function ListButtons({lists,counts,onSelect,onUpdate}:{lists:ListEntity[];counts:Record<string,number>;onSelect:(id:string)=>void;onUpdate:(id:string,changes:ListUpdateInput)=>Promise<void>}) {
   if(!lists.length) return <div className="organization-empty-row">No lists here.</div>
   return <div className="organization-list-grid">{lists.map((list)=><div className="organization-list-card" key={list.id}>
     <button className="organization-list-card__open" onClick={()=>onSelect(list.id)}><i style={{background:list.color??'var(--accent)'}}/><span><strong>{list.name}</strong><small>{counts[list.id]??0} open tasks</small></span></button>
@@ -182,7 +183,7 @@ function ListButtons({lists,counts,onSelect,onUpdate}:{lists:ListEntity[];counts
   </div>)}</div>
 }
 
-function TagBranch({tag,byParent,counts,onUpdate,onOpen}:{tag:TagEntity;byParent:Map<string|undefined,TagEntity[]>;counts:Record<string,number>;onUpdate:(id:string,changes:Partial<TagEntity>)=>Promise<void>;onOpen:(id:string)=>void}) {
+function TagBranch({tag,byParent,counts,onUpdate,onOpen}:{tag:TagEntity;byParent:Map<string|undefined,TagEntity[]>;counts:Record<string,number>;onUpdate:(id:string,changes:TagUpdateInput)=>Promise<void>;onOpen:(id:string)=>void}) {
   const children=byParent.get(tag.id)??[]
   return <div className="tag-branch">
     <div className="tag-row"><button className="tag-row__name" onClick={()=>onOpen(tag.id)}>#{tag.name}</button><span>{counts[tag.id]??0}</span><button className={tag.favorite?'is-favorite':''} aria-label={tag.favorite?'Unfavorite tag':'Favorite tag'} onClick={()=>void onUpdate(tag.id,{favorite:!tag.favorite})}>★</button><button aria-label={'Archive #'+tag.name} onClick={()=>void onUpdate(tag.id,{archived:true})}>×</button></div>
