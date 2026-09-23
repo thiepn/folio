@@ -16,7 +16,7 @@ export type SmartOperator =
   | 'is' | 'is-not' | 'in' | 'not-in' | 'exists' | 'not-exists'
   | 'has-any' | 'has-all' | 'has-none'
   | 'on' | 'before' | 'after' | 'on-or-before' | 'on-or-after' | 'between'
-  | 'within-next' | 'overdue'
+  | 'today' | 'tomorrow' | 'within-next' | 'overdue'
   | 'lt' | 'lte' | 'gt' | 'gte'
 export type SmartSortField = 'manual' | 'planned' | 'deadline' | 'priority' | 'estimate' | 'title' | 'created' | 'updated'
 export type SmartGroupBy = 'none' | 'project' | 'list' | 'section' | 'priority' | 'planned' | 'deadline' | 'tag' | 'status' | 'readiness'
@@ -26,7 +26,7 @@ export interface SmartFilterCondition {
   type: 'condition'
   field: SmartField
   operator: SmartOperator
-  value?: string | number | boolean | string[] | [string, string]
+  value?: string | number | boolean | string[] | [string, string] | [number, number]
   includeDescendants?: boolean
 }
 
@@ -174,6 +174,8 @@ function compareDate(actual: LocalDate | undefined, condition: SmartFilterCondit
   if (condition.operator === 'not-exists') return !actual
   if (!actual) return false
   const expected = stringValue(condition.value)
+  if (condition.operator === 'today') return actual === today
+  if (condition.operator === 'tomorrow') return actual === addLocalDays(today, 1)
   if (condition.operator === 'on') return actual === expected
   if (condition.operator === 'before') return actual < expected
   if (condition.operator === 'after') return actual > expected
@@ -203,7 +205,7 @@ function compareNumber(actual: number | undefined, condition: SmartFilterConditi
   if (condition.operator === 'gte') return actual >= expected
   if (condition.operator === 'between' && Array.isArray(condition.value) && condition.value.length >= 2) {
     const [from,to] = condition.value
-    return typeof from === 'string' || typeof to === 'string' ? false : actual >= Number(from) && actual <= Number(to)
+    return typeof from === 'number' && typeof to === 'number' && actual >= from && actual <= to
   }
   return false
 }
