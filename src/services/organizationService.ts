@@ -39,8 +39,22 @@ export const organizationService = {
   async updateFolder(id: string, input: FolderUpdateInput): Promise<UndoableMutation> {
     const before = await organizationRepository.getFolder(id)
     if (!before) throw new Error('Folder not found.')
-    await organizationRepository.updateFolder(id, input)
-    return { message: 'Folder updated', undo: async () => { await db.folders.put(before) } }
+    const childLists = input.archived === true && !before.archived
+      ? (await db.lists.where('folderId').equals(id).toArray()).map((list) => ({ ...list }))
+      : []
+    await db.transaction('rw', db.folders, db.lists, async () => {
+      await organizationRepository.updateFolder(id, input)
+      if (input.archived === true && !before.archived) {
+        for (const list of childLists) await db.lists.update(list.id, { folderId: undefined, updatedAt: now() })
+      }
+    })
+    return {
+      message: input.archived === true ? 'Folder archived' : input.archived === false ? 'Folder restored' : 'Folder updated',
+      undo: async () => {
+        await db.folders.put(before)
+        if (childLists.length) await db.lists.bulkPut(childLists)
+      },
+    }
   },
 
   async createList(input: ListCreateInput): Promise<{ list: ListEntity; undo: UndoableMutation }> {
@@ -132,12 +146,19 @@ export const organizationService = {
     const requestedParent = input.parentTagId === null ? undefined : (input.parentTagId ?? before.parentTagId)
     await assertTagParent(id, requestedParent)
     const beforeName = before.name
+    const childSnapshots = input.archived === true && !before.archived
+      ? (await db.tags.where('parentTagId').equals(id).toArray()).map((tag) => ({ ...tag }))
+      : []
     const next = await organizationRepository.updateTag(id, input)
 
     const affectedTasks = (await db.tasks.where('tagIds').equals(id).toArray()).map((task) => ({ ...task }))
     const affectedSeries = (await db.recurringSeries.toArray()).filter((series) =>
       series.taskTemplate.tagIds?.includes(id) || Object.values(series.exceptions ?? {}).some((exception) => exception.tagIds?.includes(id))
     ).map((series) => structuredClone(series))
+
+    if (input.archived === true && !before.archived && childSnapshots.length) {
+      for (const child of childSnapshots) await db.tags.update(child.id, { parentTagId: before.parentTagId, updatedAt: now() })
+    }
 
     if (next.name !== beforeName && affectedTasks.length) {
       await db.tasks.bulkPut(affectedTasks.map((task) => ({
@@ -166,9 +187,10 @@ export const organizationService = {
     }
 
     return {
-      message: 'Tag updated',
+      message: input.archived === true ? 'Tag archived' : input.archived === false ? 'Tag restored' : 'Tag updated',
       undo: async () => {
         await db.tags.put(before)
+        if (childSnapshots.length) await db.tags.bulkPut(childSnapshots)
         if (affectedTasks.length) await db.tasks.bulkPut(affectedTasks)
         if (affectedSeries.length) await db.recurringSeries.bulkPut(affectedSeries)
       },
@@ -181,13 +203,26 @@ export const organizationService = {
     const target = await organizationRepository.getTag(targetId)
     if (!source || !target) throw new Error('Tag not found.')
 
+    let cursor: string | undefined = target.parentTagId
+    while (cursor) {
+      if (cursor === sourceId) throw new Error('Cannot merge a tag into one of its descendants.')
+      cursor = (await organizationRepository.getTag(cursor))?.parentTagId
+    }
+
     const tasks = (await db.tasks.where('tagIds').equals(sourceId).toArray()).map((task) => ({ ...task }))
     const series = (await db.recurringSeries.toArray()).filter((item) =>
       item.taskTemplate.tagIds?.includes(sourceId) || Object.values(item.exceptions ?? {}).some((exception) => exception.tagIds?.includes(sourceId))
     ).map((item) => structuredClone(item))
     const sourceSnapshot = { ...source }
+    const targetSnapshot = { ...target }
+    const childSnapshots = (await db.tags.where('parentTagId').equals(sourceId).toArray()).map((tag) => ({ ...tag }))
 
     await db.transaction('rw', db.tasks, db.tags, db.recurringSeries, async () => {
+      if (target.parentTagId === sourceId) await db.tags.update(targetId, { parentTagId: source.parentTagId, updatedAt: now() })
+      for (const child of childSnapshots) {
+        if (child.id !== targetId) await db.tags.update(child.id, { parentTagId: targetId, updatedAt: now() })
+      }
+
       for (const task of tasks) {
         const ids = [...new Set((task.tagIds ?? []).map((id) => id === sourceId ? targetId : id))]
         const tagEntities = await Promise.all(ids.map((id) => db.tags.get(id)))
@@ -216,9 +251,12 @@ export const organizationService = {
       message: 'Tags merged',
       undo: async () => {
         await db.tags.put(sourceSnapshot)
+        await db.tags.put(targetSnapshot)
+        if (childSnapshots.length) await db.tags.bulkPut(childSnapshots)
         if (tasks.length) await db.tasks.bulkPut(tasks)
         if (series.length) await db.recurringSeries.bulkPut(series)
       },
     }
   },
+}
 }
