@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
-import type { ListEntity, ProjectEntity, SectionEntity, TagEntity } from '../../domain/models'
+import type { ListEntity, SectionEntity, TagEntity } from '../../domain/models'
 import {
   createEmptySmartCondition, createEmptySmartGroup,
   type SmartField, type SmartFilterCondition, type SmartFilterGroup, type SmartFilterNode,
@@ -87,7 +87,7 @@ function addNode(root:SmartFilterGroup,parentId:string,node:SmartFilterNode):Sma
 export function SmartViewEditorModal({open,view,projects,lists,sections,tags,onClose,onSave}:{
   open:boolean
   view?:SmartTaskView
-  projects:ProjectEntity[]
+  projects:Array<{id:string;name:string}>
   lists:ListEntity[]
   sections:SectionEntity[]
   tags:TagEntity[]
@@ -150,7 +150,7 @@ export function SmartViewEditorModal({open,view,projects,lists,sections,tags,onC
 }
 
 function QueryGroupEditor({group,depth,projects,lists,sections,tags,onChange}:{
-  group:SmartFilterGroup;depth:number;projects:ProjectEntity[];lists:ListEntity[];sections:SectionEntity[];tags:TagEntity[];onChange:(group:SmartFilterGroup)=>void
+  group:SmartFilterGroup;depth:number;projects:Array<{id:string;name:string}>;lists:ListEntity[];sections:SectionEntity[];tags:TagEntity[];onChange:(group:SmartFilterGroup)=>void
 }) {
   return <div className="smart-filter-group" data-depth={depth}>
     <div className="smart-filter-group__head">
@@ -172,7 +172,7 @@ function QueryGroupEditor({group,depth,projects,lists,sections,tags,onChange}:{
 }
 
 function ConditionEditor({condition,projects,lists,sections,tags,onChange,onRemove}:{
-  condition:SmartFilterCondition;projects:ProjectEntity[];lists:ListEntity[];sections:SectionEntity[];tags:TagEntity[];onChange:(condition:SmartFilterCondition)=>void;onRemove:()=>void
+  condition:SmartFilterCondition;projects:Array<{id:string;name:string}>;lists:ListEntity[];sections:SectionEntity[];tags:TagEntity[];onChange:(condition:SmartFilterCondition)=>void;onRemove:()=>void
 }) {
   const ops=operators[condition.field]
   function changeField(field:SmartField){
@@ -190,7 +190,7 @@ function ConditionEditor({condition,projects,lists,sections,tags,onChange,onRemo
 }
 
 function ConditionValue({condition,projects,lists,sections,tags,onChange}:{
-  condition:SmartFilterCondition;projects:ProjectEntity[];lists:ListEntity[];sections:SectionEntity[];tags:TagEntity[];onChange:(condition:SmartFilterCondition)=>void
+  condition:SmartFilterCondition;projects:Array<{id:string;name:string}>;lists:ListEntity[];sections:SectionEntity[];tags:TagEntity[];onChange:(condition:SmartFilterCondition)=>void
 }) {
   const noValue=['exists','not-exists','today','tomorrow','overdue'].includes(condition.operator)
   if(noValue)return <span className="smart-condition-value is-static">—</span>
