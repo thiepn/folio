@@ -1,0 +1,100 @@
+import fs from 'node:fs'
+import path from 'node:path'
+
+const root = process.cwd()
+const read = (p) => fs.readFileSync(path.join(root, p), 'utf8')
+const exists = (p) => fs.existsSync(path.join(root, p))
+const checks = []
+const check = (name, ok) => checks.push({ name, ok: Boolean(ok) })
+
+const pkg = JSON.parse(read('package.json'))
+const models = read('src/domain/models.ts')
+const schemas = read('src/domain/schemas.ts')
+const database = read('src/db/database.ts')
+const migration = read('src/migrations/v16ToV17.ts')
+const dates = read('src/domain/date.ts')
+const logic = read('src/features/recurrence/recurrenceLogic.ts')
+const cases = read('src/features/recurrence/recurrenceLogicCases.ts')
+const editor = read('src/features/recurrence/RecurrenceEditorModal.tsx')
+const service = read('src/services/recurrenceService.ts')
+const graph = read('src/services/recurrenceGraph.ts')
+const backupSchemas = read('src/services/backupSchemas.ts')
+const importSchema = read('src/features/import/importSchema.ts')
+const patchSchema = read('src/features/patch/patchSchema.ts')
+const importService = read('src/services/importService.ts')
+const patchService = read('src/services/patchService.ts')
+const app = read('src/app/App.tsx')
+const interop = read('src/features/interop/InteroperabilityModal.tsx')
+const styles = read('src/styles/index.css')
+const publicImport = read('public/schema/folio-import-v1.schema.json')
+const publicPatch = read('public/schema/folio-patch-v1.schema.json')
+
+check('D2 validator registered', pkg.scripts?.['validate:recurrence-v2'] === 'node scripts/validate-dates-recurrence-v2.mjs')
+check('release gate runs D2 validation', pkg.scripts?.['release:verify']?.includes('validate:recurrence-v2'))
+
+check('database schema v17', /DATABASE_SCHEMA_VERSION\s*=\s*17\b/.test(database) && database.includes('this.version(17)'))
+check('v16 to v17 migration registered', database.includes('migrateV16ToV17') && migration.includes("monthlyMode") && migration.includes("afterCompletionUnit"))
+check('migration preserves D1 template context', ['template.tags','template.checklist','template.sourceUrl','template.location','template.pinned'].every((token) => migration.includes(token)))
+
+check('recurrence model supports completion units', models.includes("CompletionIntervalUnit = 'day' | 'week' | 'month' | 'year'"))
+check('recurrence model supports monthly patterns', models.includes("MonthlyRecurrenceMode = 'days' | 'ordinal-weekday' | 'last-day'") && models.includes('RecurrenceOrdinal'))
+check('recurrence model supports selected month dates', models.includes('monthDays?: number[]') && models.includes('yearMonths?: number[]'))
+check('series template carries D1 context', ['tags: string[]','checklist: string[]','sourceUrl?: string','location?: string','pinned: boolean'].every((token) => models.includes(token)))
+check('occurrence exceptions can explicitly clear values', models.includes('projectId?: EntityId | null') && models.includes('plannedDate?: LocalDate | null'))
+
+check('runtime schema validates monthly modes', schemas.includes('monthlyRecurrenceModeSchema') && schemas.includes('ordinal-weekday') && schemas.includes('last-day'))
+check('runtime schema validates completion unit', schemas.includes('completionIntervalUnitSchema') && schemas.includes('afterCompletionUnit'))
+check('runtime schema validates rich recurring template', schemas.includes('checklist: z.array(z.string().trim().min(1).max(500))') && schemas.includes('pinned: z.boolean().default(false)'))
+
+check('timezone date-key helper exists', dates.includes('dateKeyInTimeZone') && dates.includes("timeZone,"))
+check('timezone wall-clock helper exists', dates.includes('atTimeInZone') && dates.includes('DST overlap') && dates.includes('spring-forward gap'))
+
+check('weekly interval uses calendar-week anchor', logic.includes('weekDiff') && logic.includes('startOfLocalWeek(from)') && logic.includes('weeks % interval === 0'))
+check('monthly multiple-date logic exists', logic.includes('configuredMonthDays') && logic.includes('clampedMonthDays'))
+check('monthly ordinal weekday logic exists', logic.includes('ordinalWeekdayDay') && logic.includes("mode === 'ordinal-weekday'"))
+check('monthly last-day logic exists', logic.includes("mode === 'last-day'"))
+check('yearly selected-month logic exists', logic.includes('yearMonths') && logic.includes('configuredMonths'))
+check('completion recurrence uses series timezone', logic.includes('dateKeyInTimeZone(completedAt, series.timezone)'))
+check('completion recurrence supports month/year units', logic.includes("unit === 'month'") && logic.includes("unit === 'year'"))
+check('recurrence preview exists', logic.includes('previewOccurrenceDates') && editor.includes('recurrence-preview__dates'))
+
+check('logic cases cover biweekly calendar anchoring', cases.includes('biweekly calendar anchor') && cases.includes('2026-08-31,2026-09-14'))
+check('logic cases cover month-end clamping', cases.includes('monthly clamp') && cases.includes('2026-02-28'))
+check('logic cases cover last weekday', cases.includes('last Friday'))
+check('logic cases cover completion month interval', cases.includes('after completion month clamp'))
+check('logic cases cover series timezone completion date', cases.includes('series timezone completion date'))
+
+check('editor exposes monthly pattern modes', editor.includes('Monthly pattern') && editor.includes('Nth / last weekday') && editor.includes('Last day of month'))
+check('editor exposes yearly month selector', editor.includes('month-selector') && editor.includes('yearMonths'))
+check('editor exposes completion interval unit', editor.includes('afterCompletionUnit') && editor.includes('Month(s)') && editor.includes('Year(s)'))
+check('editor explains calendar-week weekly anchoring', editor.includes('Monday-first calendar weeks'))
+
+check('one-off edits persist recurrence exceptions', service.includes('recordOccurrenceException') && app.includes('recurrenceService.recordOccurrenceException'))
+check('future series split moves exceptions', service.includes('earlierExceptions') && service.includes('futureExceptions'))
+check('future split pivot remains selected slot', service.includes('nextAllowed?.add(pivot.recurrenceDate)'))
+check('series materialization horizon uses series timezone', service.includes('seriesMaterializationThrough') && service.includes('dateKeyInTimeZone(new Date(), series.timezone)'))
+check('recurring blocks use series wall clock', service.includes('atTimeInZone(task.plannedDate, startMinute, series.timezone)') && graph.includes('atTimeInZone(date, startMinute, series.timezone)'))
+check('recurring blocks use elapsed duration', graph.includes('duration * 60_000') && !graph.includes('Math.min(1439'))
+
+check('recurring templates propagate tags/checklists', service.includes("changed.includes('tags')") && service.includes("changed.includes('checklist')"))
+check('recurring occurrence checklist receives fresh IDs', service.includes('freshChecklist') && graph.includes('freshChecklist'))
+
+check('backup schema preserves D2 recurrence fields', backupSchemas.includes('monthlyMode:') && backupSchemas.includes('afterCompletionUnit:') && backupSchemas.includes('backupRecurrenceExceptionSchema'))
+check('structured import schema supports D2 rules', importSchema.includes('monthlyMode:') && importSchema.includes('afterCompletionUnit:') && importSchema.includes('yearMonths:'))
+check('structured patch schema supports rich series templates', patchSchema.includes('tags: z.array') && patchSchema.includes('checklist: z.array') && patchSchema.includes('sourceUrl:'))
+check('import execution preserves recurring D1 context', importService.includes('tags: item.taskTemplate.tags') && importService.includes('dateKeyInTimeZone(new Date(), item.timezone)'))
+check('patch execution preserves recurring D1 context', patchService.includes('tags: value.taskTemplate.tags') && patchService.includes('freshChecklist(fields.checklist, now)'))
+check('patch reconciliation uses series timezone', patchService.includes('dateKeyInTimeZone(new Date(), series.timezone)'))
+
+check('public import schema advertises D2 fields', publicImport.includes('"monthlyMode"') && publicImport.includes('"afterCompletionUnit"') && publicImport.includes('"yearMonths"'))
+check('public patch schema advertises D2 fields', publicPatch.includes('"monthlyMode"') && publicPatch.includes('"afterCompletionUnit"') && publicPatch.includes('"checklist"'))
+
+check('public v17 backup schema exists', exists('public/schema/folio-backup-v17.schema.json'))
+check('interop advertises v8 through v17 restore', interop.includes('Schema v17 · complete planner state') && interop.includes('schema v8–v17'))
+check('D2 stylesheet loaded', styles.includes("@import './recurrence-v2.css';"))
+check('D2 design document exists', exists('docs/DATES_RECURRENCE_V2_D2.md'))
+
+const failures = checks.filter((item) => !item.ok)
+for (const item of checks) console.log(`${item.ok ? 'PASS' : 'FAIL'}  ${item.name}`)
+console.log(`\n${checks.length - failures.length}/${checks.length} D2 recurrence checks passed.`)
+if (failures.length) process.exit(1)
