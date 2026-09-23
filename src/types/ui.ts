@@ -8,10 +8,15 @@ export interface TaskPreview {
   description?: string
   project?: string
   projectId?: string
+  list?: string
+  listId?: string
+  section?: string
+  sectionId?: string
   parentTaskId?: string
   meta?: string
   durationMinutes?: number
   tags?: string[]
+  tagIds?: string[]
   checklist?: Array<{ id: string; text: string; completed: boolean; sortOrder: number; createdAt: string; updatedAt: string; completedAt?: string }>
   progressMode?: 'auto' | 'manual'
   progressPercent?: number
