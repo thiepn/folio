@@ -95,6 +95,10 @@ export const reminderRepository = {
     })
   },
 
+  async listAllOccurrences(): Promise<ReminderOccurrenceEntity[]> {
+    return (await db.reminderOccurrences.toArray()).sort((a, b) => a.fireAt.localeCompare(b.fireAt))
+  },
+
   async listOccurrencesForReminder(reminderId: string): Promise<ReminderOccurrenceEntity[]> {
     return (await db.reminderOccurrences.where('reminderId').equals(reminderId).toArray()).sort((a, b) => a.fireAt.localeCompare(b.fireAt))
   },
