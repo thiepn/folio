@@ -33,6 +33,44 @@ export type ReminderBlockEdge = 'start' | 'end'
 export type ReminderOccurrenceStatus = 'scheduled' | 'snoozed' | 'due' | 'dismissed' | 'cancelled'
 export type ListSortMode = 'manual' | 'planned' | 'deadline' | 'priority' | 'title' | 'created' | 'updated'
 export type ListGroupMode = 'section' | 'none' | 'planned' | 'priority' | 'tag'
+export type ContentOwnerType = 'task' | 'note'
+export type AttachmentKind = 'image' | 'audio' | 'file' | 'link'
+
+export interface NoteEntity {
+  id: EntityId
+  title: string
+  body: string
+  sourceTaskId?: EntityId
+  archived: boolean
+  archivedAt?: IsoDateTime
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface AttachmentEntity {
+  id: EntityId
+  ownerType: ContentOwnerType
+  ownerId: EntityId
+  kind: AttachmentKind
+  name: string
+  mimeType?: string
+  size: number
+  blob?: Blob
+  url?: string
+  width?: number
+  height?: number
+  durationSeconds?: number
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface SearchDocumentEntity {
+  id: string
+  ownerType: ContentOwnerType
+  ownerId: EntityId
+  text: string
+  updatedAt: IsoDateTime
+}
 
 export interface TaskChecklistItem {
   id: EntityId
