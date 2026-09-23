@@ -134,7 +134,7 @@ check('restore writes reminder tables', backup.includes('db.reminders.bulkPut') 
 check('database migration/health includes reminder tables', databaseService.includes("'reminders', 'reminderOccurrences'") && databaseService.includes('db.reminders.count()'))
 check('interop shows reminder backup counts', interop.includes('restorePreview.counts.reminders') && interop.includes('restorePreview.counts.reminderOccurrences'))
 check('public v18 backup schema exists', exists('public/schema/folio-backup-v18.schema.json'))
-check('interop retains v18 restore compatibility', interop.includes('Schema v19 · complete planner state') && interop.includes('schema v8–v19'))
+check('interop retains v18 restore compatibility', interop.includes('Schema v20 · complete planner state') && interop.includes('schema v8–v20'))
 
 check('platform reports notification fallback', platform.includes('System notifications are unavailable; Folio reminders will remain in-app only.'))
 check('D3 stylesheet loaded', styles.includes("@import './reminders-v2.css';"))
