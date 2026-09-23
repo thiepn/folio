@@ -95,7 +95,7 @@ export const organizationRepository = {
     const parsed=tagCreateSchema.parse(input), normalizedName=normalizeTagName(parsed.name)
     if(!normalizedName) throw new Error('Tag name is required.')
     const existing=await db.tags.where('normalizedName').equals(normalizedName).first()
-    if(existing) return existing
+    if(existing) throw new Error('A tag with that name already exists.')
     if(parsed.parentTagId && !(await db.tags.get(parsed.parentTagId))) throw new Error('Parent tag not found.')
     const stamp=now()
     const row:TagEntity={id:crypto.randomUUID(),name:parsed.name.trim().replace(/^#/,'').replace(/\s+/g,' '),normalizedName,parentTagId:parsed.parentTagId,color:parsed.color,favorite:parsed.favorite,archived:false,sortOrder:parsed.sortOrder??Date.now(),createdAt:stamp,updatedAt:stamp}
