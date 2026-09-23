@@ -51,6 +51,11 @@ export const timeBlockRepository = {
       description: parsed.description || undefined,
       location: parsed.location || undefined,
       kind: parsed.kind,
+      allDay: parsed.allDay,
+      timeZone: parsed.timeZone,
+      source: parsed.source,
+      sourceCalendar: parsed.sourceCalendar,
+      sourceUid: parsed.sourceUid,
       start: parsed.start,
       end: parsed.end,
       createdAt: now,
@@ -65,7 +70,7 @@ export const timeBlockRepository = {
     const current = await db.timeBlocks.get(id)
     if (!current) throw new Error('Time block not found.')
     const next = { ...current, ...parsed, updatedAt: new Date().toISOString() }
-    timeBlockCreateSchema.parse({ taskId: next.taskId, title: next.title, description: next.description, location: next.location, kind: next.kind, start: next.start, end: next.end })
+    timeBlockCreateSchema.parse({ taskId: next.taskId, title: next.title, description: next.description, location: next.location, kind: next.kind, allDay: next.allDay, timeZone: next.timeZone, source: next.source, sourceCalendar: next.sourceCalendar, sourceUid: next.sourceUid, start: next.start, end: next.end })
     await db.timeBlocks.put(next)
     return next
   },
