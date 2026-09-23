@@ -77,15 +77,29 @@ export const organizationService = {
     const affected = (await db.tasks.where('sectionId').equals(id).toArray()).filter((task) => !task.deletedAt)
     const beforeTasks = affected.map((task) => ({ ...task }))
     const beforeSection = { ...section }
-    await db.transaction('rw', db.sections, db.tasks, async () => {
+    const seriesSnapshots = (await db.recurringSeries.toArray()).filter((series) =>
+      series.taskTemplate.sectionId === id || Object.values(series.exceptions ?? {}).some((exception) => exception.sectionId === id)
+    ).map((series) => structuredClone(series))
+    await db.transaction('rw', db.sections, db.tasks, db.recurringSeries, async () => {
       await db.sections.update(id, { archived, updatedAt: now() })
-      if (archived) for (const task of affected) await db.tasks.update(task.id, { sectionId: undefined, updatedAt: now() })
+      if (archived) {
+        for (const task of affected) await db.tasks.update(task.id, { sectionId: undefined, updatedAt: now() })
+        for (const series of seriesSnapshots) {
+          if (series.taskTemplate.sectionId === id) series.taskTemplate.sectionId = undefined
+          for (const [date, exception] of Object.entries(series.exceptions ?? {})) {
+            if (exception.sectionId === id) series.exceptions[date] = { ...exception, sectionId: null }
+          }
+          series.updatedAt = now()
+          await db.recurringSeries.put(series)
+        }
+      }
     })
     return {
       message: archived ? 'Section archived' : 'Section restored',
       undo: async () => {
         await db.sections.put(beforeSection)
         if (beforeTasks.length) await db.tasks.bulkPut(beforeTasks)
+        if (seriesSnapshots.length) await db.recurringSeries.bulkPut(seriesSnapshots)
       },
     }
   },
