@@ -186,7 +186,23 @@ function upsertSeriesOccurrence(workspace: Workspace, touch: (type: SnapshotType
   }
   let task = existing
   if (!task) {
-    task = makeTaskEntity({ title: fields.title, description: fields.description, projectId: fields.projectId, priority: fields.priority, status: 'todo', plannedDate: fields.plannedDate, deadline: fields.deadline, estimatedMinutes: fields.estimatedMinutes, seriesId: series.id, recurrenceDate: date }, crypto.randomUUID(), now, Date.now())
+    task = makeTaskEntity({
+      title: fields.title,
+      description: fields.description,
+      projectId: fields.projectId,
+      priority: fields.priority,
+      status: 'todo',
+      plannedDate: fields.plannedDate,
+      deadline: fields.deadline,
+      estimatedMinutes: fields.estimatedMinutes,
+      tags: fields.tags,
+      checklist: freshChecklist(fields.checklist, now),
+      sourceUrl: fields.sourceUrl,
+      location: fields.location,
+      pinned: fields.pinned,
+      seriesId: series.id,
+      recurrenceDate: date,
+    }, crypto.randomUUID(), now, Date.now())
     touch('task', task.id)
     workspace.tasks.set(task.id, task)
   } else if (task.status !== 'completed') {
@@ -194,14 +210,37 @@ function upsertSeriesOccurrence(workspace: Workspace, touch: (type: SnapshotType
     markPlanDraft(workspace, touch, task.plannedDate, now)
     markPlanDraft(workspace, touch, fields.plannedDate, now)
     moveDailyPlanItem(workspace, touch, task.id, task.plannedDate, fields.plannedDate, now)
-    task = { ...task, title: fields.title, description: fields.description, projectId: fields.projectId, priority: fields.priority, estimatedMinutes: fields.estimatedMinutes, plannedDate: fields.plannedDate, deadline: fields.deadline, status: 'todo', updatedAt: now }
+    task = {
+      ...task,
+      title: fields.title,
+      description: fields.description,
+      projectId: fields.projectId,
+      priority: fields.priority,
+      estimatedMinutes: fields.estimatedMinutes,
+      tags: fields.tags,
+      checklist: freshChecklist(fields.checklist, now),
+      sourceUrl: fields.sourceUrl,
+      location: fields.location,
+      pinned: fields.pinned,
+      plannedDate: fields.plannedDate,
+      deadline: fields.deadline,
+      status: 'todo',
+      updatedAt: now,
+    }
     workspace.tasks.set(task.id, task)
   }
   if (task.status === 'completed') return
   const taskBlocks = [...workspace.timeBlocks.values()].filter((block) => block.taskId === task!.id)
   for (const block of taskBlocks) { touch('timeBlock', block.id); workspace.timeBlocks.delete(block.id) }
-  if (fields.startMinute !== undefined && fields.blockDurationMinutes) {
-    const block = makeTimeBlockEntity({ taskId: task.id, title: task.title, kind: 'task', start: isoAtMinute(fields.plannedDate, fields.startMinute), end: isoAtMinute(fields.plannedDate, fields.startMinute + fields.blockDurationMinutes) }, crypto.randomUUID(), now)
+  if (fields.startMinute !== undefined && fields.blockDurationMinutes && fields.plannedDate) {
+    const start = atTimeInZone(fields.plannedDate, fields.startMinute, series.timezone)
+    const block = makeTimeBlockEntity({
+      taskId: task.id,
+      title: task.title,
+      kind: 'task',
+      start,
+      end: new Date(new Date(start).getTime() + fields.blockDurationMinutes * 60_000).toISOString(),
+    }, crypto.randomUUID(), now)
     touch('timeBlock', block.id)
     workspace.timeBlocks.set(block.id, block)
   }
@@ -209,7 +248,7 @@ function upsertSeriesOccurrence(workspace: Workspace, touch: (type: SnapshotType
 }
 
 function reconcileSeries(workspace: Workspace, touch: (type: SnapshotType, id: string) => void, series: RecurringSeriesEntity, structural: boolean, now: string) {
-  const today = localDateKey()
+  const today = dateKeyInTimeZone(new Date(), series.timezone)
   const occurrences = [...workspace.tasks.values()].filter((task) => task.seriesId === series.id)
   if (series.status !== 'active') {
     for (const task of occurrences) if (task.status !== 'completed' && (task.recurrenceDate ?? '') >= today) {
@@ -228,7 +267,7 @@ function reconcileSeries(workspace: Workspace, touch: (type: SnapshotType, id: s
     return
   }
 
-  const through = series.materializedThrough ?? defaultMaterializationThrough()
+  const through = series.materializedThrough ?? defaultMaterializationThrough(today)
   const dates = calendarOccurrenceDates({ ...series, status: 'active' }, through)
   const allowed = new Set(dates)
   for (const task of occurrences) {
