@@ -109,6 +109,7 @@ function AppContent() {
   const [addOpen, setAddOpen] = useState(false)
   const [addDefaultStatus, setAddDefaultStatus] = useState<'todo' | 'inbox'>('todo')
   const [addDefaultProjectId, setAddDefaultProjectId] = useState('')
+  const [addDefaultListId, setAddDefaultListId] = useState('')
   const [addDefaultPlannedDate, setAddDefaultPlannedDate] = useState<string | undefined>(undefined)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [selectedListId, setSelectedListId] = useState<string | null>(null)
@@ -349,9 +350,10 @@ function AppContent() {
     }
   }, [view, selectedProjectId, shortcuts, paletteOpen, shortcutHelpOpen, keyboardSettingsOpen, selection])
 
-  const openAdd = useCallback((status: 'todo' | 'inbox' = 'todo', projectId = '', plannedDate?: string) => {
+  const openAdd = useCallback((status: 'todo' | 'inbox' = 'todo', projectId = '', plannedDate?: string, listId = '') => {
     setAddDefaultStatus(status)
     setAddDefaultProjectId(projectId)
+    setAddDefaultListId(status === 'inbox' ? '' : listId)
     setAddDefaultPlannedDate(status === 'inbox' ? undefined : plannedDate)
     setAddOpen(true)
   }, [])
@@ -919,8 +921,10 @@ function AppContent() {
       <QuickAddModal
         open={addOpen}
         projects={data.projects}
+        lists={data.lists}
         defaultStatus={addDefaultStatus}
         defaultProjectId={addDefaultProjectId}
+        defaultListId={addDefaultListId}
         defaultPlannedDate={addDefaultPlannedDate ?? data.today}
         onClose={() => setAddOpen(false)}
         onImport={() => { setAddOpen(false); setImportOpen(true) }}
