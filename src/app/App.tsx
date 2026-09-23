@@ -377,9 +377,16 @@ function AppContent() {
   }
 
   async function saveTask(id: string, changes: TaskUpdateInput, scope: 'this' | 'future' | 'entire' = 'this') {
-    const before = data?.allTasks.find((task) => task.id === id)
-    if (scope === 'this' || !before?.seriesId) {
+    const before = data?.allTasks.find((task) => task.id === id) ?? data?.subtasks.find((task) => task.id === id)
+    if (!before?.seriesId) {
       registerUndo(await taskChangeMutation(id, changes))
+      return
+    }
+
+    if (scope === 'this') {
+      const taskUndo = await taskChangeMutation(id, changes)
+      const exceptionUndo = await recurrenceService.recordOccurrenceException(id, changes)
+      registerUndo(combineUndo('Occurrence updated', [taskUndo, exceptionUndo]))
       return
     }
 
@@ -389,6 +396,11 @@ function AppContent() {
     if (Object.prototype.hasOwnProperty.call(changes, 'projectId')) template.projectId = changes.projectId === null ? undefined : changes.projectId
     if (Object.prototype.hasOwnProperty.call(changes, 'priority')) template.priority = changes.priority
     if (Object.prototype.hasOwnProperty.call(changes, 'estimatedMinutes')) template.estimatedMinutes = changes.estimatedMinutes === null ? undefined : changes.estimatedMinutes
+    if (Object.prototype.hasOwnProperty.call(changes, 'tags')) template.tags = changes.tags
+    if (Object.prototype.hasOwnProperty.call(changes, 'checklist')) template.checklist = changes.checklist?.map((item) => item.text)
+    if (Object.prototype.hasOwnProperty.call(changes, 'sourceUrl')) template.sourceUrl = changes.sourceUrl === null ? undefined : changes.sourceUrl
+    if (Object.prototype.hasOwnProperty.call(changes, 'location')) template.location = changes.location === null ? undefined : changes.location
+    if (Object.prototype.hasOwnProperty.call(changes, 'pinned')) template.pinned = changes.pinned
 
     const seriesUndo = scope === 'future'
       ? await recurrenceService.updateFuture(id, { taskTemplate: template })
@@ -997,7 +1009,19 @@ function combineUndo(message: string, actions: UndoableMutation[]): UndoableMuta
 }
 
 function recurrenceRule(value: RecurrenceEditorValue) {
-  return { frequency: value.frequency, interval: value.interval, weekdays: value.weekdays, until: value.until, count: value.count }
+  return {
+    frequency: value.frequency,
+    interval: value.interval,
+    weekdays: value.weekdays,
+    monthlyMode: value.monthlyMode,
+    monthDays: value.monthDays,
+    ordinal: value.ordinal,
+    weekday: value.weekday,
+    yearMonths: value.yearMonths,
+    afterCompletionUnit: value.afterCompletionUnit,
+    until: value.until,
+    count: value.count,
+  }
 }
 
 function localDayDifference(from: string, to: string) {
