@@ -59,7 +59,10 @@ export const organizationRepository = {
 
   async createList(input: ListCreateInput): Promise<ListEntity> {
     const parsed=listCreateSchema.parse(input)
-    if(parsed.folderId && !(await db.folders.get(parsed.folderId))) throw new Error('Folder not found.')
+    if (parsed.folderId) {
+      const folder = await db.folders.get(parsed.folderId)
+      if (!folder || folder.archived) throw new Error('Folder not found.')
+    }
     const stamp=now()
     const row:ListEntity={id:crypto.randomUUID(),name:parsed.name,description:parsed.description,folderId:parsed.folderId,color:parsed.color,icon:parsed.icon,favorite:parsed.favorite,archived:false,sortOrder:parsed.sortOrder??Date.now(),sortMode:parsed.sortMode,groupMode:parsed.groupMode,showCompleted:parsed.showCompleted,createdAt:stamp,updatedAt:stamp}
     await db.lists.add(row); return row
@@ -68,14 +71,18 @@ export const organizationRepository = {
     const current=await db.lists.get(id); if(!current) throw new Error('List not found.')
     const parsed=listUpdateSchema.parse(input)
     const folderId=parsed.folderId===null?undefined:(parsed.folderId??current.folderId)
-    if(folderId && !(await db.folders.get(folderId))) throw new Error('Folder not found.')
+    if (folderId) {
+      const folder = await db.folders.get(folderId)
+      if (!folder || folder.archived) throw new Error('Folder not found.')
+    }
     const next:ListEntity={...current,...parsed,folderId,archivedAt:parsed.archived===true&&!current.archived?now():parsed.archived===false?undefined:current.archivedAt,updatedAt:now()}
     await db.lists.put(next); return next
   },
 
   async createSection(input:SectionCreateInput): Promise<SectionEntity> {
     const parsed=sectionCreateSchema.parse(input)
-    if(!(await db.lists.get(parsed.listId))) throw new Error('List not found.')
+    const list = await db.lists.get(parsed.listId)
+    if (!list || list.archived) throw new Error('List not found.')
     const stamp=now()
     const row:SectionEntity={id:crypto.randomUUID(),listId:parsed.listId,name:parsed.name,sortOrder:parsed.sortOrder??Date.now(),archived:false,createdAt:stamp,updatedAt:stamp}
     await db.sections.add(row); return row
