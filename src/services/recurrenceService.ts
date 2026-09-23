@@ -181,7 +181,7 @@ export const recurrenceService = {
     if (!task) throw new Error('Task not found.')
     if (task.seriesId) throw new Error('Task already belongs to a recurring series.')
     const previous = { ...task }
-    const startDate = input.startDate ?? task.plannedDate ?? localDateKey()
+    const startDate = input.startDate ?? task.plannedDate ?? dateKeyInTimeZone(new Date(), input.timezone ?? 'local')
     const created = await recurrenceRepository.create({
       title: task.title,
       timezone: input.timezone,
