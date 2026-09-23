@@ -716,6 +716,28 @@ function AppContent() {
         run: () => { navigate('projects'); setSelectedProjectId(project.id) },
       })
     }
+    for (const targetList of data?.lists ?? []) {
+      list.push({
+        id: `search-list-${targetList.id}`,
+        group: 'List',
+        label: targetList.name,
+        note: `${data?.listCounts[targetList.id] ?? 0} open tasks`,
+        keywords: `${targetList.description} folder organize list`,
+        searchOnly: true,
+        run: () => { navigate('lists'); setSelectedListId(targetList.id) },
+      })
+    }
+    for (const tag of data?.tags ?? []) {
+      list.push({
+        id: `search-tag-${tag.id}`,
+        group: 'Tag',
+        label: '#' + tag.name,
+        note: `${data?.tagCounts[tag.id] ?? 0} open tasks`,
+        keywords: `${tag.name} tag label taxonomy`,
+        searchOnly: true,
+        run: () => { navigate('lists'); setSelectedListId('__tag__:' + tag.id) },
+      })
+    }
     for (const habit of habitData?.habits ?? []) {
       list.push({
         id: `search-habit-${habit.id}`,
@@ -748,14 +770,20 @@ function AppContent() {
       for (const targetList of data?.lists ?? []) list.push({ id: `bulk-list-${targetList.id}`, group: `Selected · ${selected} · List`, label: `Move selected to ${targetList.name}`, run: () => updateSelected({ listId: targetList.id, sectionId: null }, `${selected} tasks moved to ${targetList.name}`) })
     }
     return list
-  }, [selection.selectedIds, shortcuts, view, selectedProjectId, selectedListId, data?.today, data?.projects, data?.lists, data?.allTasks, focusData?.activeSession, habitData?.habits])
+  }, [selection.selectedIds, shortcuts, view, selectedProjectId, selectedListId, data?.today, data?.projects, data?.lists, data?.tags, data?.listCounts, data?.tagCounts, data?.allTasks, focusData?.activeSession, habitData?.habits])
 
   if (!data || !habitData) return <BootState />
 
   const topbarTitle = view === 'projects' && selectedProjectId
     ? selectedProjectId === '__unassigned__' ? 'No project' : selectedProject?.name ?? 'Projects'
     : view === 'lists' && selectedListId
-      ? data.lists.find((list) => list.id === selectedListId)?.name ?? (selectedListId === '__all__' ? 'All tasks' : selectedListId === '__unlisted__' ? 'No list' : selectedListId === '__high__' ? 'High priority' : selectedListId === '__unscheduled__' ? 'Unscheduled' : 'Lists')
+      ? data.lists.find((list) => list.id === selectedListId)?.name
+        ?? (selectedListId.startsWith('__tag__:') ? '#' + (data.tags.find((tag) => tag.id === selectedListId.slice('__tag__:'.length))?.name ?? 'Tag')
+          : selectedListId === '__all__' ? 'All tasks'
+            : selectedListId === '__unlisted__' ? 'No list'
+              : selectedListId === '__high__' ? 'High priority'
+                : selectedListId === '__unscheduled__' ? 'Unscheduled'
+                  : 'Lists')
       : viewAnnouncement
   const topbarMeta = view === 'today'
     ? new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date())
