@@ -115,8 +115,11 @@ export const organizationRepository = {
   },
   async resolveTagNames(names:string[]): Promise<TagEntity[]> {
     const result:TagEntity[]=[]
-    for(const raw of [...new Set(names.map((value)=>value.trim()).filter(Boolean))].slice(0,50)) {
+    const seen=new Set<string>()
+    for(const raw of names.map((value)=>value.trim()).filter(Boolean)) {
       const normalized=normalizeTagName(raw)
+      if(!normalized || seen.has(normalized) || seen.size>=50) continue
+      seen.add(normalized)
       let tag=await db.tags.where('normalizedName').equals(normalized).first()
       if(!tag) tag=await this.createTag({name:raw})
       result.push(tag)
