@@ -26,6 +26,11 @@ export type RecurringSeriesStatus = 'active' | 'paused' | 'archived'
 export type ReviewKind = 'daily' | 'weekly' | 'monthly'
 export type TaskProgressMode = 'auto' | 'manual'
 export type TaskActivityKind = 'created' | 'updated' | 'completed' | 'reopened' | 'subtask' | 'comment' | 'restored' | 'duplicated'
+export type ReminderOwnerType = 'task' | 'series' | 'habit' | 'system'
+export type ReminderTriggerType = 'absolute' | 'task-date' | 'time-block' | 'habit-time' | 'daily'
+export type ReminderTaskDateField = 'plannedDate' | 'deadline'
+export type ReminderBlockEdge = 'start' | 'end'
+export type ReminderOccurrenceStatus = 'scheduled' | 'snoozed' | 'due' | 'dismissed' | 'cancelled'
 
 export interface TaskChecklistItem {
   id: EntityId
@@ -250,6 +255,46 @@ export interface RecurringSeriesEntity {
   }
   exceptions: Record<LocalDate, RecurrenceException>
   materializedThrough?: LocalDate
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface ReminderEntity {
+  id: EntityId
+  ownerType: ReminderOwnerType
+  ownerId: string
+  label?: string
+  triggerType: ReminderTriggerType
+  absoluteAt?: IsoDateTime
+  taskDateField?: ReminderTaskDateField
+  dayOffset?: number
+  minuteOfDay?: number
+  blockEdge?: ReminderBlockEdge
+  offsetMinutes?: number
+  weekdays?: number[]
+  timeZone: string
+  persistent: boolean
+  enabled: boolean
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface ReminderOccurrenceEntity {
+  id: EntityId
+  reminderId: EntityId
+  ownerType: ReminderOwnerType
+  ownerId: string
+  targetTaskId?: EntityId
+  sourceKey: string
+  scheduledFor: IsoDateTime
+  fireAt: IsoDateTime
+  status: ReminderOccurrenceStatus
+  snoozedUntil?: IsoDateTime
+  deliveredAt?: IsoDateTime
+  dismissedAt?: IsoDateTime
+  deliveryCount: number
+  titleSnapshot: string
+  bodySnapshot?: string
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
 }
