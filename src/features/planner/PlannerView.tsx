@@ -4,7 +4,7 @@ import { Tabs } from '../../components/ui/Tabs'
 import { addLocalDays, addLocalMonths, startOfLocalMonth, startOfLocalWeek } from '../../domain/date'
 import type { LocalDate } from '../../domain/models'
 import { usePlannerData } from '../../hooks/usePlannerData'
-import { CalendarView } from './CalendarView'
+import { CalendarV2View } from './CalendarV2View'
 import { AdvancedPlanningView } from './AdvancedPlanningView'
 import { AgendaPlanner, DayPlanner, MonthPlanner, WeekPlannerV14 } from './PlannerOverhaulViews'
 
@@ -17,15 +17,16 @@ interface PlannerViewProps {
   onMoveDate: (id: string, date?: LocalDate) => void
   onSetCapacity: (date: LocalDate, minutes?: number) => void
   onAddForDate?: (date: LocalDate) => void
-  onCreateTaskBlock: (taskId: string, date: LocalDate, startMinute: number, durationMinutes: number) => void | Promise<void>
-  onCreateEvent: (title: string, date: LocalDate, startMinute: number, durationMinutes: number, details?: { description?: string; location?: string }) => void | Promise<void>
-  onUpdateBlock: (id: string, date: LocalDate, startMinute: number, durationMinutes: number) => void | Promise<void>
-  onUpdateEvent: (id: string, title: string, date: LocalDate, startMinute: number, durationMinutes: number, details?: { description?: string; location?: string }) => void | Promise<void>
+  onCreateTaskBlock: (taskId: string, date: LocalDate, startMinute: number, durationMinutes: number, timeZone?: string) => void | Promise<void>
+  onCreateEvent: (title: string, date: LocalDate, startMinute: number, durationMinutes: number, details?: { description?: string; location?: string; allDay?: boolean; endDateExclusive?: LocalDate; timeZone?: string }) => void | Promise<void>
+  onUpdateBlock: (id: string, date: LocalDate, startMinute: number, durationMinutes: number, timeZone?: string) => void | Promise<void>
+  onUpdateEvent: (id: string, title: string, date: LocalDate, startMinute: number, durationMinutes: number, details?: { description?: string; location?: string; allDay?: boolean; endDateExclusive?: LocalDate; timeZone?: string }) => void | Promise<void>
   onResizeBlock: (id: string, durationMinutes: number) => void | Promise<void>
   onDeleteBlock: (id: string) => void | Promise<void>
+  onDuplicateBlock: (id: string, date?: LocalDate, startMinute?: number, timeZone?: string) => void | Promise<void>
 }
 
-export function PlannerView({ today, onToggle, onOpen, onMoveDate, onSetCapacity, onAddForDate, onCreateTaskBlock, onCreateEvent, onUpdateBlock, onUpdateEvent, onResizeBlock, onDeleteBlock }: PlannerViewProps) {
+export function PlannerView({ today, onToggle, onOpen, onMoveDate, onSetCapacity, onAddForDate, onCreateTaskBlock, onCreateEvent, onUpdateBlock, onUpdateEvent, onResizeBlock, onDeleteBlock, onDuplicateBlock }: PlannerViewProps) {
   const [tab, setTab] = useState<PlannerTab>('agenda')
   const [selectedDate, setSelectedDate] = useState<LocalDate>(today)
   const [weekStart, setWeekStart] = useState(() => startOfLocalWeek(today))
@@ -125,7 +126,7 @@ export function PlannerView({ today, onToggle, onOpen, onMoveDate, onSetCapacity
       onMoveDate={onMoveDate}
     /> : null}
 
-    {tab === 'calendar' ? <CalendarView
+    {tab === 'calendar' ? <CalendarV2View
       today={today}
       anchorDate={selectedDate}
       onSelectedDateChange={setSelectedDate}
@@ -136,6 +137,7 @@ export function PlannerView({ today, onToggle, onOpen, onMoveDate, onSetCapacity
       onUpdateEvent={onUpdateEvent}
       onResizeBlock={onResizeBlock}
       onDeleteBlock={onDeleteBlock}
+      onDuplicateBlock={onDuplicateBlock}
     /> : null}
 
     {tab === 'advanced' ? <AdvancedPlanningView today={today} onOpenTask={onOpen} /> : null}

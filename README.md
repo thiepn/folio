@@ -142,6 +142,14 @@ D6 is a derived-query layer over existing task data, so IndexedDB remains schema
 
 See `docs/SMART_VIEWS_V2_D6.md`.
 
+## D7 — Calendar V2
+
+Calendar is now a full scheduling workspace with Agenda, Day, 3 Day, Week, 4 Week, Month and Year views; mini-calendar navigation; D6 Smart View task sources; 24-hour timezone-aware scheduling; all-day lanes; cross-midnight items; side-by-side overlap layout; drag/move/Alt-copy/resize interactions; live current-time tracking; and local ICS provenance.
+
+All-day and calendar-source metadata live as optional TimeBlock fields, so IndexedDB remains schema v19. Structured Import/Patch and local ICS import/export understand all-day/timezone-aware events, while continuous provider synchronization remains a later integrations phase.
+
+See `docs/CALENDAR_V2_D7.md`.
+
 ## Data and privacy
 
 Planner data is local-first in IndexedDB. The current database schema is **v19**. Full backups export schema v19, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, folders/lists/sections/tags, and durable review records; direct restore supports compatible backups from **v8 through v19**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.

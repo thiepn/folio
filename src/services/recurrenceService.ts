@@ -74,6 +74,7 @@ async function createOccurrence(series: RecurringSeriesEntity, recurrenceDate: L
       taskId: task.id,
       title: task.title,
       kind: 'task',
+      timeZone: series.timezone,
       start,
       end: new Date(new Date(start).getTime() + duration * 60_000).toISOString(),
     })
@@ -148,10 +149,10 @@ async function applyTemplateChanges(task: TaskEntity, series: RecurringSeriesEnt
       const start = atTimeInZone(task.plannedDate, startMinute, series.timezone)
       const end = new Date(new Date(start).getTime() + duration * 60_000).toISOString()
       if (blocks[0]) {
-        await timeBlockRepository.update(blocks[0].id, { title: fields.title, start, end })
+        await timeBlockRepository.update(blocks[0].id, { title: fields.title, timeZone: series.timezone, start, end })
         for (const extra of blocks.slice(1)) await timeBlockRepository.remove(extra.id)
       } else {
-        await timeBlockRepository.create({ taskId: task.id, title: fields.title, kind: 'task', start, end })
+        await timeBlockRepository.create({ taskId: task.id, title: fields.title, kind: 'task', timeZone: series.timezone, start, end })
       }
     }
   }

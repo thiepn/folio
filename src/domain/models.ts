@@ -232,6 +232,11 @@ export interface TimeBlockEntity {
   description?: string
   location?: string
   kind: TimeBlockKind
+  allDay?: boolean
+  timeZone?: string
+  source?: 'folio' | 'ics'
+  sourceCalendar?: string
+  sourceUid?: string
   start: IsoDateTime
   end: IsoDateTime
   createdAt: IsoDateTime

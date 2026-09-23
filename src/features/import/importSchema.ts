@@ -76,10 +76,18 @@ export const importTimeBlockSchema = z.object({
   kind: z.enum(['task', 'event']),
   taskRef: ref.optional(),
   title: z.string().trim().max(300).optional(),
+  description: z.string().trim().max(4000).optional(),
+  location: z.string().trim().max(500).optional(),
   date: localDate,
   startMinute: z.number().int().min(0).max(1439),
   durationMinutes: z.number().int().min(15).max(1440),
-}).strict()
+  allDay: z.boolean().default(false),
+  endDateExclusive: localDate.optional(),
+  timeZone: z.string().trim().min(1).max(100).optional(),
+}).strict().superRefine((value, ctx) => {
+  if (value.allDay && value.kind !== 'event') ctx.addIssue({ code: 'custom', message: 'All-day blocks must be standalone calendar events.', path: ['allDay'] })
+  if (value.allDay && value.endDateExclusive && value.endDateExclusive <= value.date) ctx.addIssue({ code: 'custom', message: 'All-day end date must be after the start date.', path: ['endDateExclusive'] })
+})
 
 export const importSeriesSchema = z.object({
   ref,

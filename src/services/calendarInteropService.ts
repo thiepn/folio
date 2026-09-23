@@ -1,5 +1,5 @@
 import { db } from '../db/database'
-import { localDateKey } from '../domain/date'
+import { dateKeyInTimeZone, localDateKey } from '../domain/date'
 import type { CalendarImportBatchEntity, CalendarImportEventRef, LocalDate, TimeBlockEntity } from '../domain/models'
 import { parseIcs, escapeIcsText, foldIcsLine, utcIcsDate, type ParsedIcsEvent } from '../features/interop/icsLogic'
 import { timeBlockRepository } from '../repositories/timeBlockRepository'
@@ -33,7 +33,7 @@ export interface CalendarExportOptions {
 }
 
 function sameImportedEvent(current: TimeBlockEntity, original: TimeBlockEntity) {
-  return current.id === original.id && current.kind === original.kind && current.taskId === original.taskId && current.title === original.title && current.description === original.description && current.location === original.location && current.start === original.start && current.end === original.end && current.createdAt === original.createdAt && current.updatedAt === original.updatedAt
+  return current.id === original.id && current.kind === original.kind && current.taskId === original.taskId && current.title === original.title && current.description === original.description && current.location === original.location && current.allDay === original.allDay && current.timeZone === original.timeZone && current.source === original.source && current.sourceCalendar === original.sourceCalendar && current.sourceUid === original.sourceUid && current.start === original.start && current.end === original.end && current.createdAt === original.createdAt && current.updatedAt === original.updatedAt
 }
 
 async function duplicateState() {
@@ -61,7 +61,7 @@ export async function previewCalendarImport(text: string, source: CalendarImport
   const events = parsed.events.map((event) => {
     const duplicateReason = findDuplicate(event, state)
     const startMs = new Date(event.start).getTime(); const endMs = new Date(event.end).getTime()
-    const conflictTitles = state.blocks.filter((block) => new Date(block.start).getTime() < endMs && new Date(block.end).getTime() > startMs && !(block.kind === 'event' && block.title.trim().toLowerCase() === event.summary.trim().toLowerCase() && block.start === event.start && block.end === event.end)).map((block) => block.title).slice(0, 4)
+    const conflictTitles = event.allDay ? [] : state.blocks.filter((block) => !block.allDay && new Date(block.start).getTime() < endMs && new Date(block.end).getTime() > startMs && !(block.kind === 'event' && block.title.trim().toLowerCase() === event.summary.trim().toLowerCase() && block.start === event.start && block.end === event.end)).map((block) => block.title).slice(0, 4)
     return { ...event, duplicate: Boolean(duplicateReason), duplicateReason, conflictTitles }
   })
   for (let i = 0; i < events.length; i++) {
@@ -69,7 +69,7 @@ export async function previewCalendarImport(text: string, source: CalendarImport
     const startMs = Date.parse(events[i].start); const endMs = Date.parse(events[i].end)
     for (let j = 0; j < events.length; j++) {
       if (i === j || events[j].duplicate) continue
-      if (Date.parse(events[j].start) < endMs && Date.parse(events[j].end) > startMs) {
+      if (!events[i].allDay && !events[j].allDay && Date.parse(events[j].start) < endMs && Date.parse(events[j].end) > startMs) {
         const label = `Import: ${events[j].summary}`
         if (!events[i].conflictTitles.includes(label) && events[i].conflictTitles.length < 4) events[i].conflictTitles.push(label)
       }
@@ -89,7 +89,7 @@ export async function previewCalendarImport(text: string, source: CalendarImport
 
 export async function applyCalendarImport(preview: CalendarImportPreview): Promise<UndoableMutation> {
   const importable = preview.events.filter((event) => !event.duplicate)
-  if (!importable.length) throw new Error('There are no new timed events to import.')
+  if (!importable.length) throw new Error('There are no new calendar events to import.')
   const now = new Date().toISOString()
   const batchId = crypto.randomUUID()
   const created: CalendarImportEventRef[] = []
@@ -106,6 +106,11 @@ export async function applyCalendarImport(preview: CalendarImportPreview): Promi
         description: event.description?.trim() || undefined,
         location: event.location?.trim() || undefined,
         kind: 'event',
+        allDay: Boolean(event.allDay),
+        timeZone: event.timezone ?? (event.allDay ? 'local' : undefined),
+        source: 'ics',
+        sourceCalendar: preview.calendarName,
+        sourceUid: event.sourceKey ?? event.uid,
         start: event.start,
         end: event.end,
         createdAt: now,
@@ -193,12 +198,22 @@ export async function exportCalendarIcs(options: CalendarExportOptions): Promise
     lines.push('BEGIN:VEVENT')
     lines.push(`UID:timeblock-${block.id}@folio.local`)
     lines.push(`DTSTAMP:${stamp}`)
-    lines.push(`DTSTART:${utcIcsDate(block.start)}`)
-    lines.push(`DTEND:${utcIcsDate(block.end)}`)
+    if (block.allDay) {
+      const zone = block.timeZone ?? 'local'
+      const startDate = dateKeyInTimeZone(block.start, zone).replaceAll('-', '')
+      const endDate = dateKeyInTimeZone(block.end, zone).replaceAll('-', '')
+      lines.push(`DTSTART;VALUE=DATE:${startDate}`)
+      lines.push(`DTEND;VALUE=DATE:${endDate}`)
+    } else {
+      lines.push(`DTSTART:${utcIcsDate(block.start)}`)
+      lines.push(`DTEND:${utcIcsDate(block.end)}`)
+    }
     lines.push(`SUMMARY:${escapeIcsText(block.title)}`)
     if (descriptionParts.length) lines.push(`DESCRIPTION:${escapeIcsText(descriptionParts.join('\n'))}`)
     if (block.location) lines.push(`LOCATION:${escapeIcsText(block.location)}`)
     lines.push(`X-FOLIO-KIND:${block.kind.toUpperCase()}`)
+    if (block.allDay) lines.push('X-FOLIO-ALL-DAY:TRUE')
+    if (block.sourceCalendar) lines.push(`X-FOLIO-SOURCE-CALENDAR:${escapeIcsText(block.sourceCalendar)}`)
     lines.push(`X-FOLIO-TIMEBLOCK-ID:${block.id}`)
     if (task) lines.push(`X-FOLIO-TASK-ID:${task.id}`)
     if (project) lines.push(`X-FOLIO-PROJECT-ID:${project.id}`)
@@ -209,5 +224,6 @@ export async function exportCalendarIcs(options: CalendarExportOptions): Promise
 }
 
 export function calendarImportDay(event: ParsedIcsEvent) {
-  return localDateKey(new Date(event.start))
+  if (event.allDay && event.startDate) return event.startDate
+  return dateKeyInTimeZone(event.start, event.timezone ?? 'local')
 }
