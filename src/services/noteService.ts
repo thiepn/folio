@@ -21,6 +21,7 @@ export const noteService = {
     if (!note) throw new Error('Note not found.')
     const task = await taskRepository.create({ title: note.title, description: note.body, status: 'inbox', tags: [], tagIds: [] })
     await attachmentService.cloneOwner('note', note.id, 'task', task.id)
+    if (!note.sourceTaskId) await noteRepository.update(note.id, { sourceTaskId: task.id })
     return task
   },
 
