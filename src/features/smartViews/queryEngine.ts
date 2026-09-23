@@ -363,13 +363,21 @@ export function matchesSmartNode(task: TaskEntity, node: SmartFilterNode, contex
 
 const priorityRank: Record<TaskPriority,number> = { critical:0, high:1, normal:2 }
 
+function compareOptional<T>(a:T|undefined,b:T|undefined,compare:(left:T,right:T)=>number,direction:'asc'|'desc'){
+  if(a===undefined&&b===undefined)return 0
+  if(a===undefined)return 1
+  if(b===undefined)return -1
+  const result=compare(a,b)
+  return direction==='desc'?-result:result
+}
+
 function compareByRule(a: TaskEntity,b: TaskEntity,rule:SmartSortRule){
+  if(rule.field==='planned') return compareOptional(a.plannedDate,b.plannedDate,(left,right)=>left.localeCompare(right),rule.direction)
+  if(rule.field==='deadline') return compareOptional(a.deadline,b.deadline,(left,right)=>left.localeCompare(right),rule.direction)
+  if(rule.field==='estimate') return compareOptional(a.estimatedMinutes,b.estimatedMinutes,(left,right)=>left-right,rule.direction)
   let result=0
   if(rule.field==='manual') result=a.sortOrder-b.sortOrder
-  if(rule.field==='planned') result=(a.plannedDate??'9999').localeCompare(b.plannedDate??'9999')
-  if(rule.field==='deadline') result=(a.deadline??'9999').localeCompare(b.deadline??'9999')
   if(rule.field==='priority') result=priorityRank[a.priority]-priorityRank[b.priority]
-  if(rule.field==='estimate') result=(a.estimatedMinutes??Number.MAX_SAFE_INTEGER)-(b.estimatedMinutes??Number.MAX_SAFE_INTEGER)
   if(rule.field==='title') result=a.title.localeCompare(b.title)
   if(rule.field==='created') result=a.createdAt.localeCompare(b.createdAt)
   if(rule.field==='updated') result=a.updatedAt.localeCompare(b.updatedAt)
