@@ -53,7 +53,7 @@ export function CalendarV2View({
   const [editor, setEditor] = useState<TimeBlockEditorState | null>(null)
 
   const range = useMemo(() => calendarRangeForMode(mode, selectedDate), [mode, selectedDate])
-  const data = useCalendarData(range.from, range.through)
+  const data = useCalendarData(range.from, range.through, timeZone)
 
   useEffect(() => {
     if (!anchorDate) return
