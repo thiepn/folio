@@ -1,5 +1,5 @@
 import { db } from '../db/database'
-import { addLocalDays, atTimeInZone, dateKeyInTimeZone, localDateKey } from '../domain/date'
+import { addLocalDays, atTimeInZone, dateKeyInTimeZone, localDateKey, localDateToDate, minuteOfDayInTimeZone } from '../domain/date'
 import type {
   DailyPlanEntity,
   DailyPlanItemEntity,
@@ -421,7 +421,23 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
           const value: any = op.value
           const taskId = value.taskRef ? createTaskIds.get(value.taskRef) : value.taskId
           const linked = taskId ? workspace.tasks.get(taskId) : undefined
-          const entity = makeTimeBlockEntity({ taskId, title: value.kind === 'task' ? linked!.title : value.title, kind: value.kind, start: isoAtMinute(value.date, value.startMinute), end: isoAtMinute(value.date, value.startMinute + value.durationMinutes) }, crypto.randomUUID(), now)
+          const timeZone = value.timeZone ?? document.timezone
+          if (value.allDay && value.kind !== 'event') throw new Error('All-day blocks must be standalone events.')
+          const start = atTimeInZone(value.date, value.allDay ? 0 : value.startMinute, timeZone)
+          const end = value.allDay
+            ? atTimeInZone(value.endDateExclusive ?? addLocalDays(value.date, 1), 0, timeZone)
+            : new Date(Date.parse(start) + value.durationMinutes * 60_000).toISOString()
+          const entity = makeTimeBlockEntity({
+            taskId,
+            title: value.kind === 'task' ? linked!.title : value.title,
+            description: value.description,
+            location: value.location,
+            kind: value.kind,
+            allDay: Boolean(value.allDay),
+            timeZone,
+            start,
+            end,
+          }, crypto.randomUUID(), now)
           touch('timeBlock', entity.id); workspace.timeBlocks.set(entity.id, entity); markPlanDraft(workspace, touch, value.date, now)
           operationSummaries.push({ operationId: `op-${index + 1}`, op: 'create', entity: 'timeBlock', targetId: entity.id, label: entity.title })
         } else {
@@ -526,8 +542,37 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
         operationSummaries.push({ operationId: `op-${index + 1}`, op: 'update', entity: 'habit', targetId: op.id, label: current.title })
       } else if (op.entity === 'timeBlock') {
         const current = workspace.timeBlocks.get(op.id)!; const changes: any = op.changes; touch('timeBlock', op.id)
-        const oldDate = localDateFromIso(current.start); const date = changes.date ?? oldDate; const startMinute = changes.startMinute ?? minuteOfDayFromIso(current.start); const duration = changes.durationMinutes ?? durationMinutes(current.start, current.end)
-        const next = { ...current, title: changes.title ?? current.title, start: isoAtMinute(date, startMinute), end: isoAtMinute(date, startMinute + duration), updatedAt: now }
+        const timeZone = changes.timeZone ?? current.timeZone ?? document.timezone
+        const oldDate = dateKeyInTimeZone(current.start, timeZone)
+        const date = changes.date ?? oldDate
+        const allDay = changes.allDay ?? Boolean(current.allDay)
+        if (allDay && current.kind !== 'event') throw new Error('All-day blocks must be standalone events.')
+        const startMinute = changes.startMinute ?? (current.allDay ? 9 * 60 : minuteOfDayInTimeZone(current.start, timeZone))
+        const duration = changes.durationMinutes ?? (current.allDay ? 30 : durationMinutes(current.start, current.end))
+        let endDateExclusive = changes.endDateExclusive
+        if (allDay && !endDateExclusive) {
+          if (current.allDay) {
+            const previousEnd = dateKeyInTimeZone(current.end, timeZone)
+            const previousStart = dateKeyInTimeZone(current.start, timeZone)
+            const days = Math.max(1, Math.round((localDateToDate(previousEnd).getTime() - localDateToDate(previousStart).getTime()) / 86_400_000))
+            endDateExclusive = addLocalDays(date, days)
+          } else endDateExclusive = addLocalDays(date, 1)
+        }
+        const start = atTimeInZone(date, allDay ? 0 : startMinute, timeZone)
+        const end = allDay
+          ? atTimeInZone(endDateExclusive!, 0, timeZone)
+          : new Date(Date.parse(start) + duration * 60_000).toISOString()
+        const next = {
+          ...current,
+          title: changes.title ?? current.title,
+          description: Object.prototype.hasOwnProperty.call(changes, 'description') ? (changes.description ?? undefined) : current.description,
+          location: Object.prototype.hasOwnProperty.call(changes, 'location') ? (changes.location ?? undefined) : current.location,
+          allDay,
+          timeZone,
+          start,
+          end,
+          updatedAt: now,
+        }
         workspace.timeBlocks.set(op.id, next); markPlanDraft(workspace, touch, oldDate, now); markPlanDraft(workspace, touch, date, now)
         operationSummaries.push({ operationId: `op-${index + 1}`, op: 'update', entity: 'timeBlock', targetId: op.id, label: current.title })
       } else {
