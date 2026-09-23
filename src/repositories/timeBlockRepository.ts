@@ -23,7 +23,9 @@ export const timeBlockRepository = {
   async listBetween(fromDate: LocalDate, throughDate: LocalDate): Promise<TimeBlockEntity[]> {
     const start = atLocalTime(fromDate, 0)
     const endExclusive = atLocalTime(addLocalDays(throughDate, 1), 0)
-    const blocks = await db.timeBlocks.where('start').between(start, endExclusive, true, false).sortBy('start')
+    const blocks = (await db.timeBlocks.where('start').below(endExclusive).toArray())
+      .filter((block) => block.end > start)
+      .sort((a, b) => a.start.localeCompare(b.start))
     return withoutDeletedLinkedTasks(blocks)
   },
 
