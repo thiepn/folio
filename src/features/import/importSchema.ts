@@ -50,12 +50,15 @@ export const importTaskSchema = z.object({
   description: z.string().max(20_000).default(''),
   projectRef: ref.optional(),
   projectId: z.string().min(1).optional(),
+  listId: z.string().min(1).optional(),
+  sectionId: z.string().min(1).optional(),
   parentRef: ref.optional(),
   priority: priority.default('normal'),
   status: z.enum(['todo', 'inbox']).default('todo'),
   plannedDate: localDate.optional(),
   deadline: localDate.optional(),
   estimatedMinutes: z.number().int().positive().max(1440).optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(50).default([]),
 }).strict()
 
 export const importHabitSchema = z.object({
@@ -89,6 +92,8 @@ export const importSeriesSchema = z.object({
     description: z.string().max(20_000).default(''),
     projectRef: ref.optional(),
     projectId: z.string().min(1).optional(),
+    listId: z.string().min(1).optional(),
+    sectionId: z.string().min(1).optional(),
     priority: priority.default('normal'),
     estimatedMinutes: z.number().int().positive().max(1440).optional(),
     tags: z.array(z.string().trim().min(1).max(40)).max(50).default([]),
