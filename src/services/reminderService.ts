@@ -98,8 +98,8 @@ async function ensureSystemReminder(ownerId: 'daily-planning' | 'overdue-summary
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local'
   if (!enabled) {
     if (existing) {
-      await reminderRepository.update(existing.id, { enabled: false })
-      await reconcileReminder({ ...existing, enabled: false, updatedAt: new Date().toISOString() })
+      const next = await reminderRepository.update(existing.id, { enabled: false, minuteOfDay, timeZone })
+      await reconcileReminder(next)
     }
     emit()
     arm()
