@@ -99,6 +99,62 @@ function normalizeImportBatch(batch: any): ImportBatchEntity {
   }
 }
 
+function normalizeLegacyTagName(value: string) {
+  return value.trim().replace(/^#/, '').replace(/\s+/g, ' ').toLowerCase()
+}
+
+function legacyTagIdFor(normalized: string) {
+  let hash = 2166136261
+  for (let i = 0; i < normalized.length; i += 1) {
+    hash ^= normalized.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return `tag-v19-${(hash >>> 0).toString(36)}`
+}
+
+function upgradeBackupOrganizationV19(backup: BackupEnvelope) {
+  if (backup.version >= 19) return
+
+  const names = new Map<string, string>()
+  const remember = (value: string) => {
+    const name = value.trim().replace(/^#/, '').replace(/\s+/g, ' ')
+    if (!name) return
+    const normalized = normalizeLegacyTagName(name)
+    if (!names.has(normalized)) names.set(normalized, name)
+  }
+
+  for (const task of backup.data.tasks) for (const value of task.tags ?? []) remember(value)
+  for (const series of backup.data.recurringSeries) {
+    for (const value of series.taskTemplate.tags ?? []) remember(value)
+    for (const exception of Object.values(series.exceptions ?? {})) for (const value of exception.tags ?? []) remember(value)
+  }
+
+  const stamp = backup.exportedAt
+  backup.data.tags = [...names.entries()].map(([normalizedName, name], index) => ({
+    id: legacyTagIdFor(normalizedName),
+    name,
+    normalizedName,
+    favorite: false,
+    archived: false,
+    sortOrder: index,
+    createdAt: stamp,
+    updatedAt: stamp,
+  }))
+  const idByName = new Map(backup.data.tags.map((tag) => [tag.normalizedName, tag.id]))
+  const idsFor = (values: string[] = []) => [...new Set(values.flatMap((value) => {
+    const id = idByName.get(normalizeLegacyTagName(value))
+    return id ? [id] : []
+  }))]
+
+  for (const task of backup.data.tasks) task.tagIds = idsFor(task.tags)
+  for (const series of backup.data.recurringSeries) {
+    series.taskTemplate.tagIds = idsFor(series.taskTemplate.tags)
+    for (const [date, exception] of Object.entries(series.exceptions ?? {})) {
+      series.exceptions[date] = { ...exception, tagIds: idsFor(exception.tags ?? []) }
+    }
+  }
+}
+
 function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): BackupEnvelope {
   if (raw.version < MIN_RESTORABLE_BACKUP_VERSION) {
     throw new Error(`Backup schema v${raw.version} is too old for direct restore. Restore it in an older compatible release first, then export a fresh backup.`)
@@ -107,7 +163,7 @@ function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): Ba
     throw new Error(`Backup schema v${raw.version} is newer than this app (v${DATABASE_SCHEMA_VERSION}). Update the app before restoring it.`)
   }
 
-  return {
+  const normalized: BackupEnvelope = {
     format: raw.format,
     version: raw.version,
     exportedAt: raw.exportedAt,
@@ -134,6 +190,8 @@ function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): Ba
       tags: (raw.data.tags ?? []).map((row) => backupTagSchema.parse(row)) as TagEntity[],
     },
   }
+  upgradeBackupOrganizationV19(normalized)
+  return normalized
 }
 
 function validateBackupSemantics(backup: BackupEnvelope): string[] {
