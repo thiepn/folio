@@ -407,7 +407,9 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
           const tagData = canonicalizeTags(value.tags ?? [])
           const entity = makeTaskEntity({
             title: value.title, description: value.description, projectId, listId: value.listId, sectionId: value.sectionId, parentTaskId,
-            priority: value.priority, status: value.status, plannedDate: value.plannedDate, deadline: value.deadline, estimatedMinutes: value.estimatedMinutes,
+            priority: value.priority, status: value.status, plannedDate: value.plannedDate, deadline: value.deadline,
+            timelineStart: value.timelineStart, timelineEnd: value.timelineEnd, timelineMilestone: value.timelineMilestone,
+            estimatedMinutes: value.estimatedMinutes,
             tags: tagData.tags, tagIds: tagData.tagIds,
           }, createTaskIds.get(value.ref)!, now, Date.now() + index)
           touch('task', entity.id); workspace.tasks.set(entity.id, entity); markPlanDraft(workspace, touch, entity.plannedDate, now)
@@ -510,6 +512,12 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
         validatePlacement(listId, sectionId)
         const tagData = Object.prototype.hasOwnProperty.call(changes, 'tags') ? canonicalizeTags(changes.tags ?? []) : { tags: current.tags ?? [], tagIds: current.tagIds ?? [] }
         const plannedDate = nextStatus === 'inbox' ? undefined : Object.prototype.hasOwnProperty.call(changes, 'plannedDate') ? (changes.plannedDate ?? undefined) : current.plannedDate
+        const timelineStart = Object.prototype.hasOwnProperty.call(changes, 'timelineStart') ? (changes.timelineStart ?? undefined) : current.timelineStart
+        let timelineEnd = Object.prototype.hasOwnProperty.call(changes, 'timelineEnd') ? (changes.timelineEnd ?? undefined) : current.timelineEnd
+        const timelineMilestone = changes.timelineMilestone ?? current.timelineMilestone
+        if (!timelineStart) timelineEnd = undefined
+        if (timelineStart && timelineEnd && timelineEnd < timelineStart) throw new Error('Timeline end must not be before timeline start.')
+        if (timelineMilestone && timelineStart) timelineEnd = timelineStart
         const next: TaskEntity = {
           ...current,
           title: changes.title ?? current.title,
@@ -522,6 +530,9 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
           lastOpenStatus: nextStatus === 'inbox' || nextStatus === 'todo' ? nextStatus : current.lastOpenStatus,
           plannedDate,
           deadline: Object.prototype.hasOwnProperty.call(changes, 'deadline') ? (changes.deadline ?? undefined) : current.deadline,
+          timelineStart,
+          timelineEnd,
+          timelineMilestone,
           estimatedMinutes: Object.prototype.hasOwnProperty.call(changes, 'estimatedMinutes') ? (changes.estimatedMinutes ?? undefined) : current.estimatedMinutes,
           tags: tagData.tags,
           tagIds: tagData.tagIds,
