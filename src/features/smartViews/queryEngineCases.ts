@@ -97,6 +97,10 @@ export function validateSmartViewCases() {
   const estimateIds=runSmartView(estimate,context).map((row)=>row.id).join(',')
   if(estimateIds!=='b,a') failures.push('estimate range/sort expected b,a got '+estimateIds)
 
+  const deadlineDesc=view('deadline-desc',group([condition('status','is','todo')]),{sort:[{field:'deadline',direction:'desc'}]})
+  const deadlineDescRows=runSmartView(deadlineDesc,context)
+  if(deadlineDescRows[0]?.id!=='blocked'||deadlineDescRows.at(-1)?.deadline!==undefined) failures.push('descending deadline sort must keep missing dates last')
+
   const recurring=view('recurring',group([condition('recurring','is',true)]))
   const recurringIds=runSmartView(recurring,context).map((row)=>row.id).join(',')
   if(recurringIds!=='b') failures.push('recurring expected b got '+recurringIds)
