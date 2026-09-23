@@ -131,10 +131,6 @@ function TimelineRow({task,index,windowStart,windowEnd,pxPerDay,labelWidth,onOpe
 }) {
   const start=task.timelineStart!
   const end=task.timelineEnd??start
-  const visibleStart=start<windowStart?windowStart:start
-  const visibleEnd=end>windowEnd?windowEnd:end
-  const left=labelWidth+timelineDayOffset(windowStart,visibleStart)*pxPerDay
-  const days=timelineDayOffset(visibleStart,visibleEnd)+1
   const [preview,setPreview]=useState<{shift?:number;start?:number;end?:number}>({})
   const shift=preview.shift??0
   const startAdjust=preview.start??0
