@@ -216,6 +216,7 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
   const listIds = uniqueIds(data.lists, 'lists')
   const sectionIds = uniqueIds(data.sections, 'sections')
   const tagIds = uniqueIds(data.tags, 'tags')
+  uniqueIds(data.tags, 'tags', 'normalizedName')
 
   const warnings: string[] = []
   for (const task of data.tasks) {
