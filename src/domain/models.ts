@@ -21,6 +21,32 @@ export type DailyPlanBucket = 'must' | 'planned' | 'optional'
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'after-completion'
 export type RecurringSeriesStatus = 'active' | 'paused' | 'archived'
 export type ReviewKind = 'daily' | 'weekly' | 'monthly'
+export type TaskProgressMode = 'auto' | 'manual'
+export type TaskActivityKind = 'created' | 'updated' | 'completed' | 'reopened' | 'subtask' | 'comment' | 'restored' | 'duplicated'
+
+export interface TaskChecklistItem {
+  id: EntityId
+  text: string
+  completed: boolean
+  sortOrder: number
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+  completedAt?: IsoDateTime
+}
+
+export interface TaskComment {
+  id: EntityId
+  body: string
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface TaskActivityEntry {
+  id: EntityId
+  kind: TaskActivityKind
+  label: string
+  at: IsoDateTime
+}
 
 export interface TaskEntity {
   id: EntityId
@@ -34,6 +60,15 @@ export interface TaskEntity {
   plannedDate?: LocalDate
   deadline?: LocalDate
   estimatedMinutes?: number
+  tags: string[]
+  checklist: TaskChecklistItem[]
+  progressMode: TaskProgressMode
+  progressPercent: number
+  sourceUrl?: string
+  location?: string
+  pinned: boolean
+  comments: TaskComment[]
+  activity: TaskActivityEntry[]
   seriesId?: EntityId
   recurrenceDate?: LocalDate
   blockedByTaskIds: EntityId[]
