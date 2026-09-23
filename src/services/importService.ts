@@ -1,5 +1,5 @@
 import { db } from '../db/database'
-import { atTimeInZone, dateKeyInTimeZone, localDateToDate } from '../domain/date'
+import { addLocalDays, atTimeInZone, dateKeyInTimeZone, localDateToDate } from '../domain/date'
 import type {
   DailyPlanEntity,
   ImportBatchEntity,
@@ -207,13 +207,21 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
   const explicitBlocks = document.timeBlocks.map((item) => {
     const taskId = item.taskRef ? taskIds.get(item.taskRef) : undefined
     const linkedTask = taskId ? tasks.find((task) => task.id === taskId) : undefined
-    const start = atTimeInZone(item.date, item.startMinute, document.timezone)
+    const timeZone = item.timeZone ?? document.timezone
+    const start = atTimeInZone(item.date, item.allDay ? 0 : item.startMinute, timeZone)
+    const end = item.allDay
+      ? atTimeInZone(item.endDateExclusive ?? addLocalDays(item.date, 1), 0, timeZone)
+      : new Date(new Date(start).getTime() + item.durationMinutes * 60_000).toISOString()
     return makeTimeBlockEntity({
       taskId,
       title: item.kind === 'task' ? (linkedTask?.title ?? 'Task') : item.title!,
+      description: item.description,
+      location: item.location,
       kind: item.kind,
+      allDay: item.allDay,
+      timeZone,
       start,
-      end: new Date(new Date(start).getTime() + item.durationMinutes * 60_000).toISOString(),
+      end,
     }, crypto.randomUUID(), now)
   })
 
