@@ -35,7 +35,7 @@ export const notificationService = {
     if ('serviceWorker' in navigator) {
       try {
         const registration = await navigator.serviceWorker.ready
-        await registration.showNotification(options.title, {
+        const serviceWorkerOptions = {
           body: options.body,
           icon,
           badge,
@@ -47,7 +47,11 @@ export const notificationService = {
             { action: 'snooze10', title: 'Snooze 10m' },
             { action: 'dismiss', title: 'Dismiss' },
           ],
-        })
+        } as NotificationOptions & {
+          renotify?: boolean
+          actions?: Array<{ action: string; title: string }>
+        }
+        await registration.showNotification(options.title, serviceWorkerOptions)
         return true
       } catch {
         // Fall back to the window Notification API below.
