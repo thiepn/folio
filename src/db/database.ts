@@ -20,6 +20,9 @@ import type {
   SettingEntity,
   TaskEntity,
   TimeBlockEntity,
+  NoteEntity,
+  AttachmentEntity,
+  SearchDocumentEntity,
 } from '../domain/models'
 import { migrateV1ToV2 } from '../migrations/v1ToV2'
 import { migrateV2ToV3 } from '../migrations/v2ToV3'
@@ -40,9 +43,10 @@ import { migrateV16ToV17 } from '../migrations/v16ToV17'
 import { migrateV17ToV18 } from '../migrations/v17ToV18'
 import { migrateV18ToV19 } from '../migrations/v18ToV19'
 import { migrateV19ToV20 } from '../migrations/v19ToV20'
+import { migrateV20ToV21 } from '../migrations/v20ToV21'
 
 export const DATABASE_NAME = 'folio'
-export const DATABASE_SCHEMA_VERSION = 20
+export const DATABASE_SCHEMA_VERSION = 21
 
 export class ProductivityDatabase extends Dexie {
   tasks!: Table<TaskEntity, string>
@@ -65,6 +69,9 @@ export class ProductivityDatabase extends Dexie {
   lists!: Table<ListEntity, string>
   sections!: Table<SectionEntity, string>
   tags!: Table<TagEntity, string>
+  notes!: Table<NoteEntity, string>
+  attachments!: Table<AttachmentEntity, string>
+  searchDocuments!: Table<SearchDocumentEntity, string>
 
   constructor(databaseName = DATABASE_NAME) {
     super(databaseName)
@@ -379,6 +386,32 @@ export class ProductivityDatabase extends Dexie {
       sections: '&id,listId,archived,sortOrder,updatedAt,[listId+archived]',
       tags: '&id,&normalizedName,parentTagId,archived,favorite,sortOrder,updatedAt,[parentTagId+archived]',
     }).upgrade(migrateV19ToV20)
+
+    this.version(21).stores({
+      tasks: '&id,status,plannedDate,deadline,timelineStart,timelineEnd,projectId,listId,sectionId,parentTaskId,seriesId,recurrenceDate,*blockedByTaskIds,*tags,*tagIds,pinned,deletedAt,updatedAt,[status+plannedDate],[seriesId+recurrenceDate]',
+      projects: '&id,name,type,status,deadline,archived,favorite,updatedAt,[archived+favorite]',
+      habits: '&id,sortOrder,updatedAt',
+      habitEntries: '&id,habitId,date,status,updatedAt,[habitId+date],[habitId+status]',
+      timeBlocks: '&id,taskId,start,end,kind,updatedAt',
+      dailyPlans: '&date,status,updatedAt',
+      dailyPlanItems: '&id,date,taskId,bucket,sortOrder,updatedAt,[date+bucket],[date+taskId]',
+      focusSessions: '&id,taskId,projectIdSnapshot,startedAt,endedAt,status,[status+startedAt]',
+      recurringSeries: '&id,status,startDate,timezone,updatedAt,[status+startDate]',
+      settings: '&key,updatedAt',
+      importBatches: '&id,createdAt,status,source',
+      patchBatches: '&id,createdAt,status,source',
+      calendarImportBatches: '&id,createdAt,status,source',
+      reviewRecords: '&id,kind,periodStart,periodEnd,updatedAt,[kind+periodStart]',
+      reminders: '&id,ownerType,ownerId,triggerType,enabled,updatedAt,[ownerType+ownerId]',
+      reminderOccurrences: '&id,reminderId,ownerType,ownerId,status,fireAt,scheduledFor,targetTaskId,updatedAt,[status+fireAt],[reminderId+status],[ownerType+ownerId]',
+      folders: '&id,name,archived,sortOrder,updatedAt',
+      lists: '&id,name,folderId,archived,favorite,sortOrder,updatedAt,[folderId+archived]',
+      sections: '&id,listId,archived,sortOrder,updatedAt,[listId+archived]',
+      tags: '&id,&normalizedName,parentTagId,archived,favorite,sortOrder,updatedAt,[parentTagId+archived]',
+      notes: '&id,title,sourceTaskId,archived,updatedAt',
+      attachments: '&id,ownerType,ownerId,kind,createdAt,updatedAt,[ownerType+ownerId]',
+      searchDocuments: '&id,ownerType,ownerId,updatedAt,[ownerType+ownerId]',
+    }).upgrade(migrateV20ToV21)
   }
 }
 
