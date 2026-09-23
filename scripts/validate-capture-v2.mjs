@@ -74,6 +74,7 @@ check('capture service creates D3 reminder definitions', service.includes('remin
 check('series reminders use series owner', service.includes("ownerType = seriesId ? 'series' as const : 'task' as const"))
 check('exact reminder uses first recurring occurrence only', service.includes('recurrenceRepository.listOccurrences(series.id)') && service.includes("item.kind === 'absolute'"))
 check('absolute reminders use timezone-aware D2 helper', service.includes('atTimeInZone(reminder.date, reminder.minuteOfDay, timeZone)'))
+check('recurring capture rejects deadline before occurrence', service.includes('deadline cannot be before its occurrence date'))
 check('single capture rolls back partial creation', service.includes('await rollback(actions)') && service.includes('throw error'))
 check('batch capture rolls back earlier items', service.includes('for (const request of requests) actions.push(await createCapturedItem(request))') && service.includes('await rollback(actions)'))
 
