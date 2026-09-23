@@ -196,8 +196,8 @@ function ConditionValue({condition,projects,lists,sections,tags,onChange}:{
   if(noValue)return <span className="smart-condition-value is-static">—</span>
   if(condition.operator==='between'){
     const values=Array.isArray(condition.value)?condition.value:[condition.field==='estimate'?30:'',condition.field==='estimate'?120:'']
-    if(condition.field==='estimate') return <span className="smart-between"><input type="number" min="0" value={Number(values[0]??0)} onChange={(e)=>onChange({...condition,value:[Number(e.target.value),Number(values[1]??0)]})}/><b>and</b><input type="number" min="0" value={Number(values[1]??0)} onChange={(e)=>onChange({...condition,value:[Number(values[0]??0),Number(e.target.value)]})}/></span>
-    return <span className="smart-between"><input type="date" value={String(values[0]??'')} onChange={(e)=>onChange({...condition,value:[e.target.value,String(values[1]??'')]})}/><b>and</b><input type="date" value={String(values[1]??'')} onChange={(e)=>onChange({...condition,value:[String(values[0]??''),e.target.value]})}/></span>
+    if(condition.field==='estimate') return <span className="smart-between"><input type="number" min="0" value={Number(values[0]??0)} onChange={(e)=>onChange({...condition,value:[Number(e.target.value),Number(values[1]??0)] as [number,number]})}/><b>and</b><input type="number" min="0" value={Number(values[1]??0)} onChange={(e)=>onChange({...condition,value:[Number(values[0]??0),Number(e.target.value)] as [number,number]})}/></span>
+    return <span className="smart-between"><input type="date" value={String(values[0]??'')} onChange={(e)=>onChange({...condition,value:[e.target.value,String(values[1]??'')] as [string,string]})}/><b>and</b><input type="date" value={String(values[1]??'')} onChange={(e)=>onChange({...condition,value:[String(values[0]??''),e.target.value] as [string,string]})}/></span>
   }
   if(condition.operator==='within-next') return <span className="smart-number-unit"><input type="number" min="0" max="3650" value={typeof condition.value==='number'?condition.value:7} onChange={(e)=>onChange({...condition,value:Number(e.target.value)})}/><span>days</span></span>
   if(condition.field==='planned'||condition.field==='deadline') return <input className="smart-condition-value" type="date" value={typeof condition.value==='string'?condition.value:''} onChange={(e)=>onChange({...condition,value:e.target.value})}/>
@@ -209,10 +209,10 @@ function ConditionValue({condition,projects,lists,sections,tags,onChange}:{
 
   if(condition.field==='status') return <EntityValue condition={condition} options={[['inbox','Inbox'],['todo','To do'],['completed','Completed']]} onChange={onChange}/>
   if(condition.field==='priority') return <EntityValue condition={condition} options={[['normal','Normal'],['high','High'],['critical','Critical']]} onChange={onChange}/>
-  if(condition.field==='project') return <EntityValue condition={condition} options={projects.map((item)=>[item.id,item.name])} onChange={onChange}/>
-  if(condition.field==='list') return <EntityValue condition={condition} options={lists.map((item)=>[item.id,item.name])} onChange={onChange}/>
-  if(condition.field==='section') return <EntityValue condition={condition} options={sections.map((item)=>[item.id,item.name])} onChange={onChange}/>
-  if(condition.field==='tag') return <EntityValue condition={condition} options={tags.map((item)=>[item.id,'#'+item.name])} onChange={onChange} multiple/>
+  if(condition.field==='project') return <EntityValue condition={condition} options={projects.map((item)=>[item.id,item.name] as [string,string])} onChange={onChange}/>
+  if(condition.field==='list') return <EntityValue condition={condition} options={lists.map((item)=>[item.id,item.name] as [string,string])} onChange={onChange}/>
+  if(condition.field==='section') return <EntityValue condition={condition} options={sections.map((item)=>[item.id,item.name] as [string,string])} onChange={onChange}/>
+  if(condition.field==='tag') return <EntityValue condition={condition} options={tags.map((item)=>[item.id,'#'+item.name] as [string,string])} onChange={onChange} multiple/>
 
   return <input className="smart-condition-value" value={typeof condition.value==='string'?condition.value:''} onChange={(e)=>onChange({...condition,value:e.target.value})} placeholder="Value"/>
 }
