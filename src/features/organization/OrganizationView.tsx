@@ -25,13 +25,14 @@ function smartTasks(id: SmartId, tasks: TaskPreview[]) {
 }
 
 export function OrganizationView({
-  folders, lists, sections, tags, tasks, listCounts, tagCounts, selectedListId,
+  folders, lists, archivedLists, sections, tags, tasks, listCounts, tagCounts, selectedListId,
   onSelectList, onCreateFolder, onCreateList, onCreateSection, onCreateTag,
   onUpdateList, onUpdateFolder, onUpdateTag, onArchiveSection,
   onOpenTask, onToggleTask, onMoveTask, onAddTask,
 }: {
   folders: FolderEntity[]
   lists: ListEntity[]
+  archivedLists: ListEntity[]
   sections: SectionEntity[]
   tags: TagEntity[]
   tasks: TaskPreview[]
@@ -119,6 +120,11 @@ export function OrganizationView({
         })}
       </div>
     </section>
+
+    {archivedLists.length ? <section className="organization-panel">
+      <div className="organization-panel__head"><div><span className="eyebrow">Archive</span><h2>Archived lists</h2></div></div>
+      <div className="organization-list-grid">{archivedLists.map((list)=><div className="organization-list-card" key={list.id}><button className="organization-list-card__open" onClick={()=>void onUpdateList(list.id,{archived:false})}><i style={{background:list.color??'var(--muted)'}}/><span><strong>{list.name}</strong><small>Restore list</small></span></button></div>)}</div>
+    </section> : null}
 
     <section className="organization-panel">
       <div className="organization-panel__head"><div><span className="eyebrow">Tags</span><h2>Global tag tree</h2></div></div>
