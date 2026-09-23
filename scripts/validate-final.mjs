@@ -24,8 +24,8 @@ check('repository points to thiepn/folio', pkg.repository?.url === 'https://gith
 check('final validator registered', pkg.scripts?.['validate:final'] === 'node scripts/validate-final.mjs')
 
 const database = read('src/db/database.ts')
-check('database schema v18', /DATABASE_SCHEMA_VERSION\s*=\s*18\b/.test(database))
-check('v17→v18 migration registered', database.includes('migrateV17ToV18'))
+check('database schema v19', /DATABASE_SCHEMA_VERSION\s*=\s*19\b/.test(database))
+check('v18→v19 migration registered', database.includes('migrateV18ToV19'))
 
 const backup = read('src/services/backupService.ts')
 check('restore floor remains v8', /MIN_RESTORABLE_BACKUP_VERSION\s*=\s*8\b/.test(backup))
@@ -34,15 +34,15 @@ check('backup export follows current schema', backup.includes('version: DATABASE
 check('backup validates dependency cycles', backup.includes('Backup contains a task dependency cycle.'))
 
 const interop = read('src/features/interop/InteroperabilityModal.tsx')
-check('visible backup copy says v18', interop.includes('Schema v18 · complete planner state'))
-check('visible restore range says v8–v18', interop.includes('schema v8–v18'))
+check('visible backup copy says v19', interop.includes('Schema v19 · complete planner state'))
+check('visible restore range says v8–v19', interop.includes('schema v8–v19'))
 check('runtime UI has no stale backup schema copy', !/Schema v1[1-4] · complete planner state|schema v8–v1[1-4]/.test(interop))
 
-check('public v18 backup schema exists', exists('public/schema/folio-backup-v18.schema.json'))
+check('public v19 backup schema exists', exists('public/schema/folio-backup-v19.schema.json'))
 for (const p of [
   'public/schema/folio-import-v1.schema.json',
   'public/schema/folio-patch-v1.schema.json',
-  'public/schema/folio-backup-v18.schema.json',
+  'public/schema/folio-backup-v19.schema.json',
   'public/schema/folio-selection-v1.schema.json',
   'public/manifest.webmanifest',
 ]) {
