@@ -58,7 +58,7 @@ import type { TaskCreateInput, TaskUpdateInput } from '../repositories/taskRepos
 import type { ProjectCreateInput, ProjectUpdateInput } from '../repositories/projectRepository'
 import type { RecurringSeriesUpdateInput } from '../repositories/recurrenceRepository'
 import type { HabitCreateInput, HabitUpdateInput } from '../repositories/habitRepository'
-import type { NavView } from '../types/ui'
+import type { NavView, TaskPreview } from '../types/ui'
 import type { DailyPlanBucket, ReviewKind } from '../domain/models'
 import { CommandPalette, type PowerCommand } from '../features/power/CommandPalette'
 import { buildHabitCommandChildren, buildProjectCommandChildren, buildTaskCommandChildren } from '../features/power/commandBuilders'
@@ -331,7 +331,7 @@ function AppContent() {
   }
 
   async function taskChangeMutation(id: string, changes: TaskUpdateInput): Promise<UndoableMutation> {
-    const before = data?.allTasks.find((task) => task.id === id)
+    const before = data?.allTasks.find((task) => task.id === id) ?? data?.subtasks.find((task) => task.id === id)
     const hasDependencies = Object.prototype.hasOwnProperty.call(changes, 'blockedByTaskIds')
     const dependencyIds = hasDependencies ? (changes.blockedByTaskIds ?? []) : undefined
     const { blockedByTaskIds: _blockedByTaskIds, ...nonDependencyChanges } = changes
@@ -378,43 +378,62 @@ function AppContent() {
 
   async function saveTask(id: string, changes: TaskUpdateInput, scope: 'this' | 'future' | 'entire' = 'this') {
     const before = data?.allTasks.find((task) => task.id === id) ?? data?.subtasks.find((task) => task.id === id)
-    if (!before?.seriesId) {
-      registerUndo(await taskChangeMutation(id, changes))
+    if (!before) throw new Error('Task not found.')
+    const effective = taskUpdateDiff(before, changes)
+    if (!Object.keys(effective).length) return
+
+    if (!before.seriesId) {
+      registerUndo(await taskChangeMutation(id, effective))
       return
     }
 
     if (scope === 'this') {
-      const taskUndo = await taskChangeMutation(id, changes)
-      const exceptionUndo = await recurrenceService.recordOccurrenceException(id, changes)
-      registerUndo(combineUndo('Occurrence updated', [taskUndo, exceptionUndo]))
+      const taskUndo = await taskChangeMutation(id, effective)
+      const exceptionChanges = recurrenceOverrideDiff(before, effective)
+      const exceptionUndo = Object.keys(exceptionChanges).length
+        ? await recurrenceService.recordOccurrenceException(id, exceptionChanges)
+        : null
+      registerUndo(exceptionUndo ? combineUndo('Occurrence updated', [taskUndo, exceptionUndo]) : taskUndo)
       return
     }
 
     const template: NonNullable<RecurringSeriesUpdateInput['taskTemplate']> = {}
-    if (Object.prototype.hasOwnProperty.call(changes, 'title')) template.title = changes.title
-    if (Object.prototype.hasOwnProperty.call(changes, 'description')) template.description = changes.description
-    if (Object.prototype.hasOwnProperty.call(changes, 'projectId')) template.projectId = changes.projectId === null ? undefined : changes.projectId
-    if (Object.prototype.hasOwnProperty.call(changes, 'priority')) template.priority = changes.priority
-    if (Object.prototype.hasOwnProperty.call(changes, 'estimatedMinutes')) template.estimatedMinutes = changes.estimatedMinutes === null ? undefined : changes.estimatedMinutes
-    if (Object.prototype.hasOwnProperty.call(changes, 'tags')) template.tags = changes.tags
-    if (Object.prototype.hasOwnProperty.call(changes, 'checklist')) template.checklist = changes.checklist?.map((item) => item.text)
-    if (Object.prototype.hasOwnProperty.call(changes, 'sourceUrl')) template.sourceUrl = changes.sourceUrl === null ? undefined : changes.sourceUrl
-    if (Object.prototype.hasOwnProperty.call(changes, 'location')) template.location = changes.location === null ? undefined : changes.location
-    if (Object.prototype.hasOwnProperty.call(changes, 'pinned')) template.pinned = changes.pinned
+    if (Object.prototype.hasOwnProperty.call(effective, 'title')) template.title = effective.title
+    if (Object.prototype.hasOwnProperty.call(effective, 'description')) template.description = effective.description
+    if (Object.prototype.hasOwnProperty.call(effective, 'projectId')) template.projectId = effective.projectId === null ? undefined : effective.projectId
+    if (Object.prototype.hasOwnProperty.call(effective, 'priority')) template.priority = effective.priority
+    if (Object.prototype.hasOwnProperty.call(effective, 'estimatedMinutes')) template.estimatedMinutes = effective.estimatedMinutes === null ? undefined : effective.estimatedMinutes
+    if (Object.prototype.hasOwnProperty.call(effective, 'tags')) template.tags = effective.tags
+    if (Object.prototype.hasOwnProperty.call(effective, 'checklist')) {
+      const beforeText = (before.checklist ?? []).map((item) => item.text)
+      const nextText = effective.checklist?.map((item) => item.text) ?? []
+      if (!sameValue(beforeText, nextText)) template.checklist = nextText
+    }
+    if (Object.prototype.hasOwnProperty.call(effective, 'sourceUrl')) template.sourceUrl = effective.sourceUrl === null ? undefined : effective.sourceUrl
+    if (Object.prototype.hasOwnProperty.call(effective, 'location')) template.location = effective.location === null ? undefined : effective.location
+    if (Object.prototype.hasOwnProperty.call(effective, 'pinned')) template.pinned = effective.pinned
 
-    const seriesUndo = scope === 'future'
-      ? await recurrenceService.updateFuture(id, { taskTemplate: template })
-      : await recurrenceService.updateEntire(before.seriesId, { taskTemplate: template })
+    const templateChanged = Object.keys(template).length > 0
+    const seriesUndo = templateChanged
+      ? (scope === 'future'
+          ? await recurrenceService.updateFuture(id, { taskTemplate: template })
+          : await recurrenceService.updateEntire(before.seriesId, { taskTemplate: template }))
+      : null
 
     const occurrenceChanges: TaskUpdateInput = {}
-    if (Object.prototype.hasOwnProperty.call(changes, 'status')) occurrenceChanges.status = changes.status
-    if (Object.prototype.hasOwnProperty.call(changes, 'plannedDate')) occurrenceChanges.plannedDate = changes.plannedDate
-    if (Object.prototype.hasOwnProperty.call(changes, 'deadline')) occurrenceChanges.deadline = changes.deadline
-    if (Object.prototype.hasOwnProperty.call(changes, 'blockedByTaskIds')) occurrenceChanges.blockedByTaskIds = changes.blockedByTaskIds
+    if (Object.prototype.hasOwnProperty.call(effective, 'status')) occurrenceChanges.status = effective.status
+    if (Object.prototype.hasOwnProperty.call(effective, 'plannedDate')) occurrenceChanges.plannedDate = effective.plannedDate
+    if (Object.prototype.hasOwnProperty.call(effective, 'deadline')) occurrenceChanges.deadline = effective.deadline
+    if (Object.prototype.hasOwnProperty.call(effective, 'blockedByTaskIds')) occurrenceChanges.blockedByTaskIds = effective.blockedByTaskIds
     const occurrenceUndo = Object.keys(occurrenceChanges).length ? await taskChangeMutation(id, occurrenceChanges) : null
+
+    if (!seriesUndo && !occurrenceUndo) return
     registerUndo({
       message: scope === 'future' ? 'This and future occurrences updated' : 'Recurring series updated',
-      undo: async () => { if (occurrenceUndo) await occurrenceUndo.undo(); await seriesUndo.undo() },
+      undo: async () => {
+        if (occurrenceUndo) await occurrenceUndo.undo()
+        if (seriesUndo) await seriesUndo.undo()
+      },
     })
   }
 
@@ -997,6 +1016,60 @@ function AppContent() {
 
 export function App() {
   return <TaskSelectionProvider><AppContent /></TaskSelectionProvider>
+}
+
+function sameValue(a: unknown, b: unknown) {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+function taskUpdateDiff(before: TaskPreview, changes: TaskUpdateInput): TaskUpdateInput {
+  const diff: TaskUpdateInput = {}
+  const has = (key: keyof TaskUpdateInput) => Object.prototype.hasOwnProperty.call(changes, key)
+  const normalized = <T,>(value: T | null | undefined): T | undefined => value === null ? undefined : value
+
+  if (has('title') && changes.title !== before.title) diff.title = changes.title
+  if (has('description') && changes.description !== (before.description ?? '')) diff.description = changes.description
+  if (has('projectId') && normalized(changes.projectId) !== before.projectId) diff.projectId = changes.projectId
+  if (has('parentTaskId') && normalized(changes.parentTaskId) !== before.parentTaskId) diff.parentTaskId = changes.parentTaskId
+  if (has('priority') && changes.priority !== before.priority) diff.priority = changes.priority
+  if (has('status') && changes.status !== before.status) diff.status = changes.status
+  if (has('plannedDate') && normalized(changes.plannedDate) !== before.plannedDate) diff.plannedDate = changes.plannedDate
+  if (has('deadline') && normalized(changes.deadline) !== before.deadline) diff.deadline = changes.deadline
+  if (has('estimatedMinutes') && normalized(changes.estimatedMinutes) !== before.durationMinutes) diff.estimatedMinutes = changes.estimatedMinutes
+  if (has('tags') && !sameValue(changes.tags ?? [], before.tags ?? [])) diff.tags = changes.tags
+  if (has('checklist') && !sameValue(changes.checklist ?? [], before.checklist ?? [])) diff.checklist = changes.checklist
+  if (has('progressMode') && changes.progressMode !== (before.progressMode ?? 'auto')) diff.progressMode = changes.progressMode
+  const nextProgressMode = changes.progressMode ?? before.progressMode ?? 'auto'
+  if (has('progressPercent') && nextProgressMode === 'manual' && changes.progressPercent !== (before.progressPercent ?? 0)) diff.progressPercent = changes.progressPercent
+  if (has('sourceUrl') && normalized(changes.sourceUrl) !== before.sourceUrl) diff.sourceUrl = changes.sourceUrl
+  if (has('location') && normalized(changes.location) !== before.location) diff.location = changes.location
+  if (has('pinned') && changes.pinned !== Boolean(before.pinned)) diff.pinned = changes.pinned
+  if (has('comments') && !sameValue(changes.comments ?? [], before.comments ?? [])) diff.comments = changes.comments
+  if (has('blockedByTaskIds') && !sameValue(changes.blockedByTaskIds ?? [], before.blockedByTaskIds ?? [])) diff.blockedByTaskIds = changes.blockedByTaskIds
+  if (has('sortOrder')) diff.sortOrder = changes.sortOrder
+  return diff
+}
+
+function recurrenceOverrideDiff(before: TaskPreview, changes: TaskUpdateInput): TaskUpdateInput {
+  const override: TaskUpdateInput = { ...changes }
+  // Planner/date mutations persist their own recurrence exception transactionally.
+  delete override.plannedDate
+  // Completion state, blockers, manual progress and comments are occurrence state,
+  // not recurring template/exception defaults.
+  delete override.status
+  delete override.blockedByTaskIds
+  delete override.progressMode
+  delete override.progressPercent
+  delete override.comments
+  delete override.sortOrder
+  delete override.parentTaskId
+
+  if (Object.prototype.hasOwnProperty.call(override, 'checklist')) {
+    const beforeText = (before.checklist ?? []).map((item) => item.text)
+    const nextText = override.checklist?.map((item) => item.text) ?? []
+    if (sameValue(beforeText, nextText)) delete override.checklist
+  }
+  return override
 }
 
 function combineUndo(message: string, actions: UndoableMutation[]): UndoableMutation {
