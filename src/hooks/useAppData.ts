@@ -89,6 +89,27 @@ export function useAppData() {
       })
       .sort((a, b) => (a.planningOrder ?? 0) - (b.planningOrder ?? 0))
 
+    const childTags = new Map<string, string[]>()
+    for (const tag of tags) {
+      if (!tag.parentTagId) continue
+      const children = childTags.get(tag.parentTagId) ?? []
+      children.push(tag.id)
+      childTags.set(tag.parentTagId, children)
+    }
+    const tagScope = (rootId: string) => {
+      const result = new Set<string>([rootId])
+      const queue = [rootId]
+      while (queue.length) {
+        const parent = queue.shift()!
+        for (const child of childTags.get(parent) ?? []) if (!result.has(child)) { result.add(child); queue.push(child) }
+      }
+      return result
+    }
+    const tagCounts = Object.fromEntries(tags.map((tag) => {
+      const scope = tagScope(tag.id)
+      return [tag.id, roots.filter((task) => task.status === 'todo' && task.tagIds?.some((id) => scope.has(id))).length]
+    }))
+
     return {
       today,
       tomorrow,
@@ -123,7 +144,7 @@ export function useAppData() {
       archivedLists: allLists.filter((list) => list.archived),
       archivedTags: allTags.filter((tag) => tag.archived),
       unlistedCount: roots.filter((task) => task.status === 'todo' && !task.listId).length,
-      tagCounts: Object.fromEntries(tags.map((tag) => [tag.id, roots.filter((task) => task.status === 'todo' && task.tagIds?.includes(tag.id)).length])),
+      tagCounts,
       listCounts: Object.fromEntries(lists.map((list) => [list.id, roots.filter((task) => task.status === 'todo' && task.listId === list.id).length])),
     }
   }, [today, tomorrow])
