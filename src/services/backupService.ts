@@ -155,6 +155,15 @@ function upgradeBackupOrganizationV19(backup: BackupEnvelope) {
   }
 }
 
+function upgradeBackupTimelineV20(backup: BackupEnvelope) {
+  if (backup.version >= 20) return
+  for (const task of backup.data.tasks) {
+    task.timelineStart = task.timelineStart ?? undefined
+    task.timelineEnd = task.timelineEnd ?? undefined
+    task.timelineMilestone = Boolean(task.timelineMilestone)
+  }
+}
+
 function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): BackupEnvelope {
   if (raw.version < MIN_RESTORABLE_BACKUP_VERSION) {
     throw new Error(`Backup schema v${raw.version} is too old for direct restore. Restore it in an older compatible release first, then export a fresh backup.`)
@@ -191,6 +200,7 @@ function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): Ba
     },
   }
   upgradeBackupOrganizationV19(normalized)
+  upgradeBackupTimelineV20(normalized)
   return normalized
 }
 
