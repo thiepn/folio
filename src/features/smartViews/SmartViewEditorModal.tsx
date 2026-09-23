@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import type { ListEntity, SectionEntity, TagEntity } from '../../domain/models'
 import {
-  createEmptySmartCondition, createEmptySmartGroup,
+  createEmptySmartCondition, createEmptySmartGroup, SMART_FIELD_OPERATORS,
   type SmartField, type SmartFilterCondition, type SmartFilterGroup, type SmartFilterNode,
   type SmartGroupBy, type SmartOperator, type SmartSortField, type SmartTaskView,
 } from './queryEngine'
@@ -24,23 +24,6 @@ const operatorLabels: Partial<Record<SmartOperator,string>> = {
   lt:'less than', lte:'at most', gt:'greater than', gte:'at least',
 }
 
-const operators: Record<SmartField,SmartOperator[]> = {
-  text:['contains','not-contains','equals'],
-  status:['is','is-not','in','not-in'],
-  priority:['is','is-not','in','not-in'],
-  project:['is','is-not','in','not-in','exists','not-exists'],
-  list:['is','is-not','in','not-in','exists','not-exists'],
-  section:['is','is-not','in','not-in','exists','not-exists'],
-  tag:['has-any','has-all','has-none','exists','not-exists'],
-  planned:['today','tomorrow','overdue','within-next','on','before','after','on-or-before','on-or-after','between','exists','not-exists'],
-  deadline:['today','tomorrow','overdue','within-next','on','before','after','on-or-before','on-or-after','between','exists','not-exists'],
-  recurring:['is'],
-  readiness:['is'],
-  estimate:['lt','lte','gt','gte','between','exists','not-exists'],
-  reminder:['is'],
-  pinned:['is'],
-  completion:['is'],
-}
 
 function defaultValue(field:SmartField,operator:SmartOperator): SmartFilterCondition['value'] {
   if (operator === 'exists' || operator === 'not-exists' || operator === 'today' || operator === 'tomorrow' || operator === 'overdue') return undefined
@@ -174,9 +157,9 @@ function QueryGroupEditor({group,depth,projects,lists,sections,tags,onChange}:{
 function ConditionEditor({condition,projects,lists,sections,tags,onChange,onRemove}:{
   condition:SmartFilterCondition;projects:Array<{id:string;name:string}>;lists:ListEntity[];sections:SectionEntity[];tags:TagEntity[];onChange:(condition:SmartFilterCondition)=>void;onRemove:()=>void
 }) {
-  const ops=operators[condition.field]
+  const ops=SMART_FIELD_OPERATORS[condition.field]
   function changeField(field:SmartField){
-    const operator=operators[field][0]
+    const operator=SMART_FIELD_OPERATORS[field][0]
     onChange({...condition,field,operator,value:defaultValue(field,operator),includeDescendants:field==='tag'?true:undefined})
   }
   function changeOperator(operator:SmartOperator){onChange({...condition,operator,value:defaultValue(condition.field,operator)})}
