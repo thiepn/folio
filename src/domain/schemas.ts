@@ -211,6 +211,11 @@ export const timeBlockCreateSchema = z.object({
   description: z.string().trim().max(4000).optional(),
   location: z.string().trim().max(500).optional(),
   kind: timeBlockKindSchema,
+  allDay: z.boolean().default(false),
+  timeZone: z.string().trim().min(1).max(100).optional(),
+  source: z.enum(['folio','ics']).default('folio'),
+  sourceCalendar: z.string().trim().max(200).optional(),
+  sourceUid: z.string().trim().max(500).optional(),
   start: isoDateTime,
   end: isoDateTime,
 }).superRefine((value, ctx) => {
@@ -226,6 +231,10 @@ export const timeBlockUpdateSchema = z.object({
   title: z.string().trim().min(1).max(300).optional(),
   description: z.string().trim().max(4000).optional(),
   location: z.string().trim().max(500).optional(),
+  allDay: z.boolean().optional(),
+  timeZone: z.string().trim().min(1).max(100).nullable().optional(),
+  sourceCalendar: z.string().trim().max(200).nullable().optional(),
+  sourceUid: z.string().trim().max(500).nullable().optional(),
   start: isoDateTime.optional(),
   end: isoDateTime.optional(),
 }).superRefine((value, ctx) => {
