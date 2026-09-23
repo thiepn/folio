@@ -3,6 +3,7 @@ import { taskCreateSchema, taskUpdateSchema } from '../domain/schemas'
 import type { z } from 'zod'
 import type { LocalDate, TaskEntity } from '../domain/models'
 import { organizationRepository } from './organizationRepository'
+import { contentSearchService } from '../services/contentSearchService'
 
 export type TaskCreateInput = z.input<typeof taskCreateSchema>
 export type TaskUpdateInput = z.input<typeof taskUpdateSchema>
@@ -161,6 +162,7 @@ export const taskRepository = {
     }
     validateTimeline(task)
     await db.tasks.add(task)
+    await contentSearchService.indexTask(task)
     return task
   },
 
@@ -192,18 +194,26 @@ export const taskRepository = {
     }
     validateTimeline(next)
     await db.tasks.put(next)
+    await contentSearchService.indexTask(next)
     return next
   },
 
   async replace(task: TaskEntity): Promise<void> {
     await db.tasks.put(task)
+    await contentSearchService.indexTask(task)
   },
 
   async bulkReplace(tasks: TaskEntity[]): Promise<void> {
     await db.tasks.bulkPut(tasks)
+    for (const task of tasks) await contentSearchService.indexTask(task)
   },
 
   async removePermanently(ids: string[]): Promise<void> {
-    await db.tasks.bulkDelete(ids)
+    await db.transaction('rw', db.tasks, db.attachments, db.searchDocuments, async () => {
+      await db.tasks.bulkDelete(ids)
+      const attachments = await db.attachments.where('ownerType').equals('task').filter((item) => ids.includes(item.ownerId)).primaryKeys()
+      if (attachments.length) await db.attachments.bulkDelete(attachments as string[])
+      await db.searchDocuments.bulkDelete(ids.map((id) => `task:${id}`))
+    })
   },
 }
