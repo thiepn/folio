@@ -60,6 +60,7 @@ check('recurring exact reminder ambiguity is surfaced', parser.includes('Exact-d
 
 check('batch parser splits independent lines', parser.includes('parseQuickCaptureBatch') && parser.includes("raw.split(/\\r?\\n/)") && parser.includes('.slice(0, 100)'))
 check('Quick Add uses textarea for multiline capture', modal.includes('HTMLTextAreaElement') && modal.includes('<textarea') && modal.includes('Shift ↵'))
+check('Quick Add first-line preview avoids fragile regex escaping', modal.includes('String.fromCharCode(10)') && modal.includes('const firstLine'))
 check('Quick Add shows batch interpretation', modal.includes('BatchLedger') && modal.includes('Multi-task capture'))
 check('Quick Add structured details expose tags', modal.includes('<span>Tags</span>') && modal.includes('tagsText'))
 check('Quick Add ledger exposes reminder count', modal.includes('label="Reminders"'))
