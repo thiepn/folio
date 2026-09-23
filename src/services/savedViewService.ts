@@ -127,11 +127,17 @@ function migrateLegacy(raw: LegacySavedTaskView): SmartTaskView {
   if (dateMode === 'today') children.push(legacyCondition('planned','today'))
   if (dateMode === 'next7') children.push(legacyCondition('planned','within-next',7))
   if (dateMode === 'next30') children.push(legacyCondition('planned','within-next',30))
-  if (dateMode === 'overdue') children.push(legacyCondition('planned','overdue'))
+  if (dateMode === 'overdue') {
+    children.push(legacyCondition('planned','overdue'))
+    children.push(legacyCondition('status','is','todo'))
+  }
   if (dateMode === 'unplanned') children.push(legacyCondition('planned','not-exists'))
 
   const deadlineMode = raw.deadlineMode ?? 'all'
-  if (deadlineMode === 'overdue') children.push(legacyCondition('deadline','overdue'))
+  if (deadlineMode === 'overdue') {
+    children.push(legacyCondition('deadline','overdue'))
+    children.push(legacyCondition('status','is','todo'))
+  }
   if (deadlineMode === 'next7') children.push(legacyCondition('deadline','within-next',7))
   if (deadlineMode === 'next30') children.push(legacyCondition('deadline','within-next',30))
   if (deadlineMode === 'none') children.push(legacyCondition('deadline','not-exists'))
