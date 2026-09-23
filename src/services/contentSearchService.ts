@@ -22,26 +22,29 @@ export function markdownToSearchText(value: string) {
 
 function normalized(value: string) { return value.toLocaleLowerCase().normalize('NFKC') }
 
-async function attachmentText(ownerType: ContentOwnerType, ownerId: string) {
+async function attachmentIndex(ownerType: ContentOwnerType, ownerId: string) {
   const attachments = await db.attachments.where('[ownerType+ownerId]').equals([ownerType, ownerId]).toArray()
-  return attachments.map((item) => [item.name, item.mimeType ?? '', item.url ?? ''].join(' ')).join(' ')
+  return {
+    text: attachments.map((item) => [item.name, item.mimeType ?? '', item.url ?? ''].join(' ')).join(' '),
+    updatedAt: attachments.reduce((latest, item) => item.updatedAt > latest ? item.updatedAt : latest, ''),
+  }
 }
 
 async function taskDocument(task: TaskEntity): Promise<SearchDocumentEntity> {
-  const attachments = await attachmentText('task', task.id)
+  const attachments = await attachmentIndex('task', task.id)
   return {
     id: 'task:' + task.id, ownerType: 'task', ownerId: task.id,
-    text: markdownToSearchText([task.title, task.description, task.location ?? '', task.sourceUrl ?? '', ...(task.tags ?? []), ...(task.comments ?? []).map((comment) => comment.body), attachments].join(' ')),
-    updatedAt: task.updatedAt,
+    text: markdownToSearchText([task.title, task.description, task.location ?? '', task.sourceUrl ?? '', ...(task.tags ?? []), ...(task.comments ?? []).map((comment) => comment.body), attachments.text].join(' ')),
+    updatedAt: attachments.updatedAt > task.updatedAt ? attachments.updatedAt : task.updatedAt,
   }
 }
 
 async function noteDocument(note: NoteEntity): Promise<SearchDocumentEntity> {
-  const attachments = await attachmentText('note', note.id)
+  const attachments = await attachmentIndex('note', note.id)
   return {
     id: 'note:' + note.id, ownerType: 'note', ownerId: note.id,
-    text: markdownToSearchText([note.title, note.body, attachments].join(' ')),
-    updatedAt: note.updatedAt,
+    text: markdownToSearchText([note.title, note.body, attachments.text].join(' ')),
+    updatedAt: attachments.updatedAt > note.updatedAt ? attachments.updatedAt : note.updatedAt,
   }
 }
 
@@ -78,9 +81,29 @@ export const contentSearchService = {
     for (const note of notes) await this.indexNote(note)
   },
 
+  async ensureFresh() {
+    const [tasks, notes, documents] = await Promise.all([db.tasks.toArray(), db.notes.toArray(), db.searchDocuments.toArray()])
+    const activeTasks = tasks.filter((task) => !task.deletedAt && task.status !== 'cancelled')
+    const activeNotes = notes.filter((note) => !note.archived)
+    if (documents.length !== activeTasks.length + activeNotes.length) {
+      await this.rebuildAll()
+      return
+    }
+    const byId = new Map(documents.map((document) => [document.id, document]))
+    const ownerStale = activeTasks.some((task) => {
+      const document = byId.get('task:' + task.id)
+      return !document || document.updatedAt < task.updatedAt
+    }) || activeNotes.some((note) => {
+      const document = byId.get('note:' + note.id)
+      return !document || document.updatedAt < note.updatedAt
+    })
+    if (ownerStale) await this.rebuildAll()
+  },
+
   async search(query: string, limit = 80): Promise<ContentSearchHit[]> {
     const tokens = normalized(query).split(/\s+/).filter(Boolean)
     if (!tokens.length) return []
+    await this.ensureFresh()
     const documents = await db.searchDocuments.toArray()
     const matches = documents
       .map((document) => ({ document, haystack: normalized(document.text) }))
