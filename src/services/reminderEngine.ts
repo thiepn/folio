@@ -140,7 +140,7 @@ async function desiredHabitOccurrences(reminder: ReminderEntity, now: Date) {
   const habit = await db.habits.get(reminder.ownerId)
   if (!habit || habit.archived || habit.schedule.type === 'times-per-week') return []
   const today = dateKeyInTimeZone(now, reminder.timeZone)
-  const dates = localDateRange(addLocalDays(today, -LOOKBACK_DAYS), LOOKBACK_DAYS + HORIZON_DAYS + 1)
+  const dates = localDateRange(today, HORIZON_DAYS + 1)
   return dates
     .filter((date) => habitScheduledForDate(habit, date))
     .map((date) => {
@@ -152,7 +152,7 @@ async function desiredHabitOccurrences(reminder: ReminderEntity, now: Date) {
 
 function dailyDates(reminder: ReminderEntity, now: Date): LocalDate[] {
   const today = dateKeyInTimeZone(now, reminder.timeZone)
-  return localDateRange(addLocalDays(today, -LOOKBACK_DAYS), LOOKBACK_DAYS + HORIZON_DAYS + 1)
+  return localDateRange(today, HORIZON_DAYS + 1)
     .filter((date) => {
       if (!reminder.weekdays?.length) return true
       const weekday = new Date(`${date}T12:00:00`).getDay()
