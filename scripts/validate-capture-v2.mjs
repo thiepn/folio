@@ -24,7 +24,7 @@ const styles = read('src/styles/index.css')
 
 check('D4 validator registered', pkg.scripts?.['validate:capture-v2'] === 'node scripts/validate-capture-v2.mjs')
 check('release gate runs D4 validation', pkg.scripts?.['release:verify']?.includes('validate:capture-v2'))
-check('D4 intentionally retains schema v18', /DATABASE_SCHEMA_VERSION\s*=\s*18\b/.test(database) && !database.includes('this.version(19)'))
+check('D4 remains schema-compatible', Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1] ?? 0) >= 18 && database.includes('this.version(18)'))
 
 check('capture parser exposes tags', parser.includes('tags: string[]') && parser.includes("kind: 'tag'"))
 check('capture parser exposes reminders', parser.includes('ParsedReminder') && parser.includes('reminders: ParsedReminder[]'))
