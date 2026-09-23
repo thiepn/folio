@@ -1,0 +1,225 @@
+/* D1 — Task Engine V2 */
+
+.task-editor--v2 {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.task-v2-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.task-pin-toggle,
+.task-progress-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-soft);
+}
+
+.task-pin-toggle {
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-input);
+}
+
+.nested-task-strip,
+.task-v2-context-section,
+.task-v2-progress-section,
+.task-v2-checklist-section,
+.task-v2-comments-section,
+.task-v2-activity-section {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+}
+
+.nested-task-strip {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--text-soft);
+}
+
+.nested-task-strip span,
+.field small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.task-v2-context-section,
+.task-v2-progress-section,
+.task-v2-checklist-section,
+.task-v2-comments-section,
+.task-v2-activity-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.task-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.task-tag-list span {
+  padding: 3px 8px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  font-size: 12px;
+}
+
+.task-progress-bar {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-input);
+}
+
+.task-progress-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width var(--transition);
+}
+
+.task-progress-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.task-checklist,
+.task-comment-list,
+.task-activity-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.task-checklist-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.task-checklist-row > input[type='text'],
+.task-checklist-row > input:not([type]) {
+  width: 100%;
+}
+
+.task-checklist-row input.is-completed,
+.subtask-open.is-completed {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.task-checklist-row button,
+.task-comment-list button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.subtask-open {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.subtask-open span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtask-open small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.task-comment-list article {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-input);
+}
+
+.task-comment-list p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.task-comment-list footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.task-comment-add {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.task-comment-add textarea {
+  resize: vertical;
+}
+
+.task-comment-add .button {
+  justify-self: start;
+}
+
+.task-activity-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.task-activity-list time {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .task-v2-title-row {
+    grid-template-columns: 1fr;
+  }
+
+  .task-pin-toggle {
+    justify-self: start;
+  }
+
+  .task-progress-controls,
+  .nested-task-strip,
+  .task-activity-list > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .subtask-open {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
