@@ -337,6 +337,28 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 1440
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "allDay": {
+          "type": "boolean",
+          "default": false
+        },
+        "endDateExclusive": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "format": "date"
+        },
+        "timeZone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
         }
       }
     },
