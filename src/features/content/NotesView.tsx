@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Button } from '../../components/ui/Button'
 import { noteRepository } from '../../repositories/noteRepository'
 import { noteService } from '../../services/noteService'
-import { contentSearchService, type ContentSearchHit } from '../../services/contentSearchService'
+import { contentSearchService, markdownToSearchText, type ContentSearchHit } from '../../services/contentSearchService'
 import { MarkdownEditor } from './MarkdownEditor'
 import { AttachmentPanel } from './AttachmentPanel'
 
@@ -60,11 +60,11 @@ export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) 
           {noteHits.length ? <section><small>Notes</small>{noteHits.map((hit) => <button key={'n-' + hit.ownerId} onClick={() => { setSelectedId(hit.ownerId); setQuery('') }}><strong>{hit.title}</strong><span>{hit.snippet || 'Note'}</span></button>)}</section> : null}
           {taskHits.length ? <section><small>Tasks</small>{taskHits.map((hit) => <button key={'t-' + hit.ownerId} onClick={() => onOpenTask(hit.ownerId)}><strong>{hit.title}</strong><span>{hit.snippet || 'Task'}</span></button>)}</section> : null}
           {!hits.length ? <p>No indexed content matches.</p> : null}
-        </div> : <div className="notes-list">{notes.map((note) => <button key={note.id} className={note.id === selectedId ? 'is-active' : ''} onClick={() => setSelectedId(note.id)}><strong>{note.title}</strong><span>{note.body.replace(/[#>*_\`\\[\\]]/g, '').slice(0, 90) || 'Empty note'}</span><time>{new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(note.updatedAt))}</time></button>)}{!notes.length ? <p>No standalone notes yet.</p> : null}</div>}
+        </div> : <div className="notes-list">{notes.map((note) => <button key={note.id} className={note.id === selectedId ? 'is-active' : ''} onClick={() => setSelectedId(note.id)}><strong>{note.title}</strong><span>{markdownToSearchText(note.body).slice(0, 90) || 'Empty note'}</span><time>{new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(note.updatedAt))}</time></button>)}{!notes.length ? <p>No standalone notes yet.</p> : null}</div>}
       </aside>
       <main className="note-editor-pane">
         {selected ? <>
-          <div className="note-title-row"><input aria-label="Note title" value={title} onChange={(event) => setTitle(event.target.value)} /><div><Button onClick={() => void makeTask()}>Create inbox task</Button><Button onClick={() => void archive()}>Archive</Button><Button variant="primary" disabled={!dirty || !title.trim()} onClick={() => void save()}>{dirty ? 'Save note' : 'Saved'}</Button></div></div>
+          <div className="note-title-row"><input aria-label="Note title" value={title} onChange={(event) => setTitle(event.target.value)} /><div><Button onClick={() => void makeTask()}>Note → inbox task</Button><Button onClick={() => void archive()}>Archive</Button><Button variant="primary" disabled={!dirty || !title.trim()} onClick={() => void save()}>{dirty ? 'Save note' : 'Saved'}</Button></div></div>
           {selected.sourceTaskId ? <button className="note-source-link" type="button" onClick={() => onOpenTask(selected.sourceTaskId!)}>Created from task · open source</button> : null}
           <MarkdownEditor value={body} onChange={setBody} label="Note content · Markdown" placeholder="Write a standalone note. Use headings, lists, quotes, code blocks, links, and interactive checkboxes." />
           <AttachmentPanel ownerType="note" ownerId={selected.id} />
