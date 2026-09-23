@@ -82,6 +82,45 @@ export const backupSeriesSchema = z.object({
   }),
   exceptions: z.record(z.string(), backupRecurrenceExceptionSchema), materializedThrough: localDate.optional(), createdAt: iso, updatedAt: iso,
 })
+export const backupReminderSchema = z.object({
+  id,
+  ownerType: z.enum(['task','series','habit','system']),
+  ownerId: z.string(),
+  label: z.string().optional(),
+  triggerType: z.enum(['absolute','task-date','time-block','habit-time','daily']),
+  absoluteAt: iso.optional(),
+  taskDateField: z.enum(['plannedDate','deadline']).optional(),
+  dayOffset: z.number().int().optional(),
+  minuteOfDay: z.number().int().min(0).max(1439).optional(),
+  blockEdge: z.enum(['start','end']).optional(),
+  offsetMinutes: z.number().int().optional(),
+  weekdays: z.array(z.number().int().min(0).max(6)).optional(),
+  timeZone: z.string(),
+  persistent: z.boolean(),
+  enabled: z.boolean(),
+  createdAt: iso,
+  updatedAt: iso,
+})
+export const backupReminderOccurrenceSchema = z.object({
+  id,
+  reminderId: id,
+  ownerType: z.enum(['task','series','habit','system']),
+  ownerId: z.string(),
+  targetTaskId: id.optional(),
+  sourceKey: z.string(),
+  scheduledFor: iso,
+  fireAt: iso,
+  status: z.enum(['scheduled','snoozed','due','dismissed','cancelled']),
+  snoozedUntil: iso.optional(),
+  deliveredAt: iso.optional(),
+  dismissedAt: iso.optional(),
+  deliveryCount: z.number().int().nonnegative(),
+  titleSnapshot: z.string(),
+  bodySnapshot: z.string().optional(),
+  createdAt: iso,
+  updatedAt: iso,
+})
+
 export const backupSettingSchema = z.object({ key: z.string().min(1), value: z.unknown(), updatedAt: iso })
 const provenanceType = z.enum(['project','task','habit','timeBlock','recurringSeries'])
 const snapshot = z.object({ type: z.enum(['project','task','habit','timeBlock','recurringSeries','dailyPlan','dailyPlanItem']), id, value: z.unknown() })

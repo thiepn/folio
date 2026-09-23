@@ -195,6 +195,38 @@ export const focusSessionCreateSchema = z.object({
   if (value.mode === 'countdown' && !value.targetSeconds) ctx.addIssue({ code: 'custom', message: 'Countdown sessions require a target duration.', path: ['targetSeconds'] })
 })
 
+export const reminderOwnerTypeSchema = z.enum(['task', 'series', 'habit', 'system'])
+export const reminderTriggerTypeSchema = z.enum(['absolute', 'task-date', 'time-block', 'habit-time', 'daily'])
+export const reminderTaskDateFieldSchema = z.enum(['plannedDate', 'deadline'])
+export const reminderBlockEdgeSchema = z.enum(['start', 'end'])
+
+export const reminderCreateSchema = z.object({
+  ownerType: reminderOwnerTypeSchema,
+  ownerId: z.string().min(1).max(200),
+  label: z.string().trim().max(240).optional(),
+  triggerType: reminderTriggerTypeSchema,
+  absoluteAt: isoDateTime.optional(),
+  taskDateField: reminderTaskDateFieldSchema.optional(),
+  dayOffset: z.number().int().min(-3650).max(3650).optional(),
+  minuteOfDay: z.number().int().min(0).max(1439).optional(),
+  blockEdge: reminderBlockEdgeSchema.optional(),
+  offsetMinutes: z.number().int().min(-30 * 24 * 60).max(30 * 24 * 60).optional(),
+  weekdays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
+  timeZone: z.string().trim().min(1).max(100).default('local'),
+  persistent: z.boolean().default(false),
+  enabled: z.boolean().default(true),
+}).superRefine((value, ctx) => {
+  if (value.triggerType === 'absolute' && !value.absoluteAt) ctx.addIssue({ code: 'custom', message: 'Absolute reminders require a date and time.', path: ['absoluteAt'] })
+  if (value.triggerType === 'task-date' && !value.taskDateField) ctx.addIssue({ code: 'custom', message: 'Task-date reminders require planned date or deadline.', path: ['taskDateField'] })
+  if ((value.triggerType === 'task-date' || value.triggerType === 'habit-time' || value.triggerType === 'daily') && value.minuteOfDay === undefined) ctx.addIssue({ code: 'custom', message: 'This reminder requires a time of day.', path: ['minuteOfDay'] })
+  if (value.triggerType === 'time-block' && !value.blockEdge) ctx.addIssue({ code: 'custom', message: 'Time-block reminders require a start or end anchor.', path: ['blockEdge'] })
+  if ((value.triggerType === 'task-date' || value.triggerType === 'time-block') && !['task','series'].includes(value.ownerType)) ctx.addIssue({ code: 'custom', message: 'Task reminders must belong to a task or recurring series.', path: ['ownerType'] })
+  if (value.triggerType === 'habit-time' && value.ownerType !== 'habit') ctx.addIssue({ code: 'custom', message: 'Habit-time reminders must belong to a habit.', path: ['ownerType'] })
+  if (value.triggerType === 'daily' && value.ownerType !== 'system') ctx.addIssue({ code: 'custom', message: 'Daily system reminders must use the system owner.', path: ['ownerType'] })
+})
+
+export const reminderUpdateSchema = reminderCreateSchema.partial()
+
 export const appearanceSchema = z.object({
   accent: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
   intensity: z.enum(['subtle', 'balanced', 'vivid']),
@@ -249,6 +281,8 @@ export const backupEnvelopeSchema = z.object({
     patchBatches: z.array(z.unknown()).default([]),
     calendarImportBatches: z.array(z.unknown()).default([]),
     reviewRecords: z.array(z.unknown()).default([]),
+    reminders: z.array(z.unknown()).default([]),
+    reminderOccurrences: z.array(z.unknown()).default([]),
   }),
 }).transform((value) => ({ ...value, format: 'folio-backup' as const }))
 

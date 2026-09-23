@@ -15,7 +15,7 @@ export interface DatabaseHealth {
 
 const CONTENT_TABLES = [
   'tasks', 'projects', 'habits', 'habitEntries', 'timeBlocks', 'dailyPlans', 'dailyPlanItems',
-  'focusSessions', 'recurringSeries', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords',
+  'focusSessions', 'recurringSeries', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords', 'reminders', 'reminderOccurrences',
 ] as const
 
 /**
@@ -36,22 +36,23 @@ async function migrateLegacyDatabaseName() {
   await legacy.open()
   const [
     tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems,
-    focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords,
+    focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences,
   ] = await Promise.all([
     legacy.tasks.toArray(), legacy.projects.toArray(), legacy.habits.toArray(), legacy.habitEntries.toArray(),
     legacy.timeBlocks.toArray(), legacy.dailyPlans.toArray(), legacy.dailyPlanItems.toArray(), legacy.focusSessions.toArray(),
     legacy.recurringSeries.toArray(), legacy.settings.toArray(), legacy.importBatches.toArray(), legacy.patchBatches.toArray(), legacy.calendarImportBatches.toArray(), legacy.reviewRecords.toArray(),
+    legacy.reminders.toArray(), legacy.reminderOccurrences.toArray(),
   ])
 
   await db.open()
   await db.transaction('rw', [
     db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
-    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords,
+    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords, db.reminders, db.reminderOccurrences,
   ], async () => {
       await Promise.all([
         db.tasks.clear(), db.projects.clear(), db.habits.clear(), db.habitEntries.clear(), db.timeBlocks.clear(),
         db.dailyPlans.clear(), db.dailyPlanItems.clear(), db.focusSessions.clear(), db.recurringSeries.clear(), db.settings.clear(),
-        db.importBatches.clear(), db.patchBatches.clear(), db.calendarImportBatches.clear(), db.reviewRecords.clear(),
+        db.importBatches.clear(), db.patchBatches.clear(), db.calendarImportBatches.clear(), db.reviewRecords.clear(), db.reminders.clear(), db.reminderOccurrences.clear(),
       ])
       await db.projects.bulkPut(projects)
       await db.recurringSeries.bulkPut(recurringSeries)
@@ -67,10 +68,12 @@ async function migrateLegacyDatabaseName() {
       await db.patchBatches.bulkPut(patchBatches)
       await db.calendarImportBatches.bulkPut(calendarImportBatches)
       await db.reviewRecords.bulkPut(reviewRecords)
+      await db.reminders.bulkPut(reminders)
+      await db.reminderOccurrences.bulkPut(reminderOccurrences)
     },
   )
 
-  const expected = [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords].map((rows) => rows.length)
+  const expected = [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences].map((rows) => rows.length)
   const actual = await Promise.all(CONTENT_TABLES.map((key) => db[key].count()))
   if (expected.some((count, index) => count !== actual[index])) {
     legacy.close()
@@ -107,14 +110,15 @@ async function migrateLegacyLocalStorage() {
 }
 
 export async function getDatabaseHealth(): Promise<DatabaseHealth> {
-  const [tasks, projects, habits, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords] = await Promise.all([
+  const [tasks, projects, habits, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences] = await Promise.all([
     db.tasks.count(), db.projects.count(), db.habits.count(), db.timeBlocks.count(), db.dailyPlans.count(), db.dailyPlanItems.count(),
     db.focusSessions.count(), db.recurringSeries.count(), db.importBatches.count(), db.patchBatches.count(), db.calendarImportBatches.count(), db.reviewRecords.count(),
+    db.reminders.count(), db.reminderOccurrences.count(),
   ])
   const persistentStorage = navigator.storage?.persisted ? await navigator.storage.persisted() : null
   return {
     schemaVersion: DATABASE_SCHEMA_VERSION,
-    counts: { tasks, projects, habits, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords },
+    counts: { tasks, projects, habits, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences },
     persistentStorage,
   }
 }
@@ -122,7 +126,7 @@ export async function getDatabaseHealth(): Promise<DatabaseHealth> {
 export async function loadDemoWorkspace(): Promise<DatabaseHealth> {
   const entityCounts = await Promise.all([
     db.tasks.count(), db.projects.count(), db.habits.count(), db.habitEntries.count(), db.timeBlocks.count(),
-    db.dailyPlans.count(), db.dailyPlanItems.count(), db.focusSessions.count(), db.recurringSeries.count(), db.reviewRecords.count(),
+    db.dailyPlans.count(), db.dailyPlanItems.count(), db.focusSessions.count(), db.recurringSeries.count(), db.reviewRecords.count(), db.reminders.count(), db.reminderOccurrences.count(),
   ])
   if (entityCounts.some(Boolean)) throw new Error('Demo workspace can only be loaded into an empty workspace.')
   await installDemoWorkspace()
