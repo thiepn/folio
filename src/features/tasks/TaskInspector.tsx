@@ -151,8 +151,8 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
     return () => window.removeEventListener('keydown', shortcut)
   })
 
-  async function save() {
-    if (!title.trim() || saving) return
+  async function save(): Promise<boolean> {
+    if (!title.trim() || saving) return false
     setSaving(true)
     setError('')
     try {
@@ -180,8 +180,10 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
         comments,
         blockedByTaskIds: status === 'inbox' || task.parentTaskId ? [] : blockedByTaskIds,
       }, series ? saveScope : 'this')
+      return true
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The task could not be saved.')
+      return false
     } finally {
       setSaving(false)
     }
@@ -229,7 +231,7 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
   async function createStandaloneNote() {
     setError(''); setContentMessage('')
     try {
-      if (dirty) await save()
+      if (dirty && !(await save())) return
       const note = await noteService.createFromTask(task.id)
       setContentMessage(`Created standalone note “${note.title}” with this task's attachments.`)
     } catch (reason) {
