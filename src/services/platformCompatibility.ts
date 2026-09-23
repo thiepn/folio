@@ -46,6 +46,7 @@ export function ensurePlatformCompatibility(): PlatformCompatibility {
   if (!('URL' in globalThis) || !('Blob' in globalThis)) missing.push('Blob/URL export support')
 
   if (!('serviceWorker' in navigator)) warnings.push('Install/offline app-shell support is unavailable in this browser.')
+  if (!('Notification' in window)) warnings.push('System notifications are unavailable; Folio reminders will remain in-app only.')
   if (!navigator.storage) warnings.push('Storage persistence/quota reporting is unavailable in this browser.')
   if (!window.matchMedia) warnings.push('Reduced-motion and responsive preference detection may be limited.')
 
