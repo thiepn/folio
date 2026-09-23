@@ -14,7 +14,7 @@ const hook = read('src/hooks/usePlannerData.ts')
 const planner = read('src/features/planner/PlannerView.tsx')
 const views = read('src/features/planner/PlannerOverhaulViews.tsx')
 const logic = read('src/features/planner/plannerLogic.ts')
-const calendar = read('src/features/planner/CalendarView.tsx')
+const calendar = read('src/features/planner/CalendarV2View.tsx')
 const styles = read('src/styles/index.css')
 
 check('v1.4+ package version', Number(pkg.version.split('.')[1] ?? 0) >= 4)
@@ -36,6 +36,7 @@ check('planner visibly distinguishes planned date and deadline', views.includes(
 check('planner drag changes planned date', views.includes("setData('text/task-id'") && views.includes('onMoveDate(id, date)'))
 check('planner keyboard rescheduling exists', views.includes("event.key === 'ArrowLeft'") && views.includes("event.key === 'ArrowRight'") && views.includes("event.key === 'Backspace'"))
 check('calendar accepts planner anchor date', calendar.includes('anchorDate') && calendar.includes('onSelectedDateChange'))
+check('planner calendar upgraded to D7 views', ['agenda','3day','multiweek','year'].every((mode) => calendar.includes("'" + mode + "'")))
 check('planner overhaul stylesheet loaded', styles.includes("@import './planner-overhaul.css';"))
 check('v1.4 release doc exists', exists('docs/PLANNER_OVERHAUL_V1_4.md'))
 
