@@ -64,6 +64,7 @@ export function materializeSeriesGraph(seriesInput: RecurringSeriesEntity, throu
         taskId: task.id,
         title: task.title,
         kind: 'task',
+        timeZone: series.timezone,
         start,
         end: new Date(new Date(start).getTime() + duration * 60_000).toISOString(),
       }, crypto.randomUUID(), now))
