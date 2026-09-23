@@ -192,21 +192,39 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
     if (session.taskId && !taskIds.has(session.taskId)) warnings.push(`Focus session ${session.id} references a task that is no longer present; historical snapshot data will be retained.`)
   }
   for (const series of data.recurringSeries) if (series.taskTemplate.projectId && !projectIds.has(series.taskTemplate.projectId)) throw new Error(`Recurring series “${series.title}” references a missing project.`)
-  for (const folder of data.folders) { void folder }
   for (const list of data.lists) if (list.folderId && !folderIds.has(list.folderId)) throw new Error(`List “${list.name}” references a missing folder.`)
-  const listById = new Map(data.lists.map((list) => [list.id, list]))
   for (const section of data.sections) if (!listIds.has(section.listId)) throw new Error(`Section “${section.name}” references a missing list.`)
+  const tagParent = new Map(data.tags.map((tag) => [tag.id, tag.parentTagId]))
   for (const tag of data.tags) {
     if (tag.parentTagId && !tagIds.has(tag.parentTagId)) throw new Error(`Tag “${tag.name}” references a missing parent tag.`)
     if (tag.parentTagId === tag.id) throw new Error(`Tag “${tag.name}” cannot parent itself.`)
+    const seen = new Set([tag.id])
+    let cursor = tag.parentTagId
+    while (cursor) {
+      if (seen.has(cursor)) throw new Error('Backup contains a tag hierarchy cycle.')
+      seen.add(cursor)
+      cursor = tagParent.get(cursor)
+    }
   }
+  const sectionById = new Map(data.sections.map((section) => [section.id, section]))
   for (const task of data.tasks) {
-    if (task.sectionId && task.listId && data.sections.find((section) => section.id === task.sectionId)?.listId !== task.listId) throw new Error(`Task “${task.title}” has a section from another list.`)
+    if (task.sectionId && !task.listId) throw new Error(`Task “${task.title}” has a section but no list.`)
+    if (task.sectionId && sectionById.get(task.sectionId)?.listId !== task.listId) throw new Error(`Task “${task.title}” has a section from another list.`)
   }
   for (const series of data.recurringSeries) {
     if (series.taskTemplate.listId && !listIds.has(series.taskTemplate.listId)) throw new Error(`Recurring series “${series.title}” references a missing list.`)
     if (series.taskTemplate.sectionId && !sectionIds.has(series.taskTemplate.sectionId)) throw new Error(`Recurring series “${series.title}” references a missing section.`)
+    if (series.taskTemplate.sectionId && !series.taskTemplate.listId) throw new Error(`Recurring series “${series.title}” has a section but no list.`)
+    if (series.taskTemplate.sectionId && sectionById.get(series.taskTemplate.sectionId)?.listId !== series.taskTemplate.listId) throw new Error(`Recurring series “${series.title}” has a section from another list.`)
     for (const tagId of series.taskTemplate.tagIds ?? []) if (!tagIds.has(tagId)) throw new Error(`Recurring series “${series.title}” references missing tag ${tagId}.`)
+    for (const [date, exception] of Object.entries(series.exceptions ?? {})) {
+      if (exception.listId && !listIds.has(exception.listId)) throw new Error(`Recurring series “${series.title}” exception ${date} references a missing list.`)
+      if (exception.sectionId && !sectionIds.has(exception.sectionId)) throw new Error(`Recurring series “${series.title}” exception ${date} references a missing section.`)
+      const effectiveListId = Object.prototype.hasOwnProperty.call(exception, 'listId') ? (exception.listId ?? undefined) : series.taskTemplate.listId
+      if (exception.sectionId && !effectiveListId) throw new Error(`Recurring series “${series.title}” exception ${date} has a section but no list.`)
+      if (exception.sectionId && sectionById.get(exception.sectionId)?.listId !== effectiveListId) throw new Error(`Recurring series “${series.title}” exception ${date} has a section from another list.`)
+      for (const tagId of exception.tagIds ?? []) if (!tagIds.has(tagId)) throw new Error(`Recurring series “${series.title}” exception ${date} references missing tag ${tagId}.`)
+    }
   }
   for (const reminder of data.reminders) {
     if (reminder.ownerType === 'task' && !taskIds.has(reminder.ownerId)) throw new Error(`Reminder ${reminder.id} references a missing task.`)
