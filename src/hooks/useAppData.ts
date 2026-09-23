@@ -9,7 +9,7 @@ import { recurrenceRepository } from '../repositories/recurrenceRepository'
 import { organizationRepository } from '../repositories/organizationRepository'
 import { reminderRepository } from '../repositories/reminderRepository'
 import { savedViewService } from '../services/savedViewService'
-import { BUILTIN_SMART_VIEWS, runSmartView } from '../features/smartViews/queryEngine'
+import { BUILTIN_SMART_VIEWS, runSmartViews } from '../features/smartViews/queryEngine'
 import { taskToPreview, timeBlockToPreview } from '../adapters/uiAdapters'
 import type { DailyPlanBucket, TaskEntity } from '../domain/models'
 
@@ -129,8 +129,9 @@ export function useAppData() {
       reminderOccurrences,
     }
     const smartViews = [...BUILTIN_SMART_VIEWS, ...customSmartViews]
+    const evaluatedSmartViews = runSmartViews(smartViews, smartContext)
     const smartViewResults = Object.fromEntries(smartViews.map((view) => {
-      const matches = runSmartView(view, smartContext)
+      const matches = evaluatedSmartViews[view.id] ?? []
       return [view.id, { count: matches.length, taskIds: matches.map((task) => task.id) }]
     }))
 
