@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Tabs } from '../../components/ui/Tabs'
 import {
@@ -563,7 +563,7 @@ function TimedCalendarBlock({ block, date, task, conflict, timeZone, column, col
     width: 'calc(' + String(width) + '% - 4px)',
   }
 
-  function beginResize(event: React.PointerEvent<HTMLButtonElement>) {
+  function beginResize(event: ReactPointerEvent<HTMLButtonElement>) {
     event.preventDefault()
     event.stopPropagation()
     if (!isStartDay) return
