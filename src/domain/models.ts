@@ -199,16 +199,16 @@ export interface RecurrenceException {
   skip?: boolean
   title?: string
   description?: string
-  projectId?: EntityId
+  projectId?: EntityId | null
   priority?: TaskPriority
-  estimatedMinutes?: number
+  estimatedMinutes?: number | null
   tags?: string[]
   checklist?: string[]
-  sourceUrl?: string
-  location?: string
+  sourceUrl?: string | null
+  location?: string | null
   pinned?: boolean
-  plannedDate?: LocalDate
-  deadline?: LocalDate
+  plannedDate?: LocalDate | null
+  deadline?: LocalDate | null
   startMinute?: number
   blockDurationMinutes?: number
 }
