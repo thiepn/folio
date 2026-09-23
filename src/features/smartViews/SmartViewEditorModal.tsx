@@ -207,8 +207,8 @@ function ConditionValue({condition,projects,lists,sections,tags,onChange}:{
   if(condition.field==='reminder') return <select className="smart-condition-value" value={String(condition.value??'configured')} onChange={(e)=>onChange({...condition,value:e.target.value})}><option value="configured">Configured</option><option value="none">None</option><option value="due">Due</option><option value="snoozed">Snoozed</option><option value="outstanding">Outstanding</option></select>
   if(condition.field==='completion') return <select className="smart-condition-value" value={String(condition.value??'open')} onChange={(e)=>onChange({...condition,value:e.target.value})}><option value="open">Open</option><option value="completed">Completed</option></select>
 
-  if(condition.field==='status') return <EntityValue condition={condition} options={[['inbox','Inbox'],['todo','To do'],['completed','Completed']]} onChange={onChange}/>
-  if(condition.field==='priority') return <EntityValue condition={condition} options={[['normal','Normal'],['high','High'],['critical','Critical']]} onChange={onChange}/>
+  if(condition.field==='status') return <EntityValue condition={condition} options={[['inbox','Inbox'],['todo','To do'],['completed','Completed']] as [string,string][]} onChange={onChange}/>
+  if(condition.field==='priority') return <EntityValue condition={condition} options={[['normal','Normal'],['high','High'],['critical','Critical']] as [string,string][]} onChange={onChange}/>
   if(condition.field==='project') return <EntityValue condition={condition} options={projects.map((item)=>[item.id,item.name] as [string,string])} onChange={onChange}/>
   if(condition.field==='list') return <EntityValue condition={condition} options={lists.map((item)=>[item.id,item.name] as [string,string])} onChange={onChange}/>
   if(condition.field==='section') return <EntityValue condition={condition} options={sections.map((item)=>[item.id,item.name] as [string,string])} onChange={onChange}/>
