@@ -29,6 +29,9 @@ const taskChanges = z.object({
   status: z.enum(['todo', 'inbox']).optional(),
   plannedDate: localDate.nullable().optional(),
   deadline: localDate.nullable().optional(),
+  timelineStart: localDate.nullable().optional(),
+  timelineEnd: localDate.nullable().optional(),
+  timelineMilestone: z.boolean().optional(),
   estimatedMinutes: z.number().int().positive().max(1440).nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(50).optional(),
 }).strict()
