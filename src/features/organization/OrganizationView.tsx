@@ -136,6 +136,7 @@ export function OrganizationView({
     const scopedTagIds = selectedTag ? tagScopeIds(selectedTag.id) : undefined
     return <ListWorkspace
       key={selectedList?.id ?? selectedTag?.id}
+      today={today}
       list={selectedList}
       titleOverride={selectedTag ? '#'+selectedTag.name : undefined}
       projects={projects}
@@ -251,8 +252,8 @@ function TagBranch({tag,byParent,counts,onUpdate,onOpen}:{tag:TagEntity;byParent
   </div>
 }
 
-function ListWorkspace({list,titleOverride,projects,allLists,folders,sections,tags,tasks,onBack,onUpdateList,onCreateSection,onArchiveSection,onOpenTask,onToggleTask,onMoveTask,onBoardDrop,onTimelineSetSpan,onTimelineClear,onAddTask}:{
-  list?:ListEntity;titleOverride?:string;projects:Array<{id:string;name:string}>;allLists:ListEntity[];folders:FolderEntity[];sections:SectionEntity[];tags:TagEntity[];tasks:TaskPreview[];
+function ListWorkspace({today,list,titleOverride,projects,allLists,folders,sections,tags,tasks,onBack,onUpdateList,onCreateSection,onArchiveSection,onOpenTask,onToggleTask,onMoveTask,onBoardDrop,onTimelineSetSpan,onTimelineClear,onAddTask}:{
+  today:string;list?:ListEntity;titleOverride?:string;projects:Array<{id:string;name:string}>;allLists:ListEntity[];folders:FolderEntity[];sections:SectionEntity[];tags:TagEntity[];tasks:TaskPreview[];
   onBack:()=>void;onUpdateList:(id:string,changes:ListUpdateInput)=>Promise<void>;onCreateSection:(listId:string,name:string)=>Promise<void>;onArchiveSection:(id:string)=>Promise<void>;
   onOpenTask:(id:string)=>void;onToggleTask:(id:string)=>void;onMoveTask:(taskId:string,listId?:string,sectionId?:string)=>Promise<void>;
   onBoardDrop:(taskId:string,target:KanbanDropTarget)=>Promise<void>;onTimelineSetSpan:(taskId:string,start:string,end:string,milestone:boolean)=>Promise<void>;onTimelineClear:(taskId:string)=>Promise<void>;
