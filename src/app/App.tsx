@@ -219,6 +219,7 @@ function AppContent() {
       setSelectedTaskId(null)
       setShortcutHelpOpen(false)
       setKeyboardSettingsOpen(false)
+      setReminderCenterOpen(false)
     }
 
     function onKeyDown(event: KeyboardEvent) {
