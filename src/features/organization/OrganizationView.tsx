@@ -343,6 +343,6 @@ function ListWorkspace({list,titleOverride,projects,allLists,folders,sections,ta
         <div className="task-list">{group.tasks.map((task)=><div className="organized-task" key={task.id}><TaskRow task={task} onToggle={onToggleTask} onOpen={onOpenTask}/>{list?<select aria-label={'Move '+task.title+' to section'} value={task.sectionId??''} onChange={(e)=>void onMoveTask(task.id,list.id,e.target.value||undefined)}><option value="">No section</option>{sections.map((section)=><option key={section.id} value={section.id}>{section.name}</option>)}</select>:null}</div>)}</div>
         {!group.tasks.length?<div className="empty-state">No tasks in this group.</div>:null}
       </section>)}
-    </div>
+    </div>:null}
   </div>
 }
