@@ -156,7 +156,9 @@ export function CalendarV2View({
   }
 
   async function duplicateEditor(id: string) {
-    await onDuplicateBlock(id, undefined, undefined, timeZone)
+    const block = data?.blocks.find((item) => item.id === id)
+    const zone = block?.allDay ? (block.timeZone ?? 'local') : timeZone
+    await onDuplicateBlock(id, undefined, undefined, zone)
     setEditor(null)
   }
 
