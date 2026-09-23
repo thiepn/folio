@@ -31,6 +31,8 @@ export type ReminderTriggerType = 'absolute' | 'task-date' | 'time-block' | 'hab
 export type ReminderTaskDateField = 'plannedDate' | 'deadline'
 export type ReminderBlockEdge = 'start' | 'end'
 export type ReminderOccurrenceStatus = 'scheduled' | 'snoozed' | 'due' | 'dismissed' | 'cancelled'
+export type ListSortMode = 'manual' | 'planned' | 'deadline' | 'priority' | 'title' | 'created' | 'updated'
+export type ListGroupMode = 'section' | 'none' | 'planned' | 'priority' | 'tag'
 
 export interface TaskChecklistItem {
   id: EntityId
@@ -61,6 +63,8 @@ export interface TaskEntity {
   title: string
   description: string
   projectId?: EntityId
+  listId?: EntityId
+  sectionId?: EntityId
   parentTaskId?: EntityId
   priority: TaskPriority
   status: TaskStatus
@@ -69,6 +73,7 @@ export interface TaskEntity {
   deadline?: LocalDate
   estimatedMinutes?: number
   tags: string[]
+  tagIds: EntityId[]
   checklist: TaskChecklistItem[]
   progressMode: TaskProgressMode
   progressPercent: number
@@ -86,6 +91,60 @@ export interface TaskEntity {
   updatedAt: IsoDateTime
   completedAt?: IsoDateTime
   deletedAt?: IsoDateTime
+}
+
+export interface FolderEntity {
+  id: EntityId
+  name: string
+  color?: string
+  icon?: string
+  sortOrder: number
+  collapsed: boolean
+  archived: boolean
+  archivedAt?: IsoDateTime
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface ListEntity {
+  id: EntityId
+  name: string
+  description: string
+  folderId?: EntityId
+  color?: string
+  icon?: string
+  favorite: boolean
+  archived: boolean
+  archivedAt?: IsoDateTime
+  sortOrder: number
+  sortMode: ListSortMode
+  groupMode: ListGroupMode
+  showCompleted: boolean
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface SectionEntity {
+  id: EntityId
+  listId: EntityId
+  name: string
+  sortOrder: number
+  archived: boolean
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface TagEntity {
+  id: EntityId
+  name: string
+  normalizedName: string
+  parentTagId?: EntityId
+  color?: string
+  favorite: boolean
+  archived: boolean
+  sortOrder: number
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
 }
 
 export interface ProjectMilestone {
@@ -205,9 +264,12 @@ export interface RecurrenceException {
   title?: string
   description?: string
   projectId?: EntityId | null
+  listId?: EntityId | null
+  sectionId?: EntityId | null
   priority?: TaskPriority
   estimatedMinutes?: number | null
   tags?: string[]
+  tagIds?: EntityId[]
   checklist?: string[]
   sourceUrl?: string | null
   location?: string | null
@@ -242,9 +304,12 @@ export interface RecurringSeriesEntity {
     title: string
     description: string
     projectId?: EntityId
+    listId?: EntityId
+    sectionId?: EntityId
     priority: TaskPriority
     estimatedMinutes?: number
     tags: string[]
+    tagIds: EntityId[]
     checklist: string[]
     sourceUrl?: string
     location?: string
