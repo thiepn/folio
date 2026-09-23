@@ -18,6 +18,24 @@ export type SmartOperator =
   | 'on' | 'before' | 'after' | 'on-or-before' | 'on-or-after' | 'between'
   | 'today' | 'tomorrow' | 'within-next' | 'overdue'
   | 'lt' | 'lte' | 'gt' | 'gte'
+export const SMART_FIELD_OPERATORS: Record<SmartField,SmartOperator[]> = {
+  text:['contains','not-contains','equals'],
+  status:['is','is-not','in','not-in'],
+  priority:['is','is-not','in','not-in'],
+  project:['is','is-not','in','not-in','exists','not-exists'],
+  list:['is','is-not','in','not-in','exists','not-exists'],
+  section:['is','is-not','in','not-in','exists','not-exists'],
+  tag:['has-any','has-all','has-none','exists','not-exists'],
+  planned:['today','tomorrow','overdue','within-next','on','before','after','on-or-before','on-or-after','between','exists','not-exists'],
+  deadline:['today','tomorrow','overdue','within-next','on','before','after','on-or-before','on-or-after','between','exists','not-exists'],
+  recurring:['is'],
+  readiness:['is'],
+  estimate:['lt','lte','gt','gte','between','exists','not-exists'],
+  reminder:['is'],
+  pinned:['is'],
+  completion:['is'],
+}
+
 export type SmartSortField = 'manual' | 'planned' | 'deadline' | 'priority' | 'estimate' | 'title' | 'created' | 'updated'
 export type SmartGroupBy = 'none' | 'project' | 'list' | 'section' | 'priority' | 'planned' | 'deadline' | 'tag' | 'status' | 'readiness'
 
