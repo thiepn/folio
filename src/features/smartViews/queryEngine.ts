@@ -3,7 +3,7 @@ import type {
   ListEntity, LocalDate, ProjectEntity, ReminderEntity, ReminderOccurrenceEntity,
   SectionEntity, TagEntity, TaskEntity, TaskPriority, TaskStatus,
 } from '../../domain/models'
-import { taskIsBlocked } from '../planner/advancedPlanning'
+import { isActiveBlocker } from '../planner/dependencyLogic'
 
 export type SmartLogic = 'and' | 'or'
 export type SmartScope = 'root' | 'all'
@@ -70,6 +70,41 @@ export interface SmartViewContext {
   tags: TagEntity[]
   reminders: ReminderEntity[]
   reminderOccurrences: ReminderOccurrenceEntity[]
+}
+
+interface SmartRuntime {
+  taskMap: Map<string,TaskEntity>
+  tagScope: (id:string)=>Set<string>
+  directReminderTaskIds: Set<string>
+  reminderSeriesIds: Set<string>
+  reminderStatesByTask: Map<string,Set<ReminderOccurrenceEntity['status']>>
+}
+
+function prepareRuntime(context:SmartViewContext):SmartRuntime {
+  const directReminderTaskIds=new Set<string>()
+  const reminderSeriesIds=new Set<string>()
+  for(const reminder of context.reminders){
+    if(!reminder.enabled) continue
+    if(reminder.ownerType==='task') directReminderTaskIds.add(reminder.ownerId)
+    if(reminder.ownerType==='series') reminderSeriesIds.add(reminder.ownerId)
+  }
+  const reminderStatesByTask=new Map<string,Set<ReminderOccurrenceEntity['status']>>()
+  for(const occurrence of context.reminderOccurrences){
+    if(!occurrence.targetTaskId) continue
+    const states=reminderStatesByTask.get(occurrence.targetTaskId)??new Set()
+    states.add(occurrence.status);reminderStatesByTask.set(occurrence.targetTaskId,states)
+  }
+  return {
+    taskMap:new Map(context.tasks.map((task)=>[task.id,task])),
+    tagScope:descendantScopes(context.tags),
+    directReminderTaskIds,
+    reminderSeriesIds,
+    reminderStatesByTask,
+  }
+}
+
+function taskBlocked(task:TaskEntity,runtime:SmartRuntime){
+  return (task.blockedByTaskIds??[]).some((id)=>isActiveBlocker(runtime.taskMap.get(id)))
 }
 
 function id(seed: string) { return seed }
@@ -229,23 +264,18 @@ function descendantScopes(tags: TagEntity[]) {
   return scope
 }
 
-function reminderState(task: TaskEntity, context: SmartViewContext) {
-  const configured = context.reminders.some((reminder) =>
-    reminder.enabled && ((reminder.ownerType === 'task' && reminder.ownerId === task.id) || (reminder.ownerType === 'series' && task.seriesId && reminder.ownerId === task.seriesId))
-  )
-  const occurrenceStates = context.reminderOccurrences
-    .filter((item) => item.targetTaskId === task.id)
-    .map((item) => item.status)
+function reminderState(task: TaskEntity, runtime: SmartRuntime) {
+  const configured = runtime.directReminderTaskIds.has(task.id) || Boolean(task.seriesId && runtime.reminderSeriesIds.has(task.seriesId))
+  const occurrenceStates = runtime.reminderStatesByTask.get(task.id) ?? new Set()
   return {
     configured,
-    due: occurrenceStates.includes('due'),
-    snoozed: occurrenceStates.includes('snoozed'),
-    outstanding: occurrenceStates.some((status) => status === 'due' || status === 'snoozed'),
+    due: occurrenceStates.has('due'),
+    snoozed: occurrenceStates.has('snoozed'),
+    outstanding: occurrenceStates.has('due') || occurrenceStates.has('snoozed'),
   }
 }
 
-export function matchesSmartCondition(task: TaskEntity, condition: SmartFilterCondition, context: SmartViewContext) {
-  const taskMap = new Map(context.tasks.map((item) => [item.id,item]))
+export function matchesSmartCondition(task: TaskEntity, condition: SmartFilterCondition, context: SmartViewContext, runtime = prepareRuntime(context)) {
   if (condition.field === 'text') {
     const haystack = normalized([
       task.title, task.description, task.location ?? '', task.sourceUrl ?? '',
@@ -273,15 +303,14 @@ export function matchesSmartCondition(task: TaskEntity, condition: SmartFilterCo
     return condition.operator === 'is' ? (expected === 'completed' ? completed : expected === 'open' ? !completed : false) : false
   }
   if (condition.field === 'readiness') {
-    const blocked = taskIsBlocked(task, taskMap)
+    const blocked = taskBlocked(task, runtime)
     const expected = stringValue(condition.value)
     return condition.operator === 'is' ? (expected === 'blocked' ? blocked : expected === 'ready' ? !blocked : false) : false
   }
   if (condition.field === 'tag') {
     const selected = arrayValue(condition.value)
-    const scope = descendantScopes(context.tags)
     const expanded = condition.includeDescendants
-      ? selected.map((id) => scope(id))
+      ? selected.map((id) => runtime.tagScope(id))
       : selected.map((id) => new Set([id]))
     const actual = task.tagIds ?? []
     if (condition.operator === 'has-any' || condition.operator === 'in') return expanded.some((set) => actual.some((id) => set.has(id)))
@@ -292,7 +321,7 @@ export function matchesSmartCondition(task: TaskEntity, condition: SmartFilterCo
     return compareSet(actual,condition)
   }
   if (condition.field === 'reminder') {
-    const state = reminderState(task,context)
+    const state = reminderState(task,runtime)
     const expected = stringValue(condition.value)
     if (condition.operator !== 'is') return false
     if (expected === 'configured') return state.configured
@@ -305,9 +334,9 @@ export function matchesSmartCondition(task: TaskEntity, condition: SmartFilterCo
   return false
 }
 
-export function matchesSmartNode(task: TaskEntity, node: SmartFilterNode, context: SmartViewContext): boolean {
-  if (node.type === 'condition') return matchesSmartCondition(task,node,context)
-  const values = node.children.map((child) => matchesSmartNode(task,child,context))
+export function matchesSmartNode(task: TaskEntity, node: SmartFilterNode, context: SmartViewContext, runtime = prepareRuntime(context)): boolean {
+  if (node.type === 'condition') return matchesSmartCondition(task,node,context,runtime)
+  const values = node.children.map((child) => matchesSmartNode(task,child,context,runtime))
   const matched = node.children.length === 0 ? true : node.operator === 'and' ? values.every(Boolean) : values.some(Boolean)
   return node.negated ? !matched : matched
 }
@@ -328,10 +357,11 @@ function compareByRule(a: TaskEntity,b: TaskEntity,rule:SmartSortRule){
 }
 
 export function runSmartView(view: SmartTaskView, context: SmartViewContext) {
+  const runtime=prepareRuntime(context)
   const rows=context.tasks.filter((task)=>{
     if(task.deletedAt || task.status==='cancelled') return false
     if(view.scope==='root' && task.parentTaskId) return false
-    return matchesSmartNode(task,view.query,context)
+    return matchesSmartNode(task,view.query,context,runtime)
   })
   const rules=view.sort.length?view.sort:[{field:'manual',direction:'asc'} satisfies SmartSortRule]
   return rows.sort((a,b)=>{
@@ -353,7 +383,7 @@ export function smartGroupKey(task:TaskEntity,groupBy:SmartGroupBy,context:Smart
     : {key:'__none__',label:'No section'}
   if(groupBy==='priority') return {key:task.priority,label:task.priority[0].toUpperCase()+task.priority.slice(1)}
   if(groupBy==='status') return {key:task.status,label:task.status[0].toUpperCase()+task.status.slice(1)}
-  if(groupBy==='readiness') return taskIsBlocked(task,new Map(context.tasks.map((item)=>[item.id,item])))
+  if(groupBy==='readiness') return taskBlocked(task,prepareRuntime(context))
     ? {key:'blocked',label:'Blocked'}:{key:'ready',label:'Ready'}
   if(groupBy==='planned') return task.plannedDate?{key:task.plannedDate,label:task.plannedDate}:{key:'__none__',label:'Unscheduled'}
   if(groupBy==='deadline') return task.deadline?{key:task.deadline,label:task.deadline}:{key:'__none__',label:'No deadline'}
