@@ -8,7 +8,15 @@ import type { ProjectSummary } from '../../repositories/projectRepository'
 import type { TaskUpdateInput } from '../../repositories/taskRepository'
 import type { TaskPreview } from '../../types/ui'
 
-export function TaskInspector({ task, subtasks, projects, dependencyCandidates, series, focusSeconds = 0, onClose, onSave, onToggle, onToggleSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }: {
+type SaveScope = 'this' | 'future' | 'entire'
+type ChecklistItem = NonNullable<TaskPreview['checklist']>[number]
+type CommentItem = NonNullable<TaskPreview['comments']>[number]
+
+function parseTags(value: string) {
+  return [...new Set(value.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean))].slice(0, 50)
+}
+
+export function TaskInspector({ task, subtasks, projects, dependencyCandidates, series, focusSeconds = 0, onClose, onSave, onToggle, onToggleSubtask, onOpenSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }: {
   task: TaskPreview | null
   subtasks: TaskPreview[]
   projects: ProjectSummary[]
@@ -16,9 +24,10 @@ export function TaskInspector({ task, subtasks, projects, dependencyCandidates, 
   series?: RecurringSeriesEntity | null
   focusSeconds?: number
   onClose: () => void
-  onSave: (id: string, changes: TaskUpdateInput, scope?: 'this' | 'future' | 'entire') => Promise<void>
+  onSave: (id: string, changes: TaskUpdateInput, scope?: SaveScope) => Promise<void>
   onToggle: (id: string) => void
   onToggleSubtask: (id: string) => void
+  onOpenSubtask: (id: string) => void
   onAddSubtask: (parentId: string, title: string) => Promise<void>
   onDeleteSubtask: (id: string) => void
   onDuplicate: (id: string) => void
@@ -31,21 +40,22 @@ export function TaskInspector({ task, subtasks, projects, dependencyCandidates, 
 }) {
   return (
     <Drawer open={Boolean(task)} title="Task" onClose={onClose} className="task-drawer-overlay">
-      {task ? <TaskInspectorForm key={`${task.id}:${task.updatedAt}:${series?.updatedAt ?? ''}`} {...{ task, subtasks, projects, dependencyCandidates, series, focusSeconds, onSave, onToggle, onToggleSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }} /> : null}
+      {task ? <TaskInspectorForm key={task.id + ':' + task.updatedAt + ':' + (series?.updatedAt ?? '')} {...{ task, subtasks, projects, dependencyCandidates, series, focusSeconds, onSave, onToggle, onToggleSubtask, onOpenSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }} /> : null}
     </Drawer>
   )
 }
 
-function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, series, focusSeconds, onSave, onToggle, onToggleSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }: {
+function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, series, focusSeconds, onSave, onToggle, onToggleSubtask, onOpenSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }: {
   task: TaskPreview
   subtasks: TaskPreview[]
   projects: ProjectSummary[]
   dependencyCandidates: TaskPreview[]
   series?: RecurringSeriesEntity | null
   focusSeconds: number
-  onSave: (id: string, changes: TaskUpdateInput, scope?: 'this' | 'future' | 'entire') => Promise<void>
+  onSave: (id: string, changes: TaskUpdateInput, scope?: SaveScope) => Promise<void>
   onToggle: (id: string) => void
   onToggleSubtask: (id: string) => void
+  onOpenSubtask: (id: string) => void
   onAddSubtask: (parentId: string, title: string) => Promise<void>
   onDeleteSubtask: (id: string) => void
   onDuplicate: (id: string) => void
@@ -64,14 +74,50 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
   const [plannedDate, setPlannedDate] = useState(task.plannedDate ?? '')
   const [deadline, setDeadline] = useState(task.deadline ?? '')
   const [estimate, setEstimate] = useState(String(task.durationMinutes ?? ''))
+  const [tags, setTags] = useState((task.tags ?? []).join(', '))
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(task.checklist ?? [])
+  const [progressMode, setProgressMode] = useState<'auto' | 'manual'>(task.progressMode ?? 'auto')
+  const [progressPercent, setProgressPercent] = useState(task.progressPercent ?? 0)
+  const [sourceUrl, setSourceUrl] = useState(task.sourceUrl ?? '')
+  const [location, setLocation] = useState(task.location ?? '')
+  const [pinned, setPinned] = useState(Boolean(task.pinned))
+  const [comments, setComments] = useState<CommentItem[]>(task.comments ?? [])
   const [blockedByTaskIds, setBlockedByTaskIds] = useState<string[]>(task.blockedByTaskIds ?? [])
   const [subtaskTitle, setSubtaskTitle] = useState('')
+  const [checklistTitle, setChecklistTitle] = useState('')
+  const [commentBody, setCommentBody] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [saveScope, setSaveScope] = useState<'this' | 'future' | 'entire'>('this')
-  const dirty = useMemo(() =>
-    title.trim() !== task.title || description !== (task.description ?? '') || projectId !== (task.projectId ?? '') || priority !== task.priority || status !== task.status || plannedDate !== (task.plannedDate ?? '') || deadline !== (task.deadline ?? '') || estimate !== String(task.durationMinutes ?? '') || blockedByTaskIds.join('|') !== (task.blockedByTaskIds ?? []).join('|'),
-    [title, description, projectId, priority, status, plannedDate, deadline, estimate, blockedByTaskIds, task])
+  const [saveScope, setSaveScope] = useState<SaveScope>('this')
+
+  const autoProgress = useMemo(() => {
+    if (status === 'completed') return 100
+    const units = subtasks.length + checklist.length
+    if (!units) return 0
+    const done = subtasks.filter((item) => item.completed).length + checklist.filter((item) => item.completed).length
+    return Math.round((done / units) * 100)
+  }, [status, subtasks, checklist])
+
+  const dirty = useMemo(() => {
+    const currentTags = parseTags(tags)
+    return title.trim() !== task.title
+      || description !== (task.description ?? '')
+      || projectId !== (task.projectId ?? '')
+      || priority !== task.priority
+      || status !== task.status
+      || plannedDate !== (task.plannedDate ?? '')
+      || deadline !== (task.deadline ?? '')
+      || estimate !== String(task.durationMinutes ?? '')
+      || currentTags.join('|') !== (task.tags ?? []).join('|')
+      || JSON.stringify(checklist) !== JSON.stringify(task.checklist ?? [])
+      || progressMode !== (task.progressMode ?? 'auto')
+      || progressPercent !== (task.progressPercent ?? 0)
+      || sourceUrl !== (task.sourceUrl ?? '')
+      || location !== (task.location ?? '')
+      || pinned !== Boolean(task.pinned)
+      || JSON.stringify(comments) !== JSON.stringify(task.comments ?? [])
+      || blockedByTaskIds.join('|') !== (task.blockedByTaskIds ?? []).join('|')
+  }, [title, description, projectId, priority, status, plannedDate, deadline, estimate, tags, checklist, progressMode, progressPercent, sourceUrl, location, pinned, comments, blockedByTaskIds, task])
 
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
@@ -98,7 +144,15 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
         plannedDate: plannedDate || null,
         deadline: deadline || null,
         estimatedMinutes: estimate ? Number(estimate) : null,
-        blockedByTaskIds: status === 'inbox' ? [] : blockedByTaskIds,
+        tags: parseTags(tags),
+        checklist,
+        progressMode,
+        progressPercent: progressMode === 'manual' ? progressPercent : 0,
+        sourceUrl: sourceUrl.trim() || null,
+        location: location.trim() || null,
+        pinned,
+        comments,
+        blockedByTaskIds: status === 'inbox' || task.parentTaskId ? [] : blockedByTaskIds,
       }, series ? saveScope : 'this')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The task could not be saved.')
@@ -114,12 +168,42 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
       await onAddSubtask(task.id, subtaskTitle.trim())
       setSubtaskTitle('')
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'The subtask could not be added.')
+      setError(reason instanceof Error ? reason.message : 'The nested task could not be added.')
     }
   }
 
+  function addChecklistItem(event: React.FormEvent) {
+    event.preventDefault()
+    const text = checklistTitle.trim()
+    if (!text) return
+    const now = new Date().toISOString()
+    setChecklist((items) => [...items, { id: crypto.randomUUID(), text, completed: false, sortOrder: items.length, createdAt: now, updatedAt: now }])
+    setChecklistTitle('')
+  }
+
+  function toggleChecklistItem(id: string) {
+    const now = new Date().toISOString()
+    setChecklist((items) => items.map((item) => item.id === id ? { ...item, completed: !item.completed, completedAt: !item.completed ? now : undefined, updatedAt: now } : item))
+  }
+
+  function updateChecklistText(id: string, text: string) {
+    const now = new Date().toISOString()
+    setChecklist((items) => items.map((item) => item.id === id ? { ...item, text, updatedAt: now } : item))
+  }
+
+  function addComment(event: React.FormEvent) {
+    event.preventDefault()
+    const body = commentBody.trim()
+    if (!body) return
+    const now = new Date().toISOString()
+    setComments((items) => [...items, { id: crypto.randomUUID(), body, createdAt: now, updatedAt: now }])
+    setCommentBody('')
+  }
+
+  const visibleProgress = progressMode === 'auto' ? autoProgress : progressPercent
+
   return (
-    <div className="task-editor">
+    <div className="task-editor task-editor--v2">
       {task.status === 'inbox' ? (
         <div className="inbox-processing-strip">
           <div><strong>Inbox capture</strong><span>Give it a home when you are ready.</span></div>
@@ -127,13 +211,18 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
         </div>
       ) : null}
 
-      <div className={`recurrence-strip ${series ? 'is-series' : ''}`}>
-        <div><span className="recurrence-glyph">↻</span><div><strong>{series ? seriesSummary(series) : 'Does not repeat'}</strong><span>{series ? `${series.status === 'active' ? 'Active series' : series.status} · occurrence ${task.recurrenceDate ?? task.plannedDate ?? ''}` : 'Turn this task into a recurring series when needed.'}</span></div></div>
-        <div className="recurrence-strip__actions"><Button onClick={onOpenRecurrence}>{series ? 'Edit repeat' : 'Make recurring'}</Button>{series ? <><Button onClick={() => onSkipOccurrence(task.id)}>Skip this</Button>{series.status !== 'archived' ? <Button onClick={() => onSetSeriesStatus(series.id, series.status === 'active' ? 'paused' : 'active')}>{series.status === 'active' ? 'Pause' : 'Resume'}</Button> : null}{series.status !== 'archived' ? <Button onClick={() => onSetSeriesStatus(series.id, 'archived')}>End series</Button> : null}</> : null}</div>
-      </div>
+      {!task.parentTaskId ? (
+        <div className={'recurrence-strip ' + (series ? 'is-series' : '')}>
+          <div><span className="recurrence-glyph">↻</span><div><strong>{series ? seriesSummary(series) : 'Does not repeat'}</strong><span>{series ? (series.status === 'active' ? 'Active series' : series.status) + ' · occurrence ' + (task.recurrenceDate ?? task.plannedDate ?? '') : 'Turn this task into a recurring series when needed.'}</span></div></div>
+          <div className="recurrence-strip__actions"><Button onClick={onOpenRecurrence}>{series ? 'Edit repeat' : 'Make recurring'}</Button>{series ? <><Button onClick={() => onSkipOccurrence(task.id)}>Skip this</Button>{series.status !== 'archived' ? <Button onClick={() => onSetSeriesStatus(series.id, series.status === 'active' ? 'paused' : 'active')}>{series.status === 'active' ? 'Pause' : 'Resume'}</Button> : null}{series.status !== 'archived' ? <Button onClick={() => onSetSeriesStatus(series.id, 'archived')}>End series</Button> : null}</> : null}</div>
+        </div>
+      ) : <div className="nested-task-strip"><strong>Nested task</strong><span>This task can contain its own child tasks.</span></div>}
 
-      <label className="task-title-field"><span>Task title</span><textarea rows={2} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-      <label className="field task-notes-field"><span>Notes</span><textarea rows={5} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Context, links, acceptance criteria, or anything useful when you return to this task." /></label>
+      <div className="task-v2-title-row">
+        <label className="task-title-field"><span>Task title</span><textarea rows={2} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+        <label className="task-pin-toggle"><input type="checkbox" checked={pinned} onChange={(event) => setPinned(event.target.checked)} /><span>Pin</span></label>
+      </div>
+      <label className="field task-notes-field"><span>Notes · Markdown</span><textarea rows={7} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Context, links, acceptance criteria, meeting notes, or Markdown." /></label>
 
       <section className="task-property-section">
         <div className="eyebrow">Properties</div>
@@ -147,12 +236,48 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
         </div>
       </section>
 
+      <section className="task-v2-context-section">
+        <div className="task-section-head"><div><div className="eyebrow">Context</div><span>Keep execution details with the task.</span></div></div>
+        <label className="field"><span>Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="university, deep-work, admin" /><small>Comma-separated for now; D5 will add the global tag system.</small></label>
+        <div className="task-property-grid">
+          <label className="field"><span>URL</span><input type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="https://…" /></label>
+          <label className="field"><span>Location</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Library, campus, home…" /></label>
+        </div>
+        {parseTags(tags).length ? <div className="task-tag-list">{parseTags(tags).map((tag) => <span key={tag}>#{tag}</span>)}</div> : null}
+      </section>
 
-      {task.status !== 'inbox' ? <section className="task-dependency-section">
-        <div className="task-section-head"><div><div className="eyebrow">Dependencies</div><span>{task.activeBlockerCount ? `Blocked by ${task.activeBlockerCount} unfinished prerequisite${task.activeBlockerCount === 1 ? '' : 's'}` : blockedByTaskIds.length ? 'All prerequisites complete' : 'No prerequisites'}</span></div></div>
+      <section className="task-v2-progress-section">
+        <div className="task-section-head"><div><div className="eyebrow">Progress</div><span>{visibleProgress}% complete</span></div></div>
+        <div className="task-progress-bar" aria-label={'Task progress ' + visibleProgress + '%'}><span style={{ width: visibleProgress + '%' }} /></div>
+        <div className="task-progress-controls">
+          <label><input type="radio" name="progress-mode" checked={progressMode === 'auto'} onChange={() => setProgressMode('auto')} /> Auto from checklist and nested tasks</label>
+          <label><input type="radio" name="progress-mode" checked={progressMode === 'manual'} onChange={() => setProgressMode('manual')} /> Manual</label>
+        </div>
+        {progressMode === 'manual' ? <label className="field"><span>Manual progress</span><input type="range" min="0" max="100" step="5" value={progressPercent} onChange={(event) => setProgressPercent(Number(event.target.value))} /></label> : null}
+      </section>
+
+      <section className="task-v2-checklist-section">
+        <div className="task-section-head"><div><div className="eyebrow">Checklist</div><span>{checklist.filter((item) => item.completed).length} / {checklist.length} complete</span></div></div>
+        <div className="task-checklist">
+          {checklist.map((item) => (
+            <div className="task-checklist-row" key={item.id}>
+              <input type="checkbox" checked={item.completed} onChange={() => toggleChecklistItem(item.id)} aria-label={'Toggle checklist item ' + item.text} />
+              <input className={item.completed ? 'is-completed' : ''} value={item.text} onChange={(event) => updateChecklistText(item.id, event.target.value)} />
+              <button type="button" aria-label={'Remove checklist item ' + item.text} onClick={() => setChecklist((items) => items.filter((entry) => entry.id !== item.id))}>×</button>
+            </div>
+          ))}
+        </div>
+        <form className="subtask-add" onSubmit={addChecklistItem}>
+          <input value={checklistTitle} onChange={(event) => setChecklistTitle(event.target.value)} placeholder="Add checklist item…" />
+          <Button type="submit" disabled={!checklistTitle.trim()}>Add</Button>
+        </form>
+      </section>
+
+      {task.status !== 'inbox' && !task.parentTaskId ? <section className="task-dependency-section">
+        <div className="task-section-head"><div><div className="eyebrow">Dependencies</div><span>{task.activeBlockerCount ? 'Blocked by ' + task.activeBlockerCount + ' unfinished prerequisite' + (task.activeBlockerCount === 1 ? '' : 's') : blockedByTaskIds.length ? 'All prerequisites complete' : 'No prerequisites'}</span></div></div>
         {task.blockedByTitles?.length ? <div className="dependency-warning"><strong>Not ready yet</strong><span>{task.blockedByTitles.join(' · ')}</span></div> : null}
         <details className="dependency-picker">
-          <summary>{blockedByTaskIds.length ? `${blockedByTaskIds.length} prerequisite${blockedByTaskIds.length === 1 ? '' : 's'} selected` : 'Add prerequisite'}</summary>
+          <summary>{blockedByTaskIds.length ? blockedByTaskIds.length + ' prerequisite' + (blockedByTaskIds.length === 1 ? '' : 's') + ' selected' : 'Add prerequisite'}</summary>
           <div className="dependency-options">
             {dependencyCandidates.filter((candidate) => candidate.id !== task.id && !candidate.parentTaskId && candidate.status !== 'cancelled' && candidate.status !== 'inbox').map((candidate) => <label key={candidate.id}><input type="checkbox" checked={blockedByTaskIds.includes(candidate.id)} onChange={() => setBlockedByTaskIds((current) => current.includes(candidate.id) ? current.filter((id) => id !== candidate.id) : [...current, candidate.id])} /><span><strong>{candidate.title}</strong><small>{candidate.completed ? 'Completed' : candidate.project ?? 'No project'}</small></span></label>)}
             {!dependencyCandidates.some((candidate) => candidate.id !== task.id && !candidate.parentTaskId && candidate.status !== 'cancelled' && candidate.status !== 'inbox') ? <div className="empty-state">No other tasks are available as prerequisites.</div> : null}
@@ -164,27 +289,46 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
         <div className="task-section-head"><div><div className="eyebrow">Execution</div><span>Tracked across focus sessions</span></div>{task.status === 'todo' ? <Button variant="primary" disabled={Boolean(task.activeBlockerCount)} onClick={() => onFocus(task.id)}>{task.activeBlockerCount ? 'Blocked' : 'Start focus'}</Button> : null}</div>
         <div className="task-execution-metrics">
           <div><span>Focused</span><strong>{formatFocusMinutes(focusSeconds)}</strong></div>
-          <div><span>Estimate</span><strong>{task.durationMinutes ? `${task.durationMinutes}m` : '—'}</strong></div>
+          <div><span>Estimate</span><strong>{task.durationMinutes ? task.durationMinutes + 'm' : '—'}</strong></div>
           <div><span>{task.durationMinutes && focusSeconds / 60 > task.durationMinutes ? 'Over estimate' : 'Estimated remaining'}</span><strong>{task.durationMinutes ? formatEstimateDelta(task.durationMinutes, focusSeconds) : '—'}</strong></div>
         </div>
       </section>
 
       <section className="subtask-section">
-        <div className="task-section-head"><div><div className="eyebrow">Subtasks</div><span>{subtasks.filter((item) => item.completed).length} / {subtasks.length} complete</span></div></div>
+        <div className="task-section-head"><div><div className="eyebrow">Nested tasks</div><span>{subtasks.filter((item) => item.completed).length} / {subtasks.length} complete · unlimited depth</span></div></div>
         <div className="subtask-list">
           {subtasks.map((subtask) => (
             <div className="subtask-row" key={subtask.id}>
-              <button className={`task-check ${subtask.completed ? 'task-check--done' : ''}`} aria-label={subtask.completed ? `Reopen ${subtask.title}` : `Complete ${subtask.title}`} onClick={() => onToggleSubtask(subtask.id)} />
-              <span className={subtask.completed ? 'is-completed' : ''}>{subtask.title}</span>
-              <button className="subtask-remove" aria-label={`Remove ${subtask.title}`} onClick={() => onDeleteSubtask(subtask.id)}>×</button>
+              <button className={'task-check ' + (subtask.completed ? 'task-check--done' : '')} aria-label={subtask.completed ? 'Reopen ' + subtask.title : 'Complete ' + subtask.title} onClick={() => onToggleSubtask(subtask.id)} />
+              <button type="button" className={'subtask-open ' + (subtask.completed ? 'is-completed' : '')} onClick={() => onOpenSubtask(subtask.id)}><span>{subtask.title}</span>{subtask.subtaskTotal ? <small>{subtask.subtaskCompleted}/{subtask.subtaskTotal} children</small> : null}</button>
+              <button className="subtask-remove" aria-label={'Remove ' + subtask.title} onClick={() => onDeleteSubtask(subtask.id)}>×</button>
             </div>
           ))}
-          {!subtasks.length ? <div className="subtask-empty">Break larger work down only when it helps execution.</div> : null}
+          {!subtasks.length ? <div className="subtask-empty">Break larger work down to any depth when it helps execution.</div> : null}
         </div>
         <form className="subtask-add" onSubmit={addSubtask}>
-          <input value={subtaskTitle} onChange={(event) => setSubtaskTitle(event.target.value)} placeholder="Add a subtask…" />
+          <input value={subtaskTitle} onChange={(event) => setSubtaskTitle(event.target.value)} placeholder="Add a nested task…" />
           <Button type="submit" disabled={!subtaskTitle.trim()}>Add</Button>
         </form>
+      </section>
+
+      <section className="task-v2-comments-section">
+        <div className="task-section-head"><div><div className="eyebrow">Comments</div><span>{comments.length ? comments.length + ' note' + (comments.length === 1 ? '' : 's') : 'Lightweight decision log'}</span></div></div>
+        <div className="task-comment-list">
+          {comments.map((comment) => <article key={comment.id}><p>{comment.body}</p><footer><span>{formatTimestampDetailed(comment.createdAt)}</span><button type="button" onClick={() => setComments((items) => items.filter((item) => item.id !== comment.id))}>Delete</button></footer></article>)}
+        </div>
+        <form className="task-comment-add" onSubmit={addComment}>
+          <textarea rows={3} value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder="Add context, a decision, or a handoff note…" />
+          <Button type="submit" disabled={!commentBody.trim()}>Add comment</Button>
+        </form>
+      </section>
+
+      <section className="task-v2-activity-section">
+        <div className="task-section-head"><div><div className="eyebrow">Activity</div><span>Latest lifecycle events</span></div></div>
+        <div className="task-activity-list">
+          {(task.activity ?? []).slice(-8).reverse().map((entry) => <div key={entry.id}><span>{entry.label}</span><time>{formatTimestampDetailed(entry.at)}</time></div>)}
+          {!task.activity?.length ? <div className="subtask-empty">No activity recorded yet.</div> : null}
+        </div>
       </section>
 
       <section className="task-history-strip">
@@ -195,23 +339,38 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
 
       {error ? <div className="form-error">{error}</div> : null}
       <div className="task-save-row task-save-row--scoped">
-        {series ? <label className="task-save-scope"><span>Apply content changes to</span><select value={saveScope} onChange={(event) => setSaveScope(event.target.value as typeof saveScope)}><option value="this">This occurrence</option><option value="future">This and future</option><option value="entire">Entire series</option></select></label> : null}
+        {series ? <label className="task-save-scope"><span>Apply content changes to</span><select value={saveScope} onChange={(event) => setSaveScope(event.target.value as SaveScope)}><option value="this">This occurrence</option><option value="future">This and future</option><option value="entire">Entire series</option></select></label> : null}
         <div className="task-save-actions"><Button variant="primary" disabled={!dirty || saving} onClick={() => void save()}>{saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}</Button><span>⌘/Ctrl + Enter</span></div>
       </div>
 
       <div className="task-danger-actions">
         <Button onClick={() => onToggle(task.id)}>{task.completed ? 'Reopen' : 'Complete'}</Button>
-        <Button onClick={() => onDuplicate(task.id)}>Duplicate</Button>
+        <Button onClick={() => onDuplicate(task.id)}>Duplicate tree</Button>
         <Button onClick={() => onDelete(task.id)}>Move to trash</Button>
       </div>
     </div>
   )
 }
 
-function formatFocusMinutes(seconds: number) { const minutes = Math.round(seconds / 60); const h = Math.floor(minutes / 60), m = minutes % 60; return h ? `${h}h${m ? ` ${m}m` : ''}` : `${m}m` }
-function formatEstimateDelta(estimateMinutes: number, focusSeconds: number) { const actual = Math.round(focusSeconds / 60); const delta = estimateMinutes - actual; return delta >= 0 ? `${delta}m` : `+${Math.abs(delta)}m` }
+function formatFocusMinutes(seconds: number) {
+  const minutes = Math.round(seconds / 60)
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return h ? h + 'h' + (m ? ' ' + m + 'm' : '') : m + 'm'
+}
+
+function formatEstimateDelta(estimateMinutes: number, focusSeconds: number) {
+  const actual = Math.round(focusSeconds / 60)
+  const delta = estimateMinutes - actual
+  return delta >= 0 ? delta + 'm' : '+' + Math.abs(delta) + 'm'
+}
 
 function formatTimestamp(value?: string) {
   if (!value) return '—'
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(value))
+}
+
+function formatTimestampDetailed(value?: string) {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 }

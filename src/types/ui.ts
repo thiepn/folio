@@ -11,6 +11,15 @@ export interface TaskPreview {
   parentTaskId?: string
   meta?: string
   durationMinutes?: number
+  tags?: string[]
+  checklist?: Array<{ id: string; text: string; completed: boolean; sortOrder: number; createdAt: string; updatedAt: string; completedAt?: string }>
+  progressMode?: 'auto' | 'manual'
+  progressPercent?: number
+  sourceUrl?: string
+  location?: string
+  pinned?: boolean
+  comments?: Array<{ id: string; body: string; createdAt: string; updatedAt: string }>
+  activity?: Array<{ id: string; kind: 'created' | 'updated' | 'completed' | 'reopened' | 'subtask' | 'comment' | 'restored' | 'duplicated'; label: string; at: string }>
   priority: 'normal' | 'high' | 'critical'
   completed: boolean
   plannedDate?: string

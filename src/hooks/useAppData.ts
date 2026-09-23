@@ -87,7 +87,7 @@ export function useAppData() {
       inboxTasks: inboxTasks.map(preview),
       openTasks: openTasks.map(preview),
       allTasks: roots.map(preview),
-      subtasks: activeTasks.filter((task) => Boolean(task.parentTaskId)).map((task) => taskToPreview(task, projectMap, [], taskMap)),
+      subtasks: activeTasks.filter((task) => Boolean(task.parentTaskId)).map((task) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap)),
       trashTasks: trashTasks.map((task) => taskToPreview(task, projectMap, [], taskMap)),
       projects,
       archivedProjects: allProjectSummaries.filter((project) => project.archived),

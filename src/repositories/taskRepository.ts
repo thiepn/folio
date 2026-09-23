@@ -9,6 +9,10 @@ export type TaskUpdateInput = z.input<typeof taskUpdateSchema>
 function active(task: TaskEntity) { return !task.deletedAt && task.status !== 'cancelled' }
 function root(task: TaskEntity) { return !task.parentTaskId }
 function byOrder(a: TaskEntity, b: TaskEntity) { return a.sortOrder - b.sortOrder }
+function normalizeTags(tags: string[]) { return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))] }
+function appendActivity(task: TaskEntity, label: string, kind: TaskEntity['activity'][number]['kind'] = 'updated') {
+  return [...(task.activity ?? []), { id: crypto.randomUUID(), kind, label, at: new Date().toISOString() }].slice(-200)
+}
 
 export const taskRepository = {
   async listSnapshot(): Promise<TaskEntity[]> {
@@ -95,6 +99,15 @@ export const taskRepository = {
       plannedDate: parsed.plannedDate,
       deadline: parsed.deadline,
       estimatedMinutes: parsed.estimatedMinutes,
+      tags: normalizeTags(parsed.tags),
+      checklist: parsed.checklist,
+      progressMode: parsed.progressMode,
+      progressPercent: parsed.progressPercent,
+      sourceUrl: parsed.sourceUrl,
+      location: parsed.location,
+      pinned: parsed.pinned,
+      comments: parsed.comments,
+      activity: [{ id: crypto.randomUUID(), kind: 'created', label: 'Task created', at: now }],
       seriesId: parsed.seriesId,
       recurrenceDate: parsed.recurrenceDate,
       blockedByTaskIds: parsed.blockedByTaskIds,
@@ -113,11 +126,13 @@ export const taskRepository = {
     const current = await db.tasks.get(id)
     if (!current) throw new Error('Task not found.')
     const normalized = Object.fromEntries(Object.entries(parsed).map(([key, value]) => [key, value === null ? undefined : value])) as Partial<TaskEntity>
+    if (normalized.tags) normalized.tags = normalizeTags(normalized.tags)
     const plannedChanged = Object.prototype.hasOwnProperty.call(parsed, 'plannedDate') && normalized.plannedDate !== current.plannedDate
     const next: TaskEntity = {
       ...current,
       ...normalized,
       rescheduleCount: current.rescheduleCount + (plannedChanged && current.plannedDate ? 1 : 0),
+      activity: appendActivity(current, 'Task updated'),
       updatedAt: new Date().toISOString(),
     }
     await db.tasks.put(next)

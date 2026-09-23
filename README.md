@@ -6,7 +6,7 @@ A local-first personal productivity application with an editorial, low-noise int
 
 **Repository:** `thiepn/folio`
 
-**IndexedDB schema:** `v15`
+**IndexedDB schema:** `v16`
 
 **Status:** release-hardened · GitHub Pages ready
 
@@ -92,9 +92,17 @@ Folio now uses a warmer, higher-contrast editorial desk system across every exis
 
 See `docs/VISUAL_INTERACTION_REFINEMENT_V1_8.md`.
 
+## D1 — Task Engine V2
+
+The Folio Deepening Program begins by expanding the task itself. Tasks now support tags, checklists, automatic or manual progress, URL/location context, pinning, comments, activity history, and recursively nested task trees. Completion, trash, restore, duplication, navigation and Focus now respect the deeper hierarchy. Schema v16 is an additive task migration and backups remain directly restorable from v8 through v16.
+
+Binary attachments, the global tag taxonomy, advanced recurrence and reminders remain separate later deepening phases rather than being partially simulated here.
+
+See `docs/TASK_ENGINE_V2_D1.md`.
+
 ## Data and privacy
 
-Planner data is local-first in IndexedDB. The current database schema is **v15**. Full backups export schema v15, including durable review records, and direct restore supports compatible backups from **v8 through v15**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
+Planner data is local-first in IndexedDB. The current database schema is **v16**. Full backups export schema v16, including Task Engine V2 fields and durable review records, and direct restore supports compatible backups from **v8 through v16**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
 
 Fresh installs begin with an empty personal workspace. Optional sample data can be loaded explicitly from Data & storage.
 
@@ -118,7 +126,7 @@ Direct dependency versions and `package-lock.json` are committed for repeatable 
 
 ## Release history
 
-The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v15 data model, and `validate:final` define the current release state.
+The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v16 data model, and `validate:final` define the current source state.
 
 ## v1.1.1 release hardening
 

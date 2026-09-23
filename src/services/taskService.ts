@@ -7,8 +7,27 @@ import { recurrenceService } from './recurrenceService'
 
 export type UndoableTaskMutation = UndoableMutation
 
-async function descendants(id: string): Promise<TaskEntity[]> {
-  return (await db.tasks.where('parentTaskId').equals(id).toArray()).filter((task) => !task.deletedAt)
+async function descendants(id: string, includeDeleted = false): Promise<TaskEntity[]> {
+  const all = (await db.tasks.toArray()).filter((task) => includeDeleted || !task.deletedAt)
+  const byParent = new Map<string, TaskEntity[]>()
+  for (const task of all) {
+    if (!task.parentTaskId) continue
+    const list = byParent.get(task.parentTaskId) ?? []
+    list.push(task)
+    byParent.set(task.parentTaskId, list)
+  }
+  const result: TaskEntity[] = []
+  const queue = [...(byParent.get(id) ?? [])]
+  while (queue.length) {
+    const next = queue.shift()!
+    result.push(next)
+    queue.push(...(byParent.get(next.id) ?? []))
+  }
+  return result
+}
+
+function appendTaskActivity(task: TaskEntity, kind: TaskEntity['activity'][number]['kind'], label: string, at = new Date().toISOString()) {
+  return [...(task.activity ?? []), { id: crypto.randomUUID(), kind, label, at }].slice(-200)
 }
 
 
@@ -42,6 +61,8 @@ async function setCompletedTask(id: string, completed: boolean): Promise<Undoabl
         ? (task.status === 'inbox' || task.status === 'todo' ? task.status : task.lastOpenStatus)
         : task.lastOpenStatus,
       completedAt: completed ? now : undefined,
+      progressPercent: completed ? 100 : task.progressPercent,
+      activity: appendTaskActivity(task, completed ? 'completed' : 'reopened', completed ? 'Task completed' : 'Task reopened', now),
       updatedAt: now,
     })
     if (completed && children.length) {
@@ -97,7 +118,7 @@ export const taskService = {
   async createSubtask(parentId: string, title: string): Promise<TaskEntity> {
     const parent = await taskRepository.get(parentId)
     if (!parent) throw new Error('Parent task not found.')
-    if (parent.parentTaskId) throw new Error('Nested subtasks are intentionally limited to one level.')
+    if (parent.deletedAt) throw new Error('Cannot add a nested task to an item in trash.')
     if (parent.status === 'completed') {
       const now = new Date().toISOString()
       await db.tasks.update(parentId, {
@@ -106,14 +127,20 @@ export const taskService = {
         updatedAt: now,
       })
     }
-    return taskRepository.create({
+    const child = await taskRepository.create({
       title,
       description: '',
       parentTaskId: parentId,
       projectId: parent.projectId,
       priority: 'normal',
       status: 'todo',
+      tags: parent.tags,
     })
+    await db.tasks.update(parentId, {
+      activity: appendTaskActivity(parent, 'subtask', `Nested task added: ${title}`),
+      updatedAt: new Date().toISOString(),
+    })
+    return child
   },
 
   async duplicate(id: string): Promise<{ id: string; undo: UndoableTaskMutation }> {
@@ -121,43 +148,44 @@ export const taskService = {
     if (!source) throw new Error('Task not found.')
     const children = await descendants(id)
     const now = new Date().toISOString()
-    const copyId = crypto.randomUUID()
-    const root: TaskEntity = {
-      ...source,
-      id: copyId,
-      title: `${source.title} — copy`,
-      status: source.status === 'completed' ? 'todo' : source.status,
-      completedAt: undefined,
-      deletedAt: undefined,
-      seriesId: undefined,
-      recurrenceDate: undefined,
-      blockedByTaskIds: [],
-      rescheduleCount: 0,
-      sortOrder: Date.now(),
-      createdAt: now,
-      updatedAt: now,
-    }
-    const copies = children.map((child, index): TaskEntity => ({
-      ...child,
+    const ordered = [source, ...children]
+    const idMap = new Map(ordered.map((task) => [task.id, crypto.randomUUID()]))
+    const cloneChecklist = (task: TaskEntity) => (task.checklist ?? []).map((item, index) => ({
+      ...item,
       id: crypto.randomUUID(),
-      parentTaskId: copyId,
-      status: child.status === 'completed' ? 'todo' : child.status,
+      completed: false,
       completedAt: undefined,
-      deletedAt: undefined,
-      seriesId: undefined,
-      recurrenceDate: undefined,
-      blockedByTaskIds: [],
-      rescheduleCount: 0,
-      sortOrder: Date.now() + index + 1,
+      sortOrder: index,
       createdAt: now,
       updatedAt: now,
     }))
-    await db.tasks.bulkAdd([root, ...copies])
+    const copies = ordered.map((task, index): TaskEntity => ({
+      ...task,
+      id: idMap.get(task.id)!,
+      title: task.id === source.id ? `${source.title} — copy` : task.title,
+      parentTaskId: task.parentTaskId ? idMap.get(task.parentTaskId) : source.parentTaskId,
+      status: task.status === 'completed' ? 'todo' : task.status,
+      completedAt: undefined,
+      deletedAt: undefined,
+      seriesId: undefined,
+      recurrenceDate: undefined,
+      blockedByTaskIds: [],
+      checklist: cloneChecklist(task),
+      progressPercent: 0,
+      comments: [],
+      activity: [{ id: crypto.randomUUID(), kind: 'duplicated', label: 'Task duplicated', at: now }],
+      rescheduleCount: 0,
+      sortOrder: Date.now() + index,
+      createdAt: now,
+      updatedAt: now,
+    }))
+    const copyId = idMap.get(source.id)!
+    await db.tasks.bulkAdd(copies)
     return {
       id: copyId,
       undo: {
         message: 'Task duplicated',
-        undo: async () => { await taskRepository.removePermanently([copyId, ...copies.map((copy) => copy.id)]) },
+        undo: async () => { await taskRepository.removePermanently(copies.map((copy) => copy.id)) },
       },
     }
   },
@@ -181,11 +209,15 @@ export const taskService = {
   async restore(id: string): Promise<UndoableTaskMutation> {
     const task = await taskRepository.get(id)
     if (!task) throw new Error('Task not found.')
-    const children = await db.tasks.where('parentTaskId').equals(id).toArray()
+    const children = await descendants(id, true)
     const previous = [task, ...children].map((item) => ({ ...item }))
     const now = new Date().toISOString()
     await db.transaction('rw', db.tasks, async () => {
-      await Promise.all(previous.map((item) => db.tasks.update(item.id, { deletedAt: undefined, updatedAt: now })))
+      await Promise.all(previous.map((item) => db.tasks.update(item.id, {
+        deletedAt: undefined,
+        activity: appendTaskActivity(item, 'restored', 'Task restored', now),
+        updatedAt: now,
+      })))
     })
     return {
       message: 'Task restored',
