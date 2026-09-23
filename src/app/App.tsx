@@ -34,12 +34,14 @@ import { TaskInspector } from '../features/tasks/TaskInspector'
 import { TrashDrawer } from '../features/tasks/TrashDrawer'
 import { UndoToast } from '../features/tasks/UndoToast'
 import { FocusOverlay } from '../features/focus/FocusOverlay'
+import { ReminderCenterDrawer } from '../features/reminders/ReminderCenterDrawer'
 import { applyAppearance } from '../lib/theme'
 import { useAppData } from '../hooks/useAppData'
 import { useFocusData } from '../hooks/useFocusData'
 import { useHabitData } from '../hooks/useHabitData'
 import { useReviewData } from '../hooks/useReviewData'
 import { useHistoryData } from '../hooks/useHistoryData'
+import { useReminderData } from '../hooks/useReminderData'
 import { useMobileViewport } from '../hooks/useMobileViewport'
 import { DEFAULT_APPEARANCE, settingsRepository } from '../repositories/settingsRepository'
 import { addLocalDays, localDateKey } from '../domain/date'
@@ -53,13 +55,14 @@ import { habitService } from '../services/habitService'
 import { dependencyService } from '../services/dependencyService'
 import { savedViewService } from '../services/savedViewService'
 import { reviewRecordService } from '../services/reviewRecordService'
+import { reminderService } from '../services/reminderService'
 import type { UndoableMutation } from '../services/undo'
 import type { TaskCreateInput, TaskUpdateInput } from '../repositories/taskRepository'
 import type { ProjectCreateInput, ProjectUpdateInput } from '../repositories/projectRepository'
 import type { RecurringSeriesUpdateInput } from '../repositories/recurrenceRepository'
 import type { HabitCreateInput, HabitUpdateInput } from '../repositories/habitRepository'
 import type { NavView, TaskPreview } from '../types/ui'
-import type { DailyPlanBucket, ReviewKind } from '../domain/models'
+import type { DailyPlanBucket, ReminderOccurrenceEntity, ReviewKind } from '../domain/models'
 import { CommandPalette, type PowerCommand } from '../features/power/CommandPalette'
 import { buildHabitCommandChildren, buildProjectCommandChildren, buildTaskCommandChildren } from '../features/power/commandBuilders'
 import { ShortcutHelpModal } from '../features/power/ShortcutHelpModal'
@@ -127,6 +130,7 @@ function AppContent() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false)
   const [keyboardSettingsOpen, setKeyboardSettingsOpen] = useState(false)
+  const [reminderCenterOpen, setReminderCenterOpen] = useState(false)
   const [goChordPending, setGoChordPending] = useState(false)
   const goChordAt = useRef(0)
   const goChordTimer = useRef<number | null>(null)
@@ -137,6 +141,7 @@ function AppContent() {
   const habitData = useHabitData()
   const reviewData = useReviewData(undefined, habitData?.weeklyAdherence ?? 100)
   const historyData = useHistoryData()
+  const reminderData = useReminderData()
   useMobileViewport()
   const appearance = useLiveQuery(() => settingsRepository.getAppearance(), [], DEFAULT_APPEARANCE) ?? DEFAULT_APPEARANCE
   const storedShortcuts = useLiveQuery(() => settingsRepository.get<unknown>('power.shortcuts', DEFAULT_SHORTCUTS), [], DEFAULT_SHORTCUTS)
@@ -161,6 +166,34 @@ function AppContent() {
   useEffect(() => {
     document.title = `${viewAnnouncement} — Folio`
   }, [viewAnnouncement])
+
+  useEffect(() => {
+    reminderService.start()
+    return () => reminderService.stop()
+  }, [])
+
+  useEffect(() => {
+    const handleUrlAction = async () => {
+      const url = new URL(window.location.href)
+      const occurrenceId = url.searchParams.get('reminderOccurrence')
+      if (!occurrenceId) return
+      const action = url.searchParams.get('reminderAction') || 'open'
+      if (action !== 'open') await reminderService.handleNotificationAction(occurrenceId, action)
+      const occurrence = await reminderService.openTarget(occurrenceId)
+      if (action === 'open' && occurrence) openReminderOccurrence(occurrence)
+      url.searchParams.delete('reminderOccurrence')
+      url.searchParams.delete('reminderAction')
+      window.history.replaceState(null, '', url)
+    }
+    void handleUrlAction()
+    const listener = (event: Event) => {
+      const occurrenceId = (event as CustomEvent<{ occurrenceId?: string }>).detail?.occurrenceId
+      if (!occurrenceId) return
+      void reminderService.openTarget(occurrenceId).then((occurrence) => { if (occurrence) openReminderOccurrence(occurrence) })
+    }
+    window.addEventListener('folio:notification-open', listener)
+    return () => window.removeEventListener('folio:notification-open', listener)
+  }, [])
 
   useEffect(() => {
     function closeTransientSurfaces() {
@@ -323,6 +356,29 @@ function AppContent() {
     setSelectedTaskId(null)
     setFocusOpen(true)
   }, [])
+
+  function openReminderOccurrence(occurrence: ReminderOccurrenceEntity) {
+    setReminderCenterOpen(false)
+    if (occurrence.targetTaskId) {
+      setSelectedTaskId(occurrence.targetTaskId)
+      return
+    }
+    if (occurrence.ownerType === 'habit') {
+      navigate('habits')
+      setSelectedHabitId(occurrence.ownerId)
+      return
+    }
+    if (occurrence.ownerType === 'system' && occurrence.ownerId === 'daily-planning') {
+      navigate('today')
+      setPlanDayOpen(true)
+      return
+    }
+    if (occurrence.ownerType === 'system' && occurrence.ownerId === 'overdue-summary') {
+      navigate('today')
+      return
+    }
+    setReminderCenterOpen(true)
+  }
 
   const registerUndo = useCallback((action: UndoableMutation) => setUndoAction(action), [])
 
@@ -602,6 +658,7 @@ function AppContent() {
       { id: 'clear-selection', group: 'Selection', label: 'Clear task selection', shortcut: 'mod+shift+a', disabled: !selected, run: selection.clear },
       { id: 'shortcut-help', group: 'System', label: 'Keyboard shortcut help', shortcut: shortcuts.help, run: () => setShortcutHelpOpen(true) },
       { id: 'keyboard-settings', group: 'System', label: 'Configure keyboard shortcuts', keywords: 'key bindings hotkeys', run: () => setKeyboardSettingsOpen(true) },
+      { id: 'reminders', group: 'System', label: 'Reminders & notifications', keywords: 'alert notification bell snooze', run: () => setReminderCenterOpen(true) },
       { id: 'appearance', group: 'System', label: 'Appearance', run: () => setAppearanceOpen(true) },
       { id: 'data', group: 'System', label: 'Data & Storage', keywords: 'backup export import', run: () => setDataOpen(true) },
       { id: 'chatgpt-import', group: 'ChatGPT Bridge', label: 'Import a new ChatGPT plan', run: () => setImportOpen(true) },
@@ -698,9 +755,9 @@ function AppContent() {
       <div className="workspace">
         <div className="mobile-topbar">
           <span>{`Folio · ${viewAnnouncement}`}</span>
-          <div className="mobile-topbar__actions"><button className="mobile-command-button" onClick={() => setPaletteOpen(true)}>Search</button>{focusData?.activeSession ? <button className="is-focus-active" onClick={() => openFocus()}>Resume focus</button> : <button onClick={() => openFocus()}>Focus</button>}</div>
+          <div className="mobile-topbar__actions"><button className={reminderData?.dueCount ? 'mobile-reminder-button has-reminders' : 'mobile-reminder-button'} onClick={() => setReminderCenterOpen(true)}>Alerts{reminderData?.dueCount ? ` ${reminderData.dueCount}` : ''}</button><button className="mobile-command-button" onClick={() => setPaletteOpen(true)}>Search</button>{focusData?.activeSession ? <button className="is-focus-active" onClick={() => openFocus()}>Resume focus</button> : <button onClick={() => openFocus()}>Focus</button>}</div>
         </div>
-        <Topbar title={topbarTitle} meta={topbarMeta} onSearch={() => setPaletteOpen(true)} onAppearance={() => setAppearanceOpen(true)} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo')} onFocus={() => openFocus()} focusActive={Boolean(focusData?.activeSession)} />
+        <Topbar title={topbarTitle} meta={topbarMeta} onSearch={() => setPaletteOpen(true)} onAppearance={() => setAppearanceOpen(true)} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo')} onFocus={() => openFocus()} onReminders={() => setReminderCenterOpen(true)} reminderCount={reminderData?.dueCount ?? 0} focusActive={Boolean(focusData?.activeSession)} />
         <main className="main-content" id="main-content" ref={mainRef} tabIndex={-1}>
           {view === 'today' ? <TodayView
             tasks={data.todayTasks}
@@ -817,6 +874,7 @@ function AppContent() {
         onClear={selection.clear}
       />
 
+      <ReminderCenterDrawer open={reminderCenterOpen} onClose={() => setReminderCenterOpen(false)} onOpenOccurrence={openReminderOccurrence} />
       <AppearanceDrawer open={appearanceOpen} appearance={appearance} onChange={(next) => void settingsRepository.setAppearance(next)} onClose={() => setAppearanceOpen(false)} />
       <DataDrawer open={dataOpen} onClose={() => setDataOpen(false)} onOpenImport={() => setImportOpen(true)} onOpenPatch={() => setPatchOpen(true)} onOpenInterop={() => setInteropOpen(true)} />
       <ImportPlanModal open={importOpen} projects={[...data.projects, ...data.archivedProjects]} onClose={() => setImportOpen(false)} onApplied={registerUndo} />
