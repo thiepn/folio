@@ -89,7 +89,7 @@ export function makeHabitEntity(input: FactoryHabitInput, id: string = crypto.ra
 
 export function makeTimeBlockEntity(input: FactoryTimeBlockInput, id: string = crypto.randomUUID(), now = new Date().toISOString()): TimeBlockEntity {
   const parsed = timeBlockCreateSchema.parse(input)
-  return { id, taskId: parsed.taskId, title: parsed.title, description: parsed.description || undefined, location: parsed.location || undefined, kind: parsed.kind, start: parsed.start, end: parsed.end, createdAt: now, updatedAt: now }
+  return { id, taskId: parsed.taskId, title: parsed.title, description: parsed.description || undefined, location: parsed.location || undefined, kind: parsed.kind, allDay: parsed.allDay, timeZone: parsed.timeZone, source: parsed.source, sourceCalendar: parsed.sourceCalendar, sourceUid: parsed.sourceUid, start: parsed.start, end: parsed.end, createdAt: now, updatedAt: now }
 }
 
 export function makeSeriesEntity(input: FactorySeriesInput, id: string = crypto.randomUUID(), now = new Date().toISOString()): RecurringSeriesEntity {
