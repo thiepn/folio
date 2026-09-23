@@ -7,6 +7,9 @@ import { settingsRepository } from '../repositories/settingsRepository'
 import { dailyPlanRepository } from '../repositories/dailyPlanRepository'
 import { recurrenceRepository } from '../repositories/recurrenceRepository'
 import { organizationRepository } from '../repositories/organizationRepository'
+import { reminderRepository } from '../repositories/reminderRepository'
+import { savedViewService } from '../services/savedViewService'
+import { BUILTIN_SMART_VIEWS, runSmartView } from '../features/smartViews/queryEngine'
 import { taskToPreview, timeBlockToPreview } from '../adapters/uiAdapters'
 import type { DailyPlanBucket, TaskEntity } from '../domain/models'
 
@@ -28,6 +31,7 @@ export function useAppData() {
       taskSnapshot, projectEntities, timeBlocks, allTimeBlocks,
       defaultCapacity, dailyPlan, dailyPlanItems, recurringSeries,
       folders, lists, sections, tags, allFolders, allLists, allTags,
+      customSmartViews, reminders, reminderOccurrences,
     ] = await Promise.all([
       // One Task table snapshot feeds Today, Next, Later, Inbox, projects and history.
       taskRepository.listSnapshot(),
@@ -45,6 +49,9 @@ export function useAppData() {
       organizationRepository.listFolders(true),
       organizationRepository.listLists(true),
       organizationRepository.listTags(true),
+      savedViewService.list(),
+      reminderRepository.listDefinitions(),
+      reminderRepository.listAllOccurrences(),
     ])
 
     const projects = buildProjectSummaries(projectEntities, taskSnapshot)
@@ -110,6 +117,23 @@ export function useAppData() {
       return [tag.id, roots.filter((task) => task.status === 'todo' && task.tagIds?.some((id) => scope.has(id))).length]
     }))
 
+
+    const smartContext = {
+      today,
+      tasks: taskSnapshot,
+      projects: projectEntities,
+      lists: allLists,
+      sections,
+      tags: allTags,
+      reminders,
+      reminderOccurrences,
+    }
+    const smartViews = [...BUILTIN_SMART_VIEWS, ...customSmartViews]
+    const smartViewResults = Object.fromEntries(smartViews.map((view) => {
+      const matches = runSmartView(view, smartContext)
+      return [view.id, { count: matches.length, taskIds: matches.map((task) => task.id) }]
+    }))
+
     return {
       today,
       tomorrow,
@@ -140,6 +164,11 @@ export function useAppData() {
       tags,
       favoriteLists: lists.filter((list) => list.favorite),
       favoriteTags: tags.filter((tag) => tag.favorite),
+      smartViews,
+      customSmartViews,
+      builtinSmartViews: BUILTIN_SMART_VIEWS,
+      pinnedSmartViews: customSmartViews.filter((view) => view.pinned),
+      smartViewResults,
       archivedFolders: allFolders.filter((folder) => folder.archived),
       archivedLists: allLists.filter((list) => list.archived),
       archivedTags: allTags.filter((tag) => tag.archived),
