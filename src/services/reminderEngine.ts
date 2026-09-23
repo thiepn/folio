@@ -108,8 +108,10 @@ function taskEligible(task: TaskEntity) {
 async function desiredTaskOccurrences(reminder: ReminderEntity, nowMs: number) {
   if (reminder.triggerType === 'absolute') {
     if (!reminder.absoluteAt || !inWindow(reminder.absoluteAt, nowMs)) return []
+    if (reminder.ownerType === 'series') return []
     const targets = await taskTargets(reminder)
     const target = targets[0]
+    if (reminder.ownerType === 'task' && (!target || !taskEligible(target))) return []
     return [makeOccurrence(
       reminder,
       `absolute:${reminder.absoluteAt}`,
