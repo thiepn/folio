@@ -253,6 +253,26 @@ export const savedViewService = {
     return { id:copy.id, undo:{ message:'Smart view duplicated', undo:async()=>{ await settingsRepository.set(KEY,previous) } } }
   },
 
+  async duplicateDefinition(source: SmartTaskView): Promise<{ id: string; undo: UndoableMutation }> {
+    const previous = await currentViews()
+    if (previous.length >= MAX_VIEWS) throw new Error(`Keep smart views to ${MAX_VIEWS} or fewer.`)
+    const now = new Date().toISOString()
+    let name = `${source.name} copy`
+    let suffix = 2
+    while (previous.some((item) => item.name.toLocaleLowerCase() === name.toLocaleLowerCase())) name = `${source.name} copy ${suffix++}`
+    const copy = normalizeSmartView({
+      ...structuredClone(source),
+      id: crypto.randomUUID(),
+      builtin: undefined,
+      name,
+      pinned: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+    await settingsRepository.set(KEY,[...previous,copy])
+    return { id:copy.id, undo:{ message:'Smart view duplicated', undo:async()=>{ await settingsRepository.set(KEY,previous) } } }
+  },
+
   async togglePin(id:string): Promise<UndoableMutation> {
     const previous=await currentViews()
     const current=previous.find((item)=>item.id===id)
