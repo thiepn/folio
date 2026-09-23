@@ -13,9 +13,14 @@ export interface CaptureProject {
   name: string
 }
 
+export interface CaptureList {
+  id: string
+  name: string
+}
+
 export type CaptureTokenKind =
   | 'planned' | 'deadline' | 'duration' | 'time' | 'priority'
-  | 'project' | 'tag' | 'status' | 'recurrence' | 'reminder'
+  | 'project' | 'list' | 'tag' | 'status' | 'recurrence' | 'reminder'
 
 export interface RecognizedCaptureToken {
   kind: CaptureTokenKind
@@ -25,9 +30,9 @@ export interface RecognizedCaptureToken {
 
 export interface CaptureWarning {
   code:
-    | 'unknown-project' | 'ambiguous-project' | 'conflicting-date'
+    | 'unknown-project' | 'ambiguous-project' | 'unknown-list' | 'ambiguous-list' | 'conflicting-date'
     | 'invalid-recurrence' | 'invalid-reminder' | 'ambiguous-reminder'
-    | 'inbox-ignores-planning' | 'inbox-ignores-project'
+    | 'inbox-ignores-planning' | 'inbox-ignores-project' | 'inbox-ignores-list'
     | 'inbox-ignores-recurrence' | 'inbox-ignores-reminder'
   message: string
 }
@@ -62,6 +67,8 @@ export interface ParsedCapture {
   status: 'todo' | 'inbox'
   projectId?: string
   projectName?: string
+  listId?: string
+  listName?: string
   tags: string[]
   priority: TaskPriority
   plannedDate?: LocalDate
@@ -77,6 +84,8 @@ export interface ParsedCapture {
 export interface CaptureDefaults {
   status?: 'todo' | 'inbox'
   projectId?: string
+  listId?: string
+  lists?: CaptureList[]
   plannedDate?: LocalDate
   estimatedMinutes?: number
   priority?: TaskPriority
@@ -275,6 +284,20 @@ function ordinalValue(value: string): RecurrenceOrdinal | undefined {
   return [1,2,3,4,5].includes(number) ? number as RecurrenceOrdinal : undefined
 }
 
+function resolveList(query: string, lists: CaptureList[]) {
+  const normalized = normalizeProject(query)
+  if (!normalized) return { kind: 'none' as const }
+  const exact = lists.filter((list) => normalizeProject(list.name) === normalized)
+  if (exact.length === 1) return { kind: 'match' as const, list: exact[0] }
+  const starts = lists.filter((list) => normalizeProject(list.name).startsWith(normalized))
+  if (starts.length === 1) return { kind: 'match' as const, list: starts[0] }
+  const contains = lists.filter((list) => normalizeProject(list.name).includes(normalized))
+  if (contains.length === 1) return { kind: 'match' as const, list: contains[0] }
+  const candidates = starts.length ? starts : contains
+  if (candidates.length > 1) return { kind: 'ambiguous' as const, candidates }
+  return { kind: 'none' as const }
+}
+
 function recurrenceLabel(value: ParsedRecurrence) {
   if (value.frequency === 'after-completion') {
     const unit = value.afterCompletionUnit ?? 'day'
@@ -460,6 +483,9 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
   let status: 'todo' | 'inbox' = defaults.status ?? 'todo'
   let projectId = defaults.projectId || undefined
   let projectName = projectId ? projects.find((project) => project.id === projectId)?.name : undefined
+  const lists = defaults.lists ?? []
+  let listId = defaults.listId || undefined
+  let listName = listId ? lists.find((list) => list.id === listId)?.name : undefined
   let priority: TaskPriority = defaults.priority ?? 'normal'
   let plannedDate: LocalDate | undefined = status === 'inbox' ? undefined : (defaults.plannedDate ?? today)
   let deadline: LocalDate | undefined
@@ -471,8 +497,29 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
   const recognized: RecognizedCaptureToken[] = []
   const warnings: CaptureWarning[] = []
 
+  // Explicit list selectors: ^Personal, list:Admin, list:"Deep Work".
+  const explicitLists = [...working.matchAll(/(?:^|\s)(?:\^|list:)(?:"([^"]+)"|'([^']+)'|([^\s#~^]+))/gi)]
+  let listApplied = false
+  for (const match of explicitLists.reverse()) {
+    const query = match[1] ?? match[2] ?? match[3] ?? ''
+    const resolved = resolveList(query, lists)
+    if (resolved.kind === 'match') {
+      if (!listApplied) {
+        listId = resolved.list.id
+        listName = resolved.list.name
+        recognized.unshift({ kind: 'list', source: match[0].trim(), label: resolved.list.name })
+        listApplied = true
+      }
+      working = removeSpan(working, match.index!, match.index! + match[0].length)
+    } else if (resolved.kind === 'ambiguous') {
+      warnings.push({ code: 'ambiguous-list', message: match[0].trim() + ' matches multiple lists: ' + resolved.candidates.map((list) => list.name).join(', ') + '.' })
+    } else {
+      warnings.push({ code: 'unknown-list', message: match[0].trim() + ' does not match an active list.' })
+    }
+  }
+
   // Explicit project selectors: ~Analysis, project:Analysis, project:"Analysis III".
-  const explicitProjects = [...working.matchAll(/(?:^|\s)(?:~|project:|list:)(?:"([^"]+)"|'([^']+)'|([^\s#~]+))/gi)]
+  const explicitProjects = [...working.matchAll(/(?:^|\s)(?:~|project:)(?:"([^"]+)"|'([^']+)'|([^\s#~^]+))/gi)]
   let projectApplied = false
   for (const match of explicitProjects.reverse()) {
     const query = match[1] ?? match[2] ?? match[3] ?? ''
@@ -633,11 +680,14 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
     if ((plannedDate && recognized.some((token) => token.kind === 'planned')) || startMinute !== undefined) warnings.push({ code: 'inbox-ignores-planning', message: 'Inbox captures stay unplanned and unscheduled. Use @todo if date/time phrases should apply.' })
     if (recurrence) warnings.push({ code: 'inbox-ignores-recurrence', message: 'Inbox captures cannot repeat until processed. Use @todo to create a recurring task.' })
     if (projectId && recognized.some((token) => token.kind === 'project')) warnings.push({ code: 'inbox-ignores-project', message: 'Inbox captures stay unassigned. Use @todo if the project selector should apply.' })
+    if (listId) warnings.push({ code: 'inbox-ignores-list', message: 'Inbox captures stay outside lists until processed.' })
     if (reminders.length) warnings.push({ code: 'inbox-ignores-reminder', message: 'Inbox captures do not schedule reminders until they are processed.' })
     plannedDate = undefined
     startMinute = undefined
     projectId = undefined
     projectName = undefined
+    listId = undefined
+    listName = undefined
     recurrence = undefined
     reminders = []
   }
@@ -648,6 +698,8 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
     status,
     projectId: status === 'inbox' ? undefined : projectId,
     projectName: status === 'inbox' ? undefined : projectName,
+    listId: status === 'inbox' ? undefined : listId,
+    listName: status === 'inbox' ? undefined : listName,
     tags: unique(tags.map((tag) => tag.trim()).filter(Boolean)).slice(0, 50),
     priority,
     plannedDate,
@@ -676,6 +728,7 @@ export const CAPTURE_SYNTAX_EXAMPLES = [
   { syntax: '45m / for 1.5 hours', meaning: 'estimate' },
   { syntax: '!high / p1 / priority critical', meaning: 'priority' },
   { syntax: '~Analysis / project:"Analysis III"', meaning: 'project' },
+  { syntax: '^Personal / list:"Deep Work"', meaning: 'list' },
   { syntax: '#exam #deep-work', meaning: 'tags' },
   { syntax: 'every 2 weeks on mon,wed', meaning: 'weekly repeat' },
   { syntax: 'every month on 1,15 / every month on last Friday', meaning: 'monthly repeat' },

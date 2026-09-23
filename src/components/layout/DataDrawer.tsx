@@ -85,7 +85,7 @@ export function DataDrawer({ open, onClose, onOpenImport, onOpenPatch, onOpenInt
     } finally { setBusy(false) }
   }
 
-  const workspaceEmpty = Boolean(health && !health.counts.tasks && !health.counts.projects && !health.counts.habits && !health.counts.timeBlocks && !health.counts.dailyPlans && !health.counts.dailyPlanItems && !health.counts.focusSessions && !health.counts.recurringSeries && !health.counts.reminders && !health.counts.reminderOccurrences)
+  const workspaceEmpty = Boolean(health && !health.counts.tasks && !health.counts.projects && !health.counts.habits && !health.counts.timeBlocks && !health.counts.dailyPlans && !health.counts.dailyPlanItems && !health.counts.focusSessions && !health.counts.recurringSeries && !health.counts.reminders && !health.counts.reminderOccurrences && !health.counts.lists && !health.counts.sections && !health.counts.tags)
 
   return (
     <Drawer open={open} title="Data & storage" onClose={onClose}>
@@ -104,6 +104,10 @@ export function DataDrawer({ open, onClose, onOpenImport, onOpenPatch, onOpenInt
           <div><dt>Calendar imports</dt><dd>{health?.counts.calendarImportBatches ?? '…'}</dd></div>
           <div><dt>Reminders</dt><dd>{health?.counts.reminders ?? '…'}</dd></div>
           <div><dt>Reminder events</dt><dd>{health?.counts.reminderOccurrences ?? '…'}</dd></div>
+          <div><dt>Folders</dt><dd>{health?.counts.folders ?? '…'}</dd></div>
+          <div><dt>Lists</dt><dd>{health?.counts.lists ?? '…'}</dd></div>
+          <div><dt>Sections</dt><dd>{health?.counts.sections ?? '…'}</dd></div>
+          <div><dt>Tags</dt><dd>{health?.counts.tags ?? '…'}</dd></div>
         </dl>
         <div className="storage-inline-action">
           <Button onClick={() => void verify()} disabled={busy}>Verify database</Button>

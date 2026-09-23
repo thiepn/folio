@@ -23,11 +23,14 @@ const taskChanges = z.object({
   description: z.string().max(20_000).optional(),
   projectId: z.string().min(1).nullable().optional(),
   projectRef: ref.optional(),
+  listId: z.string().min(1).nullable().optional(),
+  sectionId: z.string().min(1).nullable().optional(),
   priority: z.enum(['normal', 'high', 'critical']).optional(),
   status: z.enum(['todo', 'inbox']).optional(),
   plannedDate: localDate.nullable().optional(),
   deadline: localDate.nullable().optional(),
   estimatedMinutes: z.number().int().positive().max(1440).nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(50).optional(),
 }).strict()
 
 const habitChanges = z.object({
@@ -51,6 +54,8 @@ const seriesTemplateChanges = z.object({
   description: z.string().max(20_000).optional(),
   projectId: z.string().min(1).nullable().optional(),
   projectRef: ref.optional(),
+  listId: z.string().min(1).nullable().optional(),
+  sectionId: z.string().min(1).nullable().optional(),
   priority: z.enum(['normal', 'high', 'critical']).optional(),
   estimatedMinutes: z.number().int().positive().max(1440).nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(50).optional(),

@@ -47,6 +47,58 @@ export const habitUpdateSchema = habitCreateSchema.partial().extend({
 })
 
 
+export const listSortModeSchema = z.enum(['manual','planned','deadline','priority','title','created','updated'])
+export const listGroupModeSchema = z.enum(['section','none','planned','priority','tag'])
+
+export const folderCreateSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  icon: z.string().trim().max(24).optional(),
+  sortOrder: z.number().finite().optional(),
+  collapsed: z.boolean().default(false),
+})
+export const folderUpdateSchema = folderCreateSchema.partial().extend({ archived: z.boolean().optional() })
+
+export const listCreateSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.string().max(10_000).default(''),
+  folderId: z.string().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  icon: z.string().trim().max(24).optional(),
+  favorite: z.boolean().default(false),
+  sortOrder: z.number().finite().optional(),
+  sortMode: listSortModeSchema.default('manual'),
+  groupMode: listGroupModeSchema.default('section'),
+  showCompleted: z.boolean().default(true),
+})
+export const listUpdateSchema = listCreateSchema.partial().extend({
+  folderId: z.string().nullable().optional(),
+  archived: z.boolean().optional(),
+})
+
+export const sectionCreateSchema = z.object({
+  listId: z.string().min(1),
+  name: z.string().trim().min(1).max(120),
+  sortOrder: z.number().finite().optional(),
+})
+export const sectionUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  sortOrder: z.number().finite().optional(),
+  archived: z.boolean().optional(),
+})
+
+export const tagCreateSchema = z.object({
+  name: z.string().trim().min(1).max(40),
+  parentTagId: z.string().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  favorite: z.boolean().default(false),
+  sortOrder: z.number().finite().optional(),
+})
+export const tagUpdateSchema = tagCreateSchema.partial().extend({
+  parentTagId: z.string().nullable().optional(),
+  archived: z.boolean().optional(),
+})
+
 export const projectCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().max(10_000).default(''),
@@ -101,6 +153,8 @@ export const taskCreateSchema = z.object({
   title: z.string().trim().min(1).max(300),
   description: z.string().max(20_000).default(''),
   projectId: z.string().optional(),
+  listId: z.string().optional(),
+  sectionId: z.string().optional(),
   parentTaskId: z.string().optional(),
   priority: taskPrioritySchema.default('normal'),
   status: taskStatusSchema.default('todo'),
@@ -108,6 +162,7 @@ export const taskCreateSchema = z.object({
   deadline: localDate.optional(),
   estimatedMinutes: z.number().int().positive().max(24 * 60).optional(),
   tags: taskTagsSchema,
+  tagIds: z.array(z.string()).max(50).default([]),
   checklist: z.array(taskChecklistItemSchema).max(500).default([]),
   progressMode: taskProgressModeSchema.default('auto'),
   progressPercent: z.number().int().min(0).max(100).default(0),
@@ -126,6 +181,8 @@ export const taskUpdateSchema = z.object({
   title: z.string().trim().min(1).max(300).optional(),
   description: z.string().max(20_000).optional(),
   projectId: z.string().nullable().optional(),
+  listId: z.string().nullable().optional(),
+  sectionId: z.string().nullable().optional(),
   parentTaskId: z.string().nullable().optional(),
   priority: taskPrioritySchema.optional(),
   status: taskStatusSchema.optional(),
@@ -133,6 +190,7 @@ export const taskUpdateSchema = z.object({
   deadline: localDate.nullable().optional(),
   estimatedMinutes: z.number().int().positive().max(24 * 60).nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(50).optional(),
+  tagIds: z.array(z.string()).max(50).optional(),
   checklist: z.array(taskChecklistItemSchema).max(500).optional(),
   progressMode: taskProgressModeSchema.optional(),
   progressPercent: z.number().int().min(0).max(100).optional(),
@@ -283,6 +341,10 @@ export const backupEnvelopeSchema = z.object({
     reviewRecords: z.array(z.unknown()).default([]),
     reminders: z.array(z.unknown()).default([]),
     reminderOccurrences: z.array(z.unknown()).default([]),
+    folders: z.array(z.unknown()).default([]),
+    lists: z.array(z.unknown()).default([]),
+    sections: z.array(z.unknown()).default([]),
+    tags: z.array(z.unknown()).default([]),
   }),
 }).transform((value) => ({ ...value, format: 'folio-backup' as const }))
 
@@ -323,9 +385,12 @@ export const recurringSeriesCreateSchema = z.object({
     title: z.string().trim().min(1).max(300),
     description: z.string().max(20_000).default(''),
     projectId: z.string().optional(),
+    listId: z.string().optional(),
+    sectionId: z.string().optional(),
     priority: taskPrioritySchema.default('normal'),
     estimatedMinutes: z.number().int().positive().max(24 * 60).optional(),
     tags: z.array(z.string().trim().min(1).max(40)).max(50).default([]),
+    tagIds: z.array(z.string()).max(50).default([]),
     checklist: z.array(z.string().trim().min(1).max(500)).max(500).default([]),
     sourceUrl: z.string().trim().url().max(2048).optional(),
     location: z.string().trim().max(500).optional(),

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addLocalDays, localDateKey } from '../../domain/date'
 import type { ProjectSummary } from '../../repositories/projectRepository'
+import type { ListEntity } from '../../domain/models'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import type { CaptureCreateRequest } from '../../services/captureService'
@@ -19,6 +20,7 @@ function requestFromParsed(parsed: ParsedCapture, description = ''): CaptureCrea
       title: parsed.title,
       description,
       projectId: parsed.status === 'inbox' ? undefined : parsed.projectId,
+      listId: parsed.status === 'inbox' ? undefined : parsed.listId,
       priority: parsed.priority,
       status: parsed.status,
       plannedDate: parsed.status === 'todo' ? parsed.plannedDate : undefined,
@@ -34,11 +36,13 @@ function requestFromParsed(parsed: ParsedCapture, description = ''): CaptureCrea
   }
 }
 
-export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultProjectId = '', defaultPlannedDate, onClose, onCreate, onCreateBatch, onImport }: {
+export function QuickAddModal({ open, projects, lists, defaultStatus = 'todo', defaultProjectId = '', defaultListId = '', defaultPlannedDate, onClose, onCreate, onCreateBatch, onImport }: {
   open: boolean
   projects: ProjectSummary[]
+  lists: ListEntity[]
   defaultStatus?: 'todo' | 'inbox'
   defaultProjectId?: string
+  defaultListId?: string
   defaultPlannedDate?: string
   onClose: () => void
   onCreate: (request: CaptureCreateRequest) => Promise<void>
@@ -53,6 +57,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [projectId, setProjectId] = useState(defaultProjectId)
+  const [listId, setListId] = useState(defaultListId)
   const [priority, setPriority] = useState<'normal' | 'high' | 'critical'>('normal')
   const [status, setStatus] = useState<'todo' | 'inbox'>(defaultStatus)
   const initialPlannedDate = defaultPlannedDate ?? today
@@ -67,11 +72,13 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
   const defaults = useMemo(() => ({
     status: defaultStatus,
     projectId: defaultProjectId,
+    listId: defaultListId,
+    lists,
     plannedDate: initialPlannedDate,
     estimatedMinutes: 30,
     priority: 'normal' as const,
     today,
-  }), [defaultStatus, defaultProjectId, initialPlannedDate, today])
+  }), [defaultStatus, defaultProjectId, defaultListId, lists, initialPlannedDate, today])
 
   const lineBreak = String.fromCharCode(10)
   const carriageReturn = String.fromCharCode(13)
@@ -91,6 +98,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
     setError('')
     setStatus(defaultStatus)
     setProjectId(defaultProjectId)
+    setListId(defaultListId)
     setPriority('normal')
     setPlannedDate(initialPlannedDate)
     setDeadline('')
@@ -99,20 +107,21 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
     setTagsText('')
     setTitle('')
     requestAnimationFrame(() => captureRef.current?.focus())
-  }, [open, defaultStatus, defaultProjectId, initialPlannedDate])
+  }, [open, defaultStatus, defaultProjectId, defaultListId, initialPlannedDate])
 
   useEffect(() => {
     if (!open || batchMode) return
     setTitle(parsed.title)
     setStatus(parsed.status)
     setProjectId(parsed.projectId ?? '')
+    setListId(parsed.listId ?? defaultListId)
     setPriority(parsed.priority)
     setPlannedDate(parsed.plannedDate ?? initialPlannedDate)
     setDeadline(parsed.deadline ?? '')
     setEstimatedMinutes(parsed.estimatedMinutes)
     setStartMinute(parsed.startMinute)
     setTagsText(parsed.tags.join(', '))
-  }, [capture, open, batchMode]) // Parser rehydrates details only when capture changes.
+  }, [capture, open, batchMode, parsed, defaultListId, initialPlannedDate])
 
   function currentSingleRequest(): CaptureCreateRequest {
     const tags = [...new Set(tagsText.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean))].slice(0, 50)
@@ -121,6 +130,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
         title: title.trim(),
         description,
         projectId: status === 'inbox' ? undefined : (projectId || undefined),
+        listId: status === 'inbox' ? undefined : (listId || undefined),
         priority,
         status,
         plannedDate: status === 'todo' && plannedDate ? plannedDate : undefined,
@@ -144,7 +154,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
       setSaving(true)
       setError('')
       try {
-        await onCreateBatch(valid.map((item) => requestFromParsed(item)))
+        await onCreateBatch(valid.map((item) => { const request=requestFromParsed(item); if(item.status!=='inbox'&&!request.input.listId&&defaultListId) request.input.listId=defaultListId; return request }))
         if (closeAfter) onClose()
         else {
           setCapture('')
@@ -220,9 +230,9 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
           </div>
         </div>
 
-        {capture.trim() ? (batchMode ? <BatchLedger items={batch} /> : <ParseLedger parsed={parsed} />) : <div className="capture-intro">
+        {capture.trim() ? (batchMode ? <BatchLedger items={batch} /> : <ParseLedger parsed={parsed} lists={lists} />) : <div className="capture-intro">
           <span className="capture-intro__mark" />
-          <p>Write naturally. Folio recognizes dates, times, duration, priority, project, tags, recurrence and reminders locally. Paste multiple lines to capture a list.</p>
+          <p>Write naturally. Folio recognizes dates, times, duration, priority, project, list, tags, recurrence and reminders locally. Paste multiple lines to capture a list.</p>
         </div>}
 
         {helpOpen ? <div className="capture-syntax">
@@ -230,7 +240,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
           <div className="capture-syntax-grid">
             {CAPTURE_SYNTAX_EXAMPLES.map((item) => <div key={item.syntax}><code>{item.syntax}</code><span>{item.meaning}</span></div>)}
           </div>
-          <p><code>~Project</code> is the preferred project selector. Legacy <code>#Project</code> still selects a uniquely matching project; other <code>#words</code> become task tags. Ambiguous project matches are warned rather than guessed.</p>
+          <p><code>~Project</code> selects a project and <code>^List</code> selects a list. Legacy <code>#Project</code> still selects a uniquely matching project; other <code>#words</code> become global task tags. Ambiguous matches are warned rather than guessed.</p>
         </div> : null}
 
         {detailsOpen && !batchMode ? <div className="quick-details">
@@ -241,6 +251,7 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
             <div className="form-grid">
               <label className="field"><span>Type</span><select value={status} onChange={(event) => setStatus(event.target.value as 'todo' | 'inbox')}><option value="todo">To-do</option><option value="inbox">Inbox capture</option></select></label>
               <label className="field"><span>Project</span><select value={projectId} disabled={status === 'inbox'} onChange={(event) => setProjectId(event.target.value)}><option value="">No project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+              <label className="field"><span>List</span><select value={listId} disabled={status === 'inbox'} onChange={(event) => setListId(event.target.value)}><option value="">No list</option>{lists.map((list) => <option key={list.id} value={list.id}>{list.name}</option>)}</select></label>
             </div>
             <label className="field"><span>Tags</span><input value={tagsText} onChange={(event) => setTagsText(event.target.value)} placeholder="exam, deep-work" /></label>
             <div className="form-grid">
@@ -278,6 +289,7 @@ function BatchLedger({ items }: { items: ParsedCapture[] }) {
         <div><strong>{item.title || 'Untitled task'}</strong><small>{[
           item.status === 'inbox' ? 'Inbox' : formatDate(item.plannedDate),
           item.projectName,
+          item.listName ? '☰ ' + item.listName : undefined,
           item.tags.length ? item.tags.map((tag) => `#${tag}`).join(' ') : undefined,
           item.recurrence ? formatRecurrence(item.recurrence) : undefined,
           item.reminders.length ? `${item.reminders.length} reminder${item.reminders.length === 1 ? '' : 's'}` : undefined,
@@ -288,7 +300,7 @@ function BatchLedger({ items }: { items: ParsedCapture[] }) {
   </div>
 }
 
-function ParseLedger({ parsed }: { parsed: ParsedCapture }) {
+function ParseLedger({ parsed, lists }: { parsed: ParsedCapture; lists: ListEntity[] }) {
   return <div className="parse-ledger" aria-live="polite">
     <div className="parse-ledger__title"><span>Interpreted as</span><strong>{parsed.title || 'Untitled task'}</strong></div>
     <div className="parse-ledger__fields">
@@ -298,6 +310,7 @@ function ParseLedger({ parsed }: { parsed: ParsedCapture }) {
       <LedgerItem label="Time" value={parsed.startMinute === undefined ? 'None' : minuteToTime(parsed.startMinute)} />
       <LedgerItem label="Priority" value={capitalize(parsed.priority)} tone={parsed.priority === 'critical' ? 'danger' : parsed.priority === 'high' ? 'accent' : undefined} />
       <LedgerItem label="Project" value={parsed.projectName ?? 'No project'} />
+      <LedgerItem label="List" value={parsed.listName ?? (parsed.listId ? lists.find((list)=>list.id===parsed.listId)?.name ?? 'List' : 'No list')} />
       <LedgerItem label="Tags" value={parsed.tags.length ? parsed.tags.map((tag) => `#${tag}`).join(' ') : 'None'} />
       <LedgerItem label="Deadline" value={parsed.deadline ? formatDate(parsed.deadline) : 'None'} />
       <LedgerItem label="Repeat" value={parsed.recurrence ? formatRecurrence(parsed.recurrence) : 'None'} />

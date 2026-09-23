@@ -6,6 +6,7 @@ import { timeBlockRepository } from '../repositories/timeBlockRepository'
 import { settingsRepository } from '../repositories/settingsRepository'
 import { dailyPlanRepository } from '../repositories/dailyPlanRepository'
 import { recurrenceRepository } from '../repositories/recurrenceRepository'
+import { organizationRepository } from '../repositories/organizationRepository'
 import { taskToPreview, timeBlockToPreview } from '../adapters/uiAdapters'
 import type { DailyPlanBucket, TaskEntity } from '../domain/models'
 
@@ -26,6 +27,7 @@ export function useAppData() {
     const [
       taskSnapshot, projectEntities, timeBlocks, allTimeBlocks,
       defaultCapacity, dailyPlan, dailyPlanItems, recurringSeries,
+      folders, lists, sections, tags, allFolders, allLists, allTags,
     ] = await Promise.all([
       // One Task table snapshot feeds Today, Next, Later, Inbox, projects and history.
       taskRepository.listSnapshot(),
@@ -36,11 +38,22 @@ export function useAppData() {
       dailyPlanRepository.get(today),
       dailyPlanRepository.listItems(today),
       recurrenceRepository.listAll(),
+      organizationRepository.listFolders(),
+      organizationRepository.listLists(),
+      organizationRepository.listSections(),
+      organizationRepository.listTags(),
+      organizationRepository.listFolders(true),
+      organizationRepository.listLists(true),
+      organizationRepository.listTags(true),
     ])
 
     const projects = buildProjectSummaries(projectEntities, taskSnapshot)
     const allProjectSummaries = buildProjectSummaries(projectEntities, taskSnapshot, true)
     const projectMap = new Map(projectEntities.map((project) => [project.id, project]))
+    const listMap = new Map(allLists.map((list) => [list.id, list]))
+    const sectionMap = new Map(sections.map((section) => [section.id, section]))
+    const tagMap = new Map(allTags.map((tag) => [tag.id, tag]))
+    const organizationMaps = { lists: listMap, sections: sectionMap, tags: tagMap }
 
     const activeTasks = taskSnapshot.filter(active)
     const roots = activeTasks.filter(root)
@@ -52,7 +65,7 @@ export function useAppData() {
       childMap.set(task.parentTaskId, list)
     }
     const taskMap = new Map(activeTasks.map((task) => [task.id, task]))
-    const preview = (task: TaskEntity) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap)
+    const preview = (task: TaskEntity) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap, organizationMaps)
 
     const todayTasks = roots.filter((task) => task.plannedDate === today && (task.status === 'todo' || task.status === 'completed')).sort(byOrder)
     const nextTasks = roots.filter((task) => task.status === 'todo' && task.plannedDate === tomorrow).sort(byOrder)
@@ -76,6 +89,27 @@ export function useAppData() {
       })
       .sort((a, b) => (a.planningOrder ?? 0) - (b.planningOrder ?? 0))
 
+    const childTags = new Map<string, string[]>()
+    for (const tag of tags) {
+      if (!tag.parentTagId) continue
+      const children = childTags.get(tag.parentTagId) ?? []
+      children.push(tag.id)
+      childTags.set(tag.parentTagId, children)
+    }
+    const tagScope = (rootId: string) => {
+      const result = new Set<string>([rootId])
+      const queue = [rootId]
+      while (queue.length) {
+        const parent = queue.shift()!
+        for (const child of childTags.get(parent) ?? []) if (!result.has(child)) { result.add(child); queue.push(child) }
+      }
+      return result
+    }
+    const tagCounts = Object.fromEntries(tags.map((tag) => {
+      const scope = tagScope(tag.id)
+      return [tag.id, roots.filter((task) => task.status === 'todo' && task.tagIds?.some((id) => scope.has(id))).length]
+    }))
+
     return {
       today,
       tomorrow,
@@ -87,8 +121,8 @@ export function useAppData() {
       inboxTasks: inboxTasks.map(preview),
       openTasks: openTasks.map(preview),
       allTasks: roots.map(preview),
-      subtasks: activeTasks.filter((task) => Boolean(task.parentTaskId)).map((task) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap)),
-      trashTasks: trashTasks.map((task) => taskToPreview(task, projectMap, [], taskMap)),
+      subtasks: activeTasks.filter((task) => Boolean(task.parentTaskId)).map((task) => taskToPreview(task, projectMap, childMap.get(task.id) ?? [], taskMap, organizationMaps)),
+      trashTasks: trashTasks.map((task) => taskToPreview(task, projectMap, [], taskMap, organizationMaps)),
       projects,
       archivedProjects: allProjectSummaries.filter((project) => project.archived),
       favoriteProjects: projects.filter((project) => project.favorite),
@@ -100,6 +134,18 @@ export function useAppData() {
       dailyPlanStatus: dailyPlan?.status ?? 'draft',
       dailyPlanCommittedAt: dailyPlan?.committedAt,
       recurringSeries,
+      folders,
+      lists,
+      sections,
+      tags,
+      favoriteLists: lists.filter((list) => list.favorite),
+      favoriteTags: tags.filter((tag) => tag.favorite),
+      archivedFolders: allFolders.filter((folder) => folder.archived),
+      archivedLists: allLists.filter((list) => list.archived),
+      archivedTags: allTags.filter((tag) => tag.archived),
+      unlistedCount: roots.filter((task) => task.status === 'todo' && !task.listId).length,
+      tagCounts,
+      listCounts: Object.fromEntries(lists.map((list) => [list.id, roots.filter((task) => task.status === 'todo' && task.listId === list.id).length])),
     }
   }, [today, tomorrow])
 }

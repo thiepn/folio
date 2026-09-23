@@ -6,7 +6,7 @@ A local-first personal productivity application with an editorial, low-noise int
 
 **Repository:** `thiepn/folio`
 
-**IndexedDB schema:** `v18`
+**IndexedDB schema:** `v19`
 
 **Status:** release-hardened · GitHub Pages ready
 
@@ -124,9 +124,17 @@ Quick Add also accepts one task per line. Multi-line paste shows an independent 
 
 See `docs/CAPTURE_ENGINE_V2_D4.md`.
 
+## D5 — Lists, Tags, Sections & Organization V2
+
+Folio now separates lightweight organization from project management. Tasks can belong to folders/lists/sections independently of Projects, while D1 tag strings are backed by a stable global tag registry with nested tags, favorites, archive state, rename/merge semantics and usage counts. Lists support per-list sorting/grouping, sections, favorites, archive/restore, and derived smart collections for All tasks, No list, High priority and Unscheduled.
+
+Schema v19 migrates every existing task/series tag into canonical Tag entities without converting existing Projects into lists. D4 capture now supports explicit list syntax, recurring tasks preserve organization metadata, and Import/Patch plus full backup/restore understand list/section/tag relationships.
+
+See `docs/ORGANIZATION_V2_D5.md`.
+
 ## Data and privacy
 
-Planner data is local-first in IndexedDB. The current database schema remains **v18**. Full backups export schema v18, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, and durable review records; direct restore supports compatible backups from **v8 through v18**. D4 Capture Engine V2 is an input-layer upgrade and adds no duplicate persistence model. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
+Planner data is local-first in IndexedDB. The current database schema is **v19**. Full backups export schema v19, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, folders/lists/sections/tags, and durable review records; direct restore supports compatible backups from **v8 through v19**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
 
 Fresh installs begin with an empty personal workspace. Optional sample data can be loaded explicitly from Data & storage.
 
@@ -150,7 +158,7 @@ Direct dependency versions and `package-lock.json` are committed for repeatable 
 
 ## Release history
 
-The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v18 data model, and `validate:final` define the current source state.
+The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v19 data model, and `validate:final` define the current source state.
 
 ## v1.1.1 release hardening
 

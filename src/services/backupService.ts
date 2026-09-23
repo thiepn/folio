@@ -1,11 +1,15 @@
 import { db, DATABASE_SCHEMA_VERSION } from '../db/database'
 import { backupEnvelopeSchema } from '../domain/schemas'
-import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema, backupReviewRecordSchema, backupReminderSchema, backupReminderOccurrenceSchema } from './backupSchemas'
+import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema, backupReviewRecordSchema, backupReminderSchema, backupReminderOccurrenceSchema, backupFolderSchema, backupListSchema, backupSectionSchema, backupTagSchema } from './backupSchemas'
 import type {
   CalendarImportBatchEntity,
   DailyPlanEntity,
   DailyPlanItemEntity,
   FocusSessionEntity,
+  FolderEntity,
+  ListEntity,
+  SectionEntity,
+  TagEntity,
   HabitEntity,
   HabitEntryEntity,
   ImportBatchEntity,
@@ -43,6 +47,10 @@ export interface BackupEnvelope {
     reviewRecords: ReviewRecordEntity[]
     reminders: ReminderEntity[]
     reminderOccurrences: ReminderOccurrenceEntity[]
+    folders: FolderEntity[]
+    lists: ListEntity[]
+    sections: SectionEntity[]
+    tags: TagEntity[]
   }
 }
 
@@ -54,7 +62,7 @@ export interface BackupPreview {
 
 const TABLE_KEYS = [
   'tasks', 'projects', 'habits', 'habitEntries', 'timeBlocks', 'dailyPlans', 'dailyPlanItems',
-  'focusSessions', 'recurringSeries', 'settings', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords', 'reminders', 'reminderOccurrences',
+  'focusSessions', 'recurringSeries', 'settings', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords', 'reminders', 'reminderOccurrences', 'folders', 'lists', 'sections', 'tags',
 ] as const
 
 function objectRow(value: unknown, label: string): Record<string, unknown> {
@@ -91,6 +99,62 @@ function normalizeImportBatch(batch: any): ImportBatchEntity {
   }
 }
 
+function normalizeLegacyTagName(value: string) {
+  return value.trim().replace(/^#/, '').replace(/\s+/g, ' ').toLowerCase()
+}
+
+function legacyTagIdFor(normalized: string) {
+  let hash = 2166136261
+  for (let i = 0; i < normalized.length; i += 1) {
+    hash ^= normalized.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return `tag-v19-${(hash >>> 0).toString(36)}`
+}
+
+function upgradeBackupOrganizationV19(backup: BackupEnvelope) {
+  if (backup.version >= 19) return
+
+  const names = new Map<string, string>()
+  const remember = (value: string) => {
+    const name = value.trim().replace(/^#/, '').replace(/\s+/g, ' ')
+    if (!name) return
+    const normalized = normalizeLegacyTagName(name)
+    if (!names.has(normalized)) names.set(normalized, name)
+  }
+
+  for (const task of backup.data.tasks) for (const value of task.tags ?? []) remember(value)
+  for (const series of backup.data.recurringSeries) {
+    for (const value of series.taskTemplate.tags ?? []) remember(value)
+    for (const exception of Object.values(series.exceptions ?? {})) for (const value of exception.tags ?? []) remember(value)
+  }
+
+  const stamp = backup.exportedAt
+  backup.data.tags = [...names.entries()].map(([normalizedName, name], index) => ({
+    id: legacyTagIdFor(normalizedName),
+    name,
+    normalizedName,
+    favorite: false,
+    archived: false,
+    sortOrder: index,
+    createdAt: stamp,
+    updatedAt: stamp,
+  }))
+  const idByName = new Map(backup.data.tags.map((tag) => [tag.normalizedName, tag.id]))
+  const idsFor = (values: string[] = []) => [...new Set(values.flatMap((value) => {
+    const id = idByName.get(normalizeLegacyTagName(value))
+    return id ? [id] : []
+  }))]
+
+  for (const task of backup.data.tasks) task.tagIds = idsFor(task.tags)
+  for (const series of backup.data.recurringSeries) {
+    series.taskTemplate.tagIds = idsFor(series.taskTemplate.tags)
+    for (const [date, exception] of Object.entries(series.exceptions ?? {})) {
+      series.exceptions[date] = { ...exception, tagIds: idsFor(exception.tags ?? []) }
+    }
+  }
+}
+
 function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): BackupEnvelope {
   if (raw.version < MIN_RESTORABLE_BACKUP_VERSION) {
     throw new Error(`Backup schema v${raw.version} is too old for direct restore. Restore it in an older compatible release first, then export a fresh backup.`)
@@ -99,7 +163,7 @@ function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): Ba
     throw new Error(`Backup schema v${raw.version} is newer than this app (v${DATABASE_SCHEMA_VERSION}). Update the app before restoring it.`)
   }
 
-  return {
+  const normalized: BackupEnvelope = {
     format: raw.format,
     version: raw.version,
     exportedAt: raw.exportedAt,
@@ -120,8 +184,14 @@ function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): Ba
       reviewRecords: (raw.data.reviewRecords ?? []).map((row) => backupReviewRecordSchema.parse(row)) as ReviewRecordEntity[],
       reminders: (raw.data.reminders ?? []).map((row) => backupReminderSchema.parse(row)) as ReminderEntity[],
       reminderOccurrences: (raw.data.reminderOccurrences ?? []).map((row) => backupReminderOccurrenceSchema.parse(row)) as ReminderOccurrenceEntity[],
+      folders: (raw.data.folders ?? []).map((row) => backupFolderSchema.parse(row)) as FolderEntity[],
+      lists: (raw.data.lists ?? []).map((row) => backupListSchema.parse(row)) as ListEntity[],
+      sections: (raw.data.sections ?? []).map((row) => backupSectionSchema.parse(row)) as SectionEntity[],
+      tags: (raw.data.tags ?? []).map((row) => backupTagSchema.parse(row)) as TagEntity[],
     },
   }
+  upgradeBackupOrganizationV19(normalized)
+  return normalized
 }
 
 function validateBackupSemantics(backup: BackupEnvelope): string[] {
@@ -142,10 +212,18 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
   uniqueIds(data.reviewRecords, 'reviewRecords')
   const reminderIds = uniqueIds(data.reminders, 'reminders')
   uniqueIds(data.reminderOccurrences, 'reminderOccurrences')
+  const folderIds = uniqueIds(data.folders, 'folders')
+  const listIds = uniqueIds(data.lists, 'lists')
+  const sectionIds = uniqueIds(data.sections, 'sections')
+  const tagIds = uniqueIds(data.tags, 'tags')
+  uniqueIds(data.tags, 'tags', 'normalizedName')
 
   const warnings: string[] = []
   for (const task of data.tasks) {
     if (task.projectId && !projectIds.has(task.projectId)) throw new Error(`Task “${task.title}” references a missing project.`)
+    if (task.listId && !listIds.has(task.listId)) throw new Error(`Task “${task.title}” references a missing list.`)
+    if (task.sectionId && !sectionIds.has(task.sectionId)) throw new Error(`Task “${task.title}” references a missing section.`)
+    for (const tagId of task.tagIds ?? []) if (!tagIds.has(tagId)) throw new Error(`Task “${task.title}” references missing tag ${tagId}.`)
     if (task.parentTaskId && !taskIds.has(task.parentTaskId)) throw new Error(`Task “${task.title}” references a missing parent task.`)
     if (task.seriesId && !seriesIds.has(task.seriesId)) throw new Error(`Task “${task.title}” references a missing recurring series.`)
     for (const blockerId of task.blockedByTaskIds ?? []) {
@@ -173,6 +251,40 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
     if (session.taskId && !taskIds.has(session.taskId)) warnings.push(`Focus session ${session.id} references a task that is no longer present; historical snapshot data will be retained.`)
   }
   for (const series of data.recurringSeries) if (series.taskTemplate.projectId && !projectIds.has(series.taskTemplate.projectId)) throw new Error(`Recurring series “${series.title}” references a missing project.`)
+  for (const list of data.lists) if (list.folderId && !folderIds.has(list.folderId)) throw new Error(`List “${list.name}” references a missing folder.`)
+  for (const section of data.sections) if (!listIds.has(section.listId)) throw new Error(`Section “${section.name}” references a missing list.`)
+  const tagParent = new Map(data.tags.map((tag) => [tag.id, tag.parentTagId]))
+  for (const tag of data.tags) {
+    if (tag.parentTagId && !tagIds.has(tag.parentTagId)) throw new Error(`Tag “${tag.name}” references a missing parent tag.`)
+    if (tag.parentTagId === tag.id) throw new Error(`Tag “${tag.name}” cannot parent itself.`)
+    const seen = new Set([tag.id])
+    let cursor = tag.parentTagId
+    while (cursor) {
+      if (seen.has(cursor)) throw new Error('Backup contains a tag hierarchy cycle.')
+      seen.add(cursor)
+      cursor = tagParent.get(cursor)
+    }
+  }
+  const sectionById = new Map(data.sections.map((section) => [section.id, section]))
+  for (const task of data.tasks) {
+    if (task.sectionId && !task.listId) throw new Error(`Task “${task.title}” has a section but no list.`)
+    if (task.sectionId && sectionById.get(task.sectionId)?.listId !== task.listId) throw new Error(`Task “${task.title}” has a section from another list.`)
+  }
+  for (const series of data.recurringSeries) {
+    if (series.taskTemplate.listId && !listIds.has(series.taskTemplate.listId)) throw new Error(`Recurring series “${series.title}” references a missing list.`)
+    if (series.taskTemplate.sectionId && !sectionIds.has(series.taskTemplate.sectionId)) throw new Error(`Recurring series “${series.title}” references a missing section.`)
+    if (series.taskTemplate.sectionId && !series.taskTemplate.listId) throw new Error(`Recurring series “${series.title}” has a section but no list.`)
+    if (series.taskTemplate.sectionId && sectionById.get(series.taskTemplate.sectionId)?.listId !== series.taskTemplate.listId) throw new Error(`Recurring series “${series.title}” has a section from another list.`)
+    for (const tagId of series.taskTemplate.tagIds ?? []) if (!tagIds.has(tagId)) throw new Error(`Recurring series “${series.title}” references missing tag ${tagId}.`)
+    for (const [date, exception] of Object.entries(series.exceptions ?? {})) {
+      if (exception.listId && !listIds.has(exception.listId)) throw new Error(`Recurring series “${series.title}” exception ${date} references a missing list.`)
+      if (exception.sectionId && !sectionIds.has(exception.sectionId)) throw new Error(`Recurring series “${series.title}” exception ${date} references a missing section.`)
+      const effectiveListId = Object.prototype.hasOwnProperty.call(exception, 'listId') ? (exception.listId ?? undefined) : series.taskTemplate.listId
+      if (exception.sectionId && !effectiveListId) throw new Error(`Recurring series “${series.title}” exception ${date} has a section but no list.`)
+      if (exception.sectionId && sectionById.get(exception.sectionId)?.listId !== effectiveListId) throw new Error(`Recurring series “${series.title}” exception ${date} has a section from another list.`)
+      for (const tagId of exception.tagIds ?? []) if (!tagIds.has(tagId)) throw new Error(`Recurring series “${series.title}” exception ${date} references missing tag ${tagId}.`)
+    }
+  }
   for (const reminder of data.reminders) {
     if (reminder.ownerType === 'task' && !taskIds.has(reminder.ownerId)) throw new Error(`Reminder ${reminder.id} references a missing task.`)
     if (reminder.ownerType === 'series' && !seriesIds.has(reminder.ownerId)) throw new Error(`Reminder ${reminder.id} references a missing recurring series.`)
@@ -191,17 +303,17 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
 }
 
 export async function createBackup(): Promise<BackupEnvelope> {
-  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences] = await Promise.all([
+  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags] = await Promise.all([
     db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(),
     db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(),
     db.settings.toArray(), db.importBatches.toArray(), db.patchBatches.toArray(), db.calendarImportBatches.toArray(), db.reviewRecords.toArray(),
-    db.reminders.toArray(), db.reminderOccurrences.toArray(),
+    db.reminders.toArray(), db.reminderOccurrences.toArray(), db.folders.toArray(), db.lists.toArray(), db.sections.toArray(), db.tags.toArray(),
   ])
   return {
     format: 'folio-backup',
     version: DATABASE_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences },
+    data: { tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags },
   }
 }
 
@@ -224,7 +336,7 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
   const d = verified.backup.data
   await db.transaction('rw', [
     db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
-    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords, db.reminders, db.reminderOccurrences,
+    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords, db.reminders, db.reminderOccurrences, db.folders, db.lists, db.sections, db.tags,
   ], async () => {
       await Promise.all(TABLE_KEYS.map((key) => (db[key] as any).clear()))
       await db.projects.bulkPut(d.projects)
@@ -243,6 +355,10 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
       await db.reviewRecords.bulkPut(d.reviewRecords)
       await db.reminders.bulkPut(d.reminders)
       await db.reminderOccurrences.bulkPut(d.reminderOccurrences)
+      await db.folders.bulkPut(d.folders)
+      await db.lists.bulkPut(d.lists)
+      await db.sections.bulkPut(d.sections)
+      await db.tags.bulkPut(d.tags)
     },
   )
 }

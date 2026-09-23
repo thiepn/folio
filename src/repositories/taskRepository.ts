@@ -2,6 +2,7 @@ import { db } from '../db/database'
 import { taskCreateSchema, taskUpdateSchema } from '../domain/schemas'
 import type { z } from 'zod'
 import type { LocalDate, TaskEntity } from '../domain/models'
+import { organizationRepository } from './organizationRepository'
 
 export type TaskCreateInput = z.input<typeof taskCreateSchema>
 export type TaskUpdateInput = z.input<typeof taskUpdateSchema>
@@ -12,6 +13,33 @@ function byOrder(a: TaskEntity, b: TaskEntity) { return a.sortOrder - b.sortOrde
 function normalizeTags(tags: string[]) { return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))] }
 function appendActivity(task: TaskEntity, label: string, kind: TaskEntity['activity'][number]['kind'] = 'updated') {
   return [...(task.activity ?? []), { id: crypto.randomUUID(), kind, label, at: new Date().toISOString() }].slice(-200)
+}
+
+async function resolveOrganization(input: { listId?: string | null; sectionId?: string | null }) {
+  const listId = input.listId === null ? undefined : input.listId
+  const sectionId = input.sectionId === null ? undefined : input.sectionId
+  if (listId) {
+    const list = await organizationRepository.getList(listId)
+    if (!list) throw new Error('List not found.')
+  }
+  if (sectionId) {
+    const section = await organizationRepository.getSection(sectionId)
+    if (!section) throw new Error('Section not found.')
+    if (!listId || section.listId !== listId) throw new Error('Section does not belong to the selected list.')
+  }
+  return { listId, sectionId }
+}
+
+async function resolveTags(names: string[], tagIds: string[] = []) {
+  if (names.length) {
+    const tags = await organizationRepository.resolveTagNames(names)
+    return { tags: tags.map((tag) => tag.name), tagIds: tags.map((tag) => tag.id) }
+  }
+  if (tagIds.length) {
+    const tags = (await Promise.all(tagIds.map((id) => organizationRepository.getTag(id)))).filter(Boolean)
+    return { tags: tags.map((tag) => tag!.name), tagIds: tags.map((tag) => tag!.id) }
+  }
+  return { tags: [] as string[], tagIds: [] as string[] }
 }
 
 export const taskRepository = {
@@ -87,11 +115,15 @@ export const taskRepository = {
   async create(input: TaskCreateInput): Promise<TaskEntity> {
     const parsed = taskCreateSchema.parse(input)
     const now = new Date().toISOString()
+    const organization = await resolveOrganization({ listId: parsed.listId, sectionId: parsed.sectionId })
+    const resolvedTags = await resolveTags(parsed.tags, parsed.tagIds)
     const task: TaskEntity = {
       id: crypto.randomUUID(),
       title: parsed.title,
       description: parsed.description,
       projectId: parsed.projectId,
+      listId: organization.listId,
+      sectionId: organization.sectionId,
       parentTaskId: parsed.parentTaskId,
       priority: parsed.priority,
       status: parsed.status,
@@ -99,7 +131,8 @@ export const taskRepository = {
       plannedDate: parsed.plannedDate,
       deadline: parsed.deadline,
       estimatedMinutes: parsed.estimatedMinutes,
-      tags: normalizeTags(parsed.tags),
+      tags: normalizeTags(resolvedTags.tags),
+      tagIds: resolvedTags.tagIds,
       checklist: parsed.checklist,
       progressMode: parsed.progressMode,
       progressPercent: parsed.progressPercent,
@@ -126,7 +159,19 @@ export const taskRepository = {
     const current = await db.tasks.get(id)
     if (!current) throw new Error('Task not found.')
     const normalized = Object.fromEntries(Object.entries(parsed).map(([key, value]) => [key, value === null ? undefined : value])) as Partial<TaskEntity>
-    if (normalized.tags) normalized.tags = normalizeTags(normalized.tags)
+    if (Object.prototype.hasOwnProperty.call(parsed, 'listId') || Object.prototype.hasOwnProperty.call(parsed, 'sectionId')) {
+      const organization = await resolveOrganization({
+        listId: Object.prototype.hasOwnProperty.call(parsed, 'listId') ? parsed.listId : current.listId,
+        sectionId: Object.prototype.hasOwnProperty.call(parsed, 'sectionId') ? parsed.sectionId : current.sectionId,
+      })
+      normalized.listId = organization.listId
+      normalized.sectionId = organization.sectionId
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed, 'tags') || Object.prototype.hasOwnProperty.call(parsed, 'tagIds')) {
+      const resolved = await resolveTags(parsed.tags ?? [], parsed.tagIds ?? [])
+      normalized.tags = normalizeTags(resolved.tags)
+      normalized.tagIds = resolved.tagIds
+    }
     const plannedChanged = Object.prototype.hasOwnProperty.call(parsed, 'plannedDate') && normalized.plannedDate !== current.plannedDate
     const next: TaskEntity = {
       ...current,

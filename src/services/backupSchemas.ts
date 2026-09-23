@@ -10,9 +10,9 @@ const backupTaskChecklistItemSchema = z.object({ id, text: z.string(), completed
 const backupTaskCommentSchema = z.object({ id, body: z.string(), createdAt: iso, updatedAt: iso })
 const backupTaskActivitySchema = z.object({ id, kind: z.enum(['created','updated','completed','reopened','subtask','comment','restored','duplicated']), label: z.string(), at: iso })
 export const backupTaskSchema = z.object({
-  id, title: z.string(), description: z.string(), projectId: id.optional(), parentTaskId: id.optional(), priority, status,
+  id, title: z.string(), description: z.string(), projectId: id.optional(), listId: id.optional(), sectionId: id.optional(), parentTaskId: id.optional(), priority, status,
   lastOpenStatus: z.enum(['inbox','todo']).optional(), plannedDate: localDate.optional(), deadline: localDate.optional(), estimatedMinutes: z.number().int().positive().optional(),
-  tags: z.array(z.string()).default([]), checklist: z.array(backupTaskChecklistItemSchema).default([]), progressMode: z.enum(['auto','manual']).default('auto'), progressPercent: z.number().int().min(0).max(100).default(0),
+  tags: z.array(z.string()).default([]), tagIds: z.array(id).default([]), checklist: z.array(backupTaskChecklistItemSchema).default([]), progressMode: z.enum(['auto','manual']).default('auto'), progressPercent: z.number().int().min(0).max(100).default(0),
   sourceUrl: z.string().optional(), location: z.string().optional(), pinned: z.boolean().default(false), comments: z.array(backupTaskCommentSchema).default([]), activity: z.array(backupTaskActivitySchema).default([]),
   seriesId: id.optional(), recurrenceDate: localDate.optional(), blockedByTaskIds: z.array(id).default([]), sortOrder: z.number(), rescheduleCount: z.number().int().nonnegative(), createdAt: iso, updatedAt: iso, completedAt: iso.optional(), deletedAt: iso.optional(),
 })
@@ -40,9 +40,12 @@ const backupRecurrenceExceptionSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   projectId: id.nullable().optional(),
+  listId: id.nullable().optional(),
+  sectionId: id.nullable().optional(),
   priority: priority.optional(),
   estimatedMinutes: z.number().int().positive().nullable().optional(),
   tags: z.array(z.string()).optional(),
+  tagIds: z.array(id).optional(),
   checklist: z.array(z.string()).optional(),
   sourceUrl: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
@@ -69,9 +72,10 @@ export const backupSeriesSchema = z.object({
     count: z.number().int().positive().optional(),
   }),
   taskTemplate: z.object({
-    title: z.string(), description: z.string(), projectId: id.optional(), priority,
+    title: z.string(), description: z.string(), projectId: id.optional(), listId: id.optional(), sectionId: id.optional(), priority,
     estimatedMinutes: z.number().int().positive().optional(),
     tags: z.array(z.string()).default([]),
+    tagIds: z.array(id).default([]),
     checklist: z.array(z.string()).default([]),
     sourceUrl: z.string().optional(),
     location: z.string().optional(),
@@ -119,6 +123,24 @@ export const backupReminderOccurrenceSchema = z.object({
   bodySnapshot: z.string().optional(),
   createdAt: iso,
   updatedAt: iso,
+})
+
+export const backupFolderSchema = z.object({
+  id, name: z.string(), color: z.string().optional(), icon: z.string().optional(), sortOrder: z.number(), collapsed: z.boolean(),
+  archived: z.boolean(), archivedAt: iso.optional(), createdAt: iso, updatedAt: iso,
+})
+export const backupListSchema = z.object({
+  id, name: z.string(), description: z.string(), folderId: id.optional(), color: z.string().optional(), icon: z.string().optional(),
+  favorite: z.boolean(), archived: z.boolean(), archivedAt: iso.optional(), sortOrder: z.number(),
+  sortMode: z.enum(['manual','planned','deadline','priority','title','created','updated']),
+  groupMode: z.enum(['section','none','planned','priority','tag']), showCompleted: z.boolean(), createdAt: iso, updatedAt: iso,
+})
+export const backupSectionSchema = z.object({
+  id, listId: id, name: z.string(), sortOrder: z.number(), archived: z.boolean(), createdAt: iso, updatedAt: iso,
+})
+export const backupTagSchema = z.object({
+  id, name: z.string(), normalizedName: z.string(), parentTagId: id.optional(), color: z.string().optional(), favorite: z.boolean(),
+  archived: z.boolean(), sortOrder: z.number(), createdAt: iso, updatedAt: iso,
 })
 
 export const backupSettingSchema = z.object({ key: z.string().min(1), value: z.unknown(), updatedAt: iso })

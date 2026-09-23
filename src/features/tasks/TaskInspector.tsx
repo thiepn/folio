@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Drawer } from '../../components/ui/Drawer'
 import { localDateKey } from '../../domain/date'
-import type { RecurringSeriesEntity } from '../../domain/models'
+import type { ListEntity, RecurringSeriesEntity, SectionEntity, TagEntity } from '../../domain/models'
 import { seriesSummary } from '../recurrence/recurrenceLogic'
 import type { ProjectSummary } from '../../repositories/projectRepository'
 import type { TaskUpdateInput } from '../../repositories/taskRepository'
@@ -17,10 +17,13 @@ function parseTags(value: string) {
   return [...new Set(value.split(',').map((tag) => tag.trim().replace(/^#/, '')).filter(Boolean))].slice(0, 50)
 }
 
-export function TaskInspector({ task, subtasks, projects, dependencyCandidates, series, focusSeconds = 0, onClose, onSave, onToggle, onToggleSubtask, onOpenSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }: {
+export function TaskInspector({ task, subtasks, projects, lists, sections, tags: knownTags, dependencyCandidates, series, focusSeconds = 0, onClose, onSave, onToggle, onToggleSubtask, onOpenSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }: {
   task: TaskPreview | null
   subtasks: TaskPreview[]
   projects: ProjectSummary[]
+  lists: ListEntity[]
+  sections: SectionEntity[]
+  tags: TagEntity[]
   dependencyCandidates: TaskPreview[]
   series?: RecurringSeriesEntity | null
   focusSeconds?: number
@@ -41,15 +44,18 @@ export function TaskInspector({ task, subtasks, projects, dependencyCandidates, 
 }) {
   return (
     <Drawer open={Boolean(task)} title="Task" onClose={onClose} className="task-drawer-overlay">
-      {task ? <TaskInspectorForm key={task.id + ':' + task.updatedAt + ':' + (series?.updatedAt ?? '')} {...{ task, subtasks, projects, dependencyCandidates, series, focusSeconds, onSave, onToggle, onToggleSubtask, onOpenSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }} /> : null}
+      {task ? <TaskInspectorForm key={task.id + ':' + task.updatedAt + ':' + (series?.updatedAt ?? '')} {...{ task, subtasks, projects, lists, sections, knownTags, dependencyCandidates, series, focusSeconds, onSave, onToggle, onToggleSubtask, onOpenSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }} /> : null}
     </Drawer>
   )
 }
 
-function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, series, focusSeconds, onSave, onToggle, onToggleSubtask, onOpenSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }: {
+function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTags, dependencyCandidates, series, focusSeconds, onSave, onToggle, onToggleSubtask, onOpenSubtask, onAddSubtask, onDeleteSubtask, onDuplicate, onDelete, onProcessInbox, onOpenRecurrence, onSkipOccurrence, onSetSeriesStatus, onFocus }: {
   task: TaskPreview
   subtasks: TaskPreview[]
   projects: ProjectSummary[]
+  lists: ListEntity[]
+  sections: SectionEntity[]
+  knownTags: TagEntity[]
   dependencyCandidates: TaskPreview[]
   series?: RecurringSeriesEntity | null
   focusSeconds: number
@@ -70,6 +76,8 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
   const [projectId, setProjectId] = useState(task.projectId ?? '')
+  const [listId, setListId] = useState(task.listId ?? '')
+  const [sectionId, setSectionId] = useState(task.sectionId ?? '')
   const [priority, setPriority] = useState(task.priority)
   const [status, setStatus] = useState(task.status)
   const [plannedDate, setPlannedDate] = useState(task.plannedDate ?? '')
@@ -104,6 +112,8 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
     return title.trim() !== task.title
       || description !== (task.description ?? '')
       || projectId !== (task.projectId ?? '')
+      || listId !== (task.listId ?? '')
+      || sectionId !== (task.sectionId ?? '')
       || priority !== task.priority
       || status !== task.status
       || plannedDate !== (task.plannedDate ?? '')
@@ -118,7 +128,7 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
       || pinned !== Boolean(task.pinned)
       || JSON.stringify(comments) !== JSON.stringify(task.comments ?? [])
       || blockedByTaskIds.join('|') !== (task.blockedByTaskIds ?? []).join('|')
-  }, [title, description, projectId, priority, status, plannedDate, deadline, estimate, tags, checklist, progressMode, progressPercent, sourceUrl, location, pinned, comments, blockedByTaskIds, task])
+  }, [title, description, projectId, listId, sectionId, priority, status, plannedDate, deadline, estimate, tags, checklist, progressMode, progressPercent, sourceUrl, location, pinned, comments, blockedByTaskIds, task])
 
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
@@ -140,6 +150,8 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
         title: title.trim(),
         description,
         projectId: projectId || null,
+        listId: listId || null,
+        sectionId: listId && sectionId ? sectionId : null,
         priority,
         status,
         plannedDate: plannedDate || null,
@@ -231,6 +243,8 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
           <label className="field"><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value as TaskPreview['status'])}><option value="inbox">Inbox</option><option value="todo">To do</option><option value="completed">Completed</option></select></label>
           <label className="field"><span>Priority</span><select value={priority} onChange={(event) => setPriority(event.target.value as TaskPreview['priority'])}><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option></select></label>
           <label className="field"><span>Project</span><select value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">No project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}{project.archived ? ' (archived)' : ''}</option>)}</select></label>
+          <label className="field"><span>List</span><select value={listId} onChange={(event) => { setListId(event.target.value); setSectionId('') }}><option value="">No list</option>{lists.filter((list)=>!list.archived).map((list)=><option key={list.id} value={list.id}>{list.name}</option>)}</select></label>
+          <label className="field"><span>Section</span><select value={sectionId} disabled={!listId} onChange={(event)=>setSectionId(event.target.value)}><option value="">No section</option>{sections.filter((section)=>section.listId===listId&&!section.archived).map((section)=><option key={section.id} value={section.id}>{section.name}</option>)}</select></label>
           <label className="field"><span>Estimate</span><input type="number" min="1" max="1440" value={estimate} placeholder="Minutes" onChange={(event) => setEstimate(event.target.value)} /></label>
           <label className="field"><span>Planned day</span><input type="date" value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} /></label>
           <label className="field"><span>Hard deadline</span><input type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label>
@@ -239,12 +253,13 @@ function TaskInspectorForm({ task, subtasks, projects, dependencyCandidates, ser
 
       <section className="task-v2-context-section">
         <div className="task-section-head"><div><div className="eyebrow">Context</div><span>Keep execution details with the task.</span></div></div>
-        <label className="field"><span>Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="university, deep-work, admin" /><small>Comma-separated for now; D5 will add the global tag system.</small></label>
+        <label className="field"><span>Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="university, deep-work, admin" /><small>Comma-separated names are resolved into the global tag registry.</small></label>
         <div className="task-property-grid">
           <label className="field"><span>URL</span><input type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="https://…" /></label>
           <label className="field"><span>Location</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Library, campus, home…" /></label>
         </div>
         {parseTags(tags).length ? <div className="task-tag-list">{parseTags(tags).map((tag) => <span key={tag}>#{tag}</span>)}</div> : null}
+        {knownTags.length ? <div className="task-known-tags"><span>Known tags</span><div>{knownTags.filter((tag)=>!tag.archived).slice(0,18).map((tag)=>{const selected=parseTags(tags).some((value)=>value.toLowerCase()===tag.name.toLowerCase());return <button type="button" className={selected?'is-selected':''} key={tag.id} onClick={()=>{const current=parseTags(tags);const next=selected?current.filter((value)=>value.toLowerCase()!==tag.name.toLowerCase()):[...current,tag.name];setTags(next.join(', '))}}>{'#'+tag.name}</button>})}</div></div>:null}
       </section>
 
       <section className="task-v2-progress-section">

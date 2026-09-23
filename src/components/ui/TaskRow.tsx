@@ -44,9 +44,9 @@ export function TaskRow({ task, onToggle, onOpen, actions }: {
       >
         <div className="task-row__body">
           <div className={`task-row__title ${task.completed ? 'task-row__title--done' : ''}`}>{task.title}</div>
-          {(task.project || task.meta || task.subtaskTotal || task.activeBlockerCount) ? (
+          {(task.pinned || task.seriesId || task.activeBlockerCount || task.list || task.project || task.meta || task.tags?.length || task.subtaskTotal || (task.progressPercent && task.progressPercent < 100)) ? (
             <div className="task-row__meta">
-              {[task.pinned ? '★ Pinned' : undefined, task.seriesId ? '↻ Recurring' : undefined, task.activeBlockerCount ? `⛓ Blocked by ${task.activeBlockerCount}` : undefined, task.project, task.meta, task.tags?.slice(0, 2).map((tag) => `#${tag}`).join(' '), task.subtaskTotal ? `${task.subtaskCompleted}/${task.subtaskTotal} nested` : undefined, task.progressPercent && task.progressPercent < 100 ? `${task.progressPercent}%` : undefined].filter(Boolean).join(' · ')}
+              {[task.pinned ? '★ Pinned' : undefined, task.seriesId ? '↻ Recurring' : undefined, task.activeBlockerCount ? `⛓ Blocked by ${task.activeBlockerCount}` : undefined, task.list ? `☰ ${task.list}${task.section ? ` / ${task.section}` : ''}` : undefined, task.project, task.meta, task.tags?.slice(0, 2).map((tag) => `#${tag}`).join(' '), task.subtaskTotal ? `${task.subtaskCompleted}/${task.subtaskTotal} nested` : undefined, task.progressPercent && task.progressPercent < 100 ? `${task.progressPercent}%` : undefined].filter(Boolean).join(' · ')}
             </div>
           ) : null}
         </div>

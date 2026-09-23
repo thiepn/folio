@@ -89,8 +89,8 @@ check('recurring occurrence checklist receives fresh IDs', service.includes('fre
 check('backup schema preserves D2 recurrence fields', backupSchemas.includes('monthlyMode:') && backupSchemas.includes('afterCompletionUnit:') && backupSchemas.includes('backupRecurrenceExceptionSchema'))
 check('structured import schema supports D2 rules', importSchema.includes('monthlyMode:') && importSchema.includes('afterCompletionUnit:') && importSchema.includes('yearMonths:'))
 check('structured patch schema supports rich series templates', patchSchema.includes('tags: z.array') && patchSchema.includes('checklist: z.array') && patchSchema.includes('sourceUrl:'))
-check('import execution preserves recurring D1 context', importService.includes('tags: item.taskTemplate.tags') && importService.includes('dateKeyInTimeZone(new Date(), item.timezone)'))
-check('patch execution preserves recurring D1 context', patchService.includes('tags: value.taskTemplate.tags') && patchService.includes('freshChecklist(fields.checklist, now)'))
+check('import execution preserves recurring D1 context', importService.includes('tags: tagData.tags') && importService.includes('tagIds: tagData.tagIds') && importService.includes('dateKeyInTimeZone(new Date(), item.timezone)'))
+check('patch execution preserves recurring D1 context', patchService.includes('tags: tagData.tags') && patchService.includes('tagIds: tagData.tagIds') && patchService.includes('freshChecklist(fields.checklist, now)'))
 check('patch reconciliation uses series timezone', patchService.includes('dateKeyInTimeZone(new Date(), series.timezone)'))
 check('patch reconciliation preserves unchanged checklist state', patchService.includes('reconcileChecklist') && patchService.includes('currentText'))
 
@@ -98,7 +98,7 @@ check('public import schema advertises D2 fields', publicImport.includes('"month
 check('public patch schema advertises D2 fields', publicPatch.includes('"monthlyMode"') && publicPatch.includes('"afterCompletionUnit"') && publicPatch.includes('"checklist"'))
 
 check('public v17 backup schema exists', exists('public/schema/folio-backup-v17.schema.json'))
-check('interop retains v17 restore compatibility', interop.includes('Schema v18 · complete planner state') && interop.includes('schema v8–v18'))
+check('interop retains v17 restore compatibility', interop.includes('Schema v19 · complete planner state') && interop.includes('schema v8–v19'))
 check('D2 stylesheet loaded', styles.includes("@import './recurrence-v2.css';"))
 check('D2 design document exists', exists('docs/DATES_RECURRENCE_V2_D2.md'))
 

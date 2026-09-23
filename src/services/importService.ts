@@ -5,6 +5,7 @@ import type {
   ImportBatchEntity,
   PatchSnapshot,
   ProjectEntity,
+  TagEntity,
   RecurringSeriesEntity,
   TaskEntity,
 } from '../domain/models'
@@ -14,6 +15,7 @@ import type { ImportAnalysis, ImportDocumentV1 } from '../features/import/import
 import { defaultMaterializationThrough } from '../features/recurrence/recurrenceLogic'
 import { importBatchRepository } from '../repositories/importBatchRepository'
 import { settingsRepository } from '../repositories/settingsRepository'
+import { normalizeTagName, organizationRepository } from '../repositories/organizationRepository'
 import { makeHabitEntity, makeProjectEntity, makeSeriesEntity, makeTaskEntity, makeTimeBlockEntity } from './entityFactory'
 import { materializeSeriesGraph } from './recurrenceGraph'
 import type { UndoableMutation } from './undo'
@@ -144,6 +146,46 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
   if (!analysis.document || analysis.issues.some((entry) => entry.severity === 'error')) throw new Error(analysis.issues.find((entry) => entry.severity === 'error')?.message ?? 'Import validation failed.')
   const document = analysis.document
   const now = new Date().toISOString()
+  const [availableLists, availableSections] = await Promise.all([
+    organizationRepository.listLists(true),
+    organizationRepository.listSections(true),
+  ])
+  const listIds = new Set(availableLists.map((list) => list.id))
+  const sectionById = new Map(availableSections.map((section) => [section.id, section]))
+  const validatePlacement = (listId?: string, sectionId?: string) => {
+    if (listId && !listIds.has(listId)) throw new Error(`Import references missing list ${listId}.`)
+    if (sectionId) {
+      const section = sectionById.get(sectionId)
+      if (!section) throw new Error(`Import references missing section ${sectionId}.`)
+      if (!listId || section.listId !== listId) throw new Error(`Import section ${sectionId} does not belong to list ${listId ?? 'none'}.`)
+    }
+  }
+  for (const item of document.tasks) validatePlacement(item.listId, item.sectionId)
+  for (const item of document.recurringSeries) validatePlacement(item.taskTemplate.listId, item.taskTemplate.sectionId)
+
+  const allTagNames = [
+    ...document.tasks.flatMap((item) => item.tags ?? []),
+    ...document.recurringSeries.flatMap((item) => item.taskTemplate.tags ?? []),
+  ]
+  const existingTags = await organizationRepository.listTags(true)
+  const tagByName = new Map(existingTags.map((tag) => [tag.normalizedName, tag]))
+  const newTags: TagEntity[] = []
+  for (const rawName of allTagNames) {
+    const name = rawName.trim().replace(/^#/, '').replace(/\s+/g, ' ')
+    const normalizedName = normalizeTagName(name)
+    if (!normalizedName || tagByName.has(normalizedName)) continue
+    const tag: TagEntity = {
+      id: crypto.randomUUID(), name, normalizedName, favorite: false, archived: false,
+      sortOrder: Date.now() + newTags.length, createdAt: now, updatedAt: now,
+    }
+    tagByName.set(normalizedName, tag)
+    newTags.push(tag)
+  }
+  const canonicalizeTags = (names: string[] = []) => {
+    const rows = [...new Set(names.map(normalizeTagName))].map((name) => tagByName.get(name)).filter(Boolean)
+    return { tags: rows.map((tag) => tag!.name), tagIds: rows.map((tag) => tag!.id) }
+  }
+
   const projectIds = new Map<string, string>()
   const taskIds = new Map<string, string>()
   const projects = document.projects.map((item) => {
@@ -152,10 +194,15 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
     return entity
   })
   for (const item of document.tasks) taskIds.set(item.ref, crypto.randomUUID())
-  const tasks = document.tasks.map((item, index) => makeTaskEntity({
-    title: item.title, description: item.description, projectId: resolveProject(document, projectIds, item.projectRef, item.projectId), parentTaskId: item.parentRef ? taskIds.get(item.parentRef) : undefined,
-    priority: item.priority, status: item.status, plannedDate: item.plannedDate, deadline: item.deadline, estimatedMinutes: item.estimatedMinutes,
-  }, taskIds.get(item.ref)!, now, Date.now() + index))
+  const tasks = document.tasks.map((item, index) => {
+    const tagData = canonicalizeTags(item.tags)
+    return makeTaskEntity({
+      title: item.title, description: item.description, projectId: resolveProject(document, projectIds, item.projectRef, item.projectId),
+      listId: item.listId, sectionId: item.sectionId, parentTaskId: item.parentRef ? taskIds.get(item.parentRef) : undefined,
+      priority: item.priority, status: item.status, plannedDate: item.plannedDate, deadline: item.deadline, estimatedMinutes: item.estimatedMinutes,
+      tags: tagData.tags, tagIds: tagData.tagIds,
+    }, taskIds.get(item.ref)!, now, Date.now() + index)
+  })
   const habits = document.habits.map((item, index) => makeHabitEntity({ title: item.title, description: item.description, kind: item.kind, target: item.target, schedule: item.schedule, countsTowardCapacity: item.countsTowardCapacity }, crypto.randomUUID(), now, Date.now() + 10_000 + index))
   const explicitBlocks = document.timeBlocks.map((item) => {
     const taskId = item.taskRef ? taskIds.get(item.taskRef) : undefined
@@ -172,6 +219,7 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
 
   const seriesGraphs = document.recurringSeries.map((item) => {
     const projectId = resolveProject(document, projectIds, item.taskTemplate.projectRef, item.taskTemplate.projectId)
+    const tagData = canonicalizeTags(item.taskTemplate.tags)
     const series = makeSeriesEntity({
       title: item.title,
       timezone: item.timezone,
@@ -181,9 +229,12 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
         title: item.taskTemplate.title,
         description: item.taskTemplate.description,
         projectId,
+        listId: item.taskTemplate.listId,
+        sectionId: item.taskTemplate.sectionId,
         priority: item.taskTemplate.priority,
         estimatedMinutes: item.taskTemplate.estimatedMinutes,
-        tags: item.taskTemplate.tags,
+        tags: tagData.tags,
+        tagIds: tagData.tagIds,
         checklist: item.taskTemplate.checklist,
         sourceUrl: item.taskTemplate.sourceUrl,
         location: item.taskTemplate.location,
@@ -221,7 +272,8 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
   ]
   const batch: ImportBatchEntity = { id: crypto.randomUUID(), title: document.title, source, status: 'applied', affectedEntities, createdSnapshots, priorDailyPlans, createdAt: now, updatedAt: now }
 
-  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.importBatches], async () => {
+  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.importBatches, db.tags], async () => {
+    if (newTags.length) await db.tags.bulkAdd(newTags)
     if (projects.length) await db.projects.bulkAdd(projects)
     if (allTasks.length) await db.tasks.bulkAdd(allTasks)
     if (habits.length) await db.habits.bulkAdd(habits)

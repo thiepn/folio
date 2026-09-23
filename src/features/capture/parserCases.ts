@@ -7,6 +7,10 @@ const projects = [
   { id: 'work', name: 'Work' },
 ]
 const today = '2026-08-20' as const
+const lists = [
+  { id: 'personal', name: 'Personal' },
+  { id: 'deep', name: 'Deep Work' },
+]
 
 export const captureParserCases = [
   {
@@ -97,12 +101,21 @@ export const captureParserCases = [
     input: 'Legacy project #Analysis #exam',
     expected: { title: 'Legacy project', projectId: 'analysis', tags: 'exam' },
   },
+  {
+    input: 'Read book tomorrow ^Personal #reading',
+    expected: { title: 'Read book', plannedDate: '2026-08-21', listId: 'personal', tags: 'reading' },
+  },
+  {
+    input: 'Write report list:"Deep Work" ~Work 60m',
+    expected: { title: 'Write report', listId: 'deep', projectId: 'work', estimatedMinutes: 60 },
+  },
+
 ]
 
 export function validateCaptureParserCases() {
   const failures: string[] = []
   for (const item of captureParserCases) {
-    const actual = parseQuickCapture(item.input, projects, { today })
+    const actual = parseQuickCapture(item.input, projects, { today, lists })
     for (const [key, value] of Object.entries(item.expected)) {
       if (key === 'recurrenceFrequency') {
         if (actual.recurrence?.frequency !== value) failures.push(`${item.input}: recurrenceFrequency expected ${String(value)} got ${String(actual.recurrence?.frequency)}`)
@@ -144,9 +157,9 @@ export function validateCaptureParserCases() {
     }
   }
 
-  const batch = parseQuickCaptureBatch('Task one tomorrow\n\nTask two #research\nTask three @inbox', projects, { today })
+  const batch = parseQuickCaptureBatch('Task one tomorrow\n\nTask two #research ^Personal\nTask three @inbox', projects, { today, lists })
   if (batch.length !== 3) failures.push(`batch: expected 3 tasks got ${batch.length}`)
-  if (batch[0]?.title !== 'Task one' || batch[1]?.tags[0] !== 'research' || batch[2]?.status !== 'inbox') failures.push('batch: parsed lines did not retain independent semantics')
+  if (batch[0]?.title !== 'Task one' || batch[1]?.tags[0] !== 'research' || batch[1]?.listId !== 'personal' || batch[2]?.status !== 'inbox') failures.push('batch: parsed lines did not retain independent semantics')
 
   return failures
 }
