@@ -14,7 +14,7 @@ export const reminderRepository = {
   },
 
   async listEnabled(): Promise<ReminderEntity[]> {
-    return (await db.reminders.where('enabled').equals(1).toArray()).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    return (await db.reminders.toArray()).filter((item) => item.enabled).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   },
 
   async listForOwner(ownerType: ReminderEntity['ownerType'], ownerId: string): Promise<ReminderEntity[]> {
