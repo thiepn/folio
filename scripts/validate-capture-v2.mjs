@@ -29,7 +29,7 @@ check('D4 intentionally retains schema v18', /DATABASE_SCHEMA_VERSION\s*=\s*18\b
 check('capture parser exposes tags', parser.includes('tags: string[]') && parser.includes("kind: 'tag'"))
 check('capture parser exposes reminders', parser.includes('ParsedReminder') && parser.includes('reminders: ParsedReminder[]'))
 check('capture parser exposes advanced recurrence fields', ['monthlyMode?: MonthlyRecurrenceMode','monthDays?: number[]','ordinal?: RecurrenceOrdinal','yearMonths?: number[]','afterCompletionUnit?: CompletionIntervalUnit'].every((token) => parser.includes(token)))
-check('natural relative dates exist', parser.includes('day after tomorrow') && parser.includes('in\\s+\\d+') && parser.includes("'next week'"))
+check('natural relative dates exist', parser.includes('day after tomorrow') && parser.includes('addLocalMonths(today, amount)') && parser.includes('startOfLocalWeek(today)'))
 check('month-name date parsing exists', parser.includes('MONTH_WORDS') && parser.includes('upcomingMonthDate'))
 check('planned date and deadline remain separate', parser.includes('Hard deadline: due Friday') && parser.includes('plannedDate = selected.date'))
 check('12/24 hour parser exists', parser.includes("match[3] === 'pm'") && parser.includes("cleaned === 'noon'"))
@@ -54,7 +54,7 @@ check('exact reminder phrase parser exists', parser.includes('Exact-date reminde
 check('deadline reminder phrase parser exists', parser.includes('before deadline') && parser.includes("taskDateField: 'deadline'"))
 check('block-relative reminder phrase parser exists', parser.includes('beforeRegex') && parser.includes("kind: 'time-block'"))
 check('planned-day reminder phrase parser exists', parser.includes('Planned-day clock reminder') && parser.includes("taskDateField: 'plannedDate'"))
-check('invalid reminders are warned and removed', parser.includes('Invalid reminder phrases stay visible as warnings but are not executed') && parser.includes('reminders = reminders.filter'))
+check('invalid reminders are warned and removed', parser.includes('reminders = reminders.filter') && parser.includes("code: 'invalid-reminder'") && parser.includes('return false'))
 check('inbox strips reminder scheduling', parser.includes('inbox-ignores-reminder') && parser.includes('reminders = []'))
 check('recurring exact reminder ambiguity is surfaced', parser.includes('Exact-date reminders apply only to the first captured occurrence'))
 
