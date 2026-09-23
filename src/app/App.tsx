@@ -955,7 +955,7 @@ function AppContent() {
       <FocusOverlay
         open={focusOpen}
         activeSession={focusData?.activeSession}
-        tasks={data.openTasks}
+        tasks={[...data.openTasks, ...data.subtasks.filter((task) => task.status === 'todo' || task.status === 'inbox')]}
         preferredTaskId={focusPreferredTaskId}
         taskTotals={focusData?.taskTotals ?? {}}
         recentSessions={focusData?.recentSessions ?? []}
