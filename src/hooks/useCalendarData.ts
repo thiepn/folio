@@ -11,7 +11,7 @@ import { savedViewService } from '../services/savedViewService'
 import { BUILTIN_SMART_VIEWS, runSmartView } from '../features/smartViews/queryEngine'
 import { taskToPreview } from '../adapters/uiAdapters'
 
-export function useCalendarData(fromDate: LocalDate, throughDate: LocalDate) {
+export function useCalendarData(fromDate: LocalDate, throughDate: LocalDate, timeZone = 'local') {
   return useLiveQuery(async () => {
     const [
       taskSnapshot, projectMap, projects, blocks, defaultCapacity, plans,
@@ -20,7 +20,7 @@ export function useCalendarData(fromDate: LocalDate, throughDate: LocalDate) {
       taskRepository.listAll(),
       projectRepository.getMap(),
       projectRepository.listAll(),
-      timeBlockRepository.listBetween(fromDate, throughDate),
+      timeBlockRepository.listBetween(fromDate, throughDate, timeZone),
       settingsRepository.getDailyCapacityMinutes(),
       dailyPlanRepository.listRange(fromDate, throughDate),
       organizationRepository.listLists(true),
@@ -77,5 +77,5 @@ export function useCalendarData(fromDate: LocalDate, throughDate: LocalDate) {
       smartViewTaskIds,
       timeZones: [...new Set(blocks.map((block) => block.timeZone).filter((value): value is string => Boolean(value)))],
     }
-  }, [fromDate, throughDate])
+  }, [fromDate, throughDate, timeZone])
 }
