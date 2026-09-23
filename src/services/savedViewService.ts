@@ -1,9 +1,9 @@
 import { settingsRepository } from '../repositories/settingsRepository'
 import type { TaskPriority } from '../domain/models'
-import type {
+import {
   SMART_FIELD_OPERATORS,
-  SmartFilterCondition, SmartFilterGroup, SmartFilterNode, SmartGroupBy,
-  SmartScope, SmartSortField, SmartSortRule, SmartTaskView,
+  type SmartFilterCondition, type SmartFilterGroup, type SmartFilterNode, type SmartGroupBy,
+  type SmartScope, type SmartSortField, type SmartSortRule, type SmartTaskView,
 } from '../features/smartViews/queryEngine'
 import type { UndoableMutation } from './undo'
 
