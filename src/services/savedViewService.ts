@@ -56,7 +56,7 @@ function cleanValue(value: unknown): SmartFilterCondition['value'] {
     const strings = value.filter((item): item is string => typeof item === 'string').slice(0, 50)
     if (strings.length === value.length) return strings
     const numbers = value.filter((item): item is number => typeof item === 'number' && Number.isFinite(item)).slice(0, 2)
-    if (numbers.length === value.length && numbers.length === 2) return [numbers[0], numbers[1]]
+    if (numbers.length === value.length && numbers.length === 2) return [numbers[0], numbers[1]] as [number,number]
   }
   return undefined
 }
@@ -64,7 +64,8 @@ function cleanValue(value: unknown): SmartFilterCondition['value'] {
 function normalizeCondition(raw: any): SmartFilterCondition {
   const field = (allowedFields.has(raw?.field) ? raw.field : 'status') as keyof typeof SMART_FIELD_OPERATORS
   const compatibleOperators = SMART_FIELD_OPERATORS[field]
-  const operator = compatibleOperators.includes(raw?.operator) ? raw.operator : compatibleOperators[0]
+  const requestedOperator = typeof raw?.operator === 'string' ? raw.operator as SmartFilterCondition['operator'] : undefined
+  const operator: SmartFilterCondition['operator'] = requestedOperator && compatibleOperators.includes(requestedOperator) ? requestedOperator : compatibleOperators[0]
   return {
     id: typeof raw?.id === 'string' && raw.id ? raw.id : crypto.randomUUID(),
     type: 'condition',
