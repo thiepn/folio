@@ -265,9 +265,12 @@ export const recurrenceService = {
     if (Object.prototype.hasOwnProperty.call(changes, 'title') && changes.title !== undefined) current.title = changes.title
     if (Object.prototype.hasOwnProperty.call(changes, 'description') && changes.description !== undefined) current.description = changes.description
     if (Object.prototype.hasOwnProperty.call(changes, 'projectId')) current.projectId = changes.projectId ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'listId')) current.listId = changes.listId ?? null
+    if (Object.prototype.hasOwnProperty.call(changes, 'sectionId')) current.sectionId = changes.sectionId ?? null
     if (Object.prototype.hasOwnProperty.call(changes, 'priority') && changes.priority !== undefined) current.priority = changes.priority
     if (Object.prototype.hasOwnProperty.call(changes, 'estimatedMinutes')) current.estimatedMinutes = changes.estimatedMinutes ?? null
     if (Object.prototype.hasOwnProperty.call(changes, 'tags') && changes.tags !== undefined) current.tags = changes.tags
+    if (Object.prototype.hasOwnProperty.call(changes, 'tagIds') && changes.tagIds !== undefined) current.tagIds = changes.tagIds
     if (Object.prototype.hasOwnProperty.call(changes, 'checklist') && changes.checklist !== undefined) current.checklist = changes.checklist.map((item) => item.text)
     if (Object.prototype.hasOwnProperty.call(changes, 'sourceUrl')) current.sourceUrl = changes.sourceUrl ?? null
     if (Object.prototype.hasOwnProperty.call(changes, 'location')) current.location = changes.location ?? null
