@@ -151,7 +151,7 @@ const taskTagsSchema = z.array(z.string().trim().min(1).max(40)).max(50).default
 
 export const taskCreateSchema = z.object({
   title: z.string().trim().min(1).max(300),
-  description: z.string().max(20_000).default(''),
+  description: z.string().max(100_000).default(''),
   projectId: z.string().optional(),
   listId: z.string().optional(),
   sectionId: z.string().optional(),
@@ -182,7 +182,7 @@ export const taskCreateSchema = z.object({
 
 export const taskUpdateSchema = z.object({
   title: z.string().trim().min(1).max(300).optional(),
-  description: z.string().max(20_000).optional(),
+  description: z.string().max(100_000).optional(),
   projectId: z.string().nullable().optional(),
   listId: z.string().nullable().optional(),
   sectionId: z.string().nullable().optional(),
@@ -206,6 +206,20 @@ export const taskUpdateSchema = z.object({
   comments: z.array(taskCommentSchema).max(500).optional(),
   blockedByTaskIds: z.array(z.string()).max(100).optional(),
   sortOrder: z.number().finite().optional(),
+})
+
+
+export const noteCreateSchema = z.object({
+  title: z.string().trim().min(1).max(300),
+  body: z.string().max(200_000).default(''),
+  sourceTaskId: z.string().optional(),
+})
+
+export const noteUpdateSchema = z.object({
+  title: z.string().trim().min(1).max(300).optional(),
+  body: z.string().max(200_000).optional(),
+  sourceTaskId: z.string().nullable().optional(),
+  archived: z.boolean().optional(),
 })
 
 
@@ -360,6 +374,8 @@ export const backupEnvelopeSchema = z.object({
     lists: z.array(z.unknown()).default([]),
     sections: z.array(z.unknown()).default([]),
     tags: z.array(z.unknown()).default([]),
+    notes: z.array(z.unknown()).default([]),
+    attachments: z.array(z.unknown()).default([]),
   }),
 }).transform((value) => ({ ...value, format: 'folio-backup' as const }))
 
