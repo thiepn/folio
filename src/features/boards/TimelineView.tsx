@@ -6,6 +6,7 @@ import type { LocalDate } from '../../domain/models'
 import type { TaskPreview } from '../../types/ui'
 
 export type TimelineZoom = 'day' | 'week' | 'month'
+const TIMELINE_LABEL_WIDTH = 205
 
 export interface TimelineMilestoneMarker {
   id: string
@@ -45,7 +46,7 @@ export function TimelineView({
     .filter((task)=>timelineIntersects(normalizeTimelineSpan(task.timelineStart!,task.timelineEnd,Boolean(task.timelineMilestone))!,spec.start,through))
     .sort((a,b)=>(a.timelineStart??'').localeCompare(b.timelineStart??'')||(a.timelineEnd??a.timelineStart??'').localeCompare(b.timelineEnd??b.timelineStart??'')||a.title.localeCompare(b.title)),
   [activeTasks,spec.start,through])
-  const width=spec.days*spec.pxPerDay
+  const width=TIMELINE_LABEL_WIDTH+spec.days*spec.pxPerDay
   const ticks=useMemo(()=>timelineTicks(spec,zoom),[spec,zoom])
   const visibleMilestones=milestones.filter((item)=>item.dueDate&&item.dueDate>=spec.start&&item.dueDate<=through)
 
@@ -54,7 +55,7 @@ export function TimelineView({
     const taskId=event.dataTransfer.getData('timeline/task-id')
     if(!taskId)return
     const rect=event.currentTarget.getBoundingClientRect()
-    const x=Math.max(0,Math.min(rect.width-1,event.clientX-rect.left))
+    const x=Math.max(0,Math.min(spec.days*spec.pxPerDay-1,event.clientX-rect.left-TIMELINE_LABEL_WIDTH))
     const date=addLocalDays(spec.start,Math.min(spec.days-1,Math.max(0,Math.floor(x/spec.pxPerDay))))
     void onSetSpan(taskId,date,date,false)
   }
@@ -87,21 +88,21 @@ export function TimelineView({
       <div className="timeline-scroll">
         <div className="timeline-canvas" style={{width}} onDragOver={(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy'}} onDrop={dropBacklog}>
           <div className="timeline-header" style={{width}}>
-            {ticks.map((tick)=><span key={tick.date} className={'timeline-tick-label '+(tick.major?'is-major':'')} style={{left:timelineDayOffset(spec.start,tick.date)*spec.pxPerDay}}>{tick.label}</span>)}
+            {ticks.map((tick)=><span key={tick.date} className={'timeline-tick-label '+(tick.major?'is-major':'')} style={{left:TIMELINE_LABEL_WIDTH+timelineDayOffset(spec.start,tick.date)*spec.pxPerDay}}>{tick.label}</span>)}
           </div>
           <div className="timeline-grid-lines">
-            {ticks.map((tick)=><i key={tick.date} className={tick.major?'is-major':''} style={{left:timelineDayOffset(spec.start,tick.date)*spec.pxPerDay}} />)}
+            {ticks.map((tick)=><i key={tick.date} className={tick.major?'is-major':''} style={{left:TIMELINE_LABEL_WIDTH+timelineDayOffset(spec.start,tick.date)*spec.pxPerDay}} />)}
           </div>
-          {today>=spec.start&&today<=through?<span className="timeline-today-line" style={{left:(timelineDayOffset(spec.start,today)+0.5)*spec.pxPerDay}}><b>Today</b></span>:null}
+          {today>=spec.start&&today<=through?<span className="timeline-today-line" style={{left:TIMELINE_LABEL_WIDTH+(timelineDayOffset(spec.start,today)+0.5)*spec.pxPerDay}}><b>Today</b></span>:null}
 
           <div className="timeline-milestone-lane">
             {visibleMilestones.map((item)=>{
-              const x=(timelineDayOffset(spec.start,item.dueDate!)+0.5)*spec.pxPerDay
+              const x=TIMELINE_LABEL_WIDTH+(timelineDayOffset(spec.start,item.dueDate!)+0.5)*spec.pxPerDay
               return <span key={item.id} className={'timeline-project-milestone '+(item.completed?'is-complete':'')} style={{left:x}} title={item.title}><i>◆</i><em>{item.title}</em></span>
             })}
           </div>
 
-          <DependencyOverlay tasks={visible} start={spec.start} pxPerDay={spec.pxPerDay} />
+          <DependencyOverlay tasks={visible} start={spec.start} pxPerDay={spec.pxPerDay} labelWidth={TIMELINE_LABEL_WIDTH} />
 
           <div className="timeline-rows">
             {visible.map((task,index)=><TimelineRow
@@ -111,6 +112,7 @@ export function TimelineView({
               windowStart={spec.start}
               windowEnd={through}
               pxPerDay={spec.pxPerDay}
+              labelWidth={TIMELINE_LABEL_WIDTH}
               onOpen={()=>onOpenTask(task.id)}
               onToggle={()=>onToggleTask(task.id)}
               onSetSpan={(start,end,milestone)=>onSetSpan(task.id,start,end,milestone)}
@@ -123,15 +125,15 @@ export function TimelineView({
   </div>
 }
 
-function TimelineRow({task,index,windowStart,windowEnd,pxPerDay,onOpen,onToggle,onSetSpan,onClear}:{
-  task:TaskPreview;index:number;windowStart:LocalDate;windowEnd:LocalDate;pxPerDay:number;
+function TimelineRow({task,index,windowStart,windowEnd,pxPerDay,labelWidth,onOpen,onToggle,onSetSpan,onClear}:{
+  task:TaskPreview;index:number;windowStart:LocalDate;windowEnd:LocalDate;pxPerDay:number;labelWidth:number;
   onOpen:()=>void;onToggle:()=>void;onSetSpan:(start:LocalDate,end:LocalDate,milestone:boolean)=>void|Promise<void>;onClear:()=>void|Promise<void>
 }) {
   const start=task.timelineStart!
   const end=task.timelineEnd??start
   const visibleStart=start<windowStart?windowStart:start
   const visibleEnd=end>windowEnd?windowEnd:end
-  const left=timelineDayOffset(windowStart,visibleStart)*pxPerDay
+  const left=labelWidth+timelineDayOffset(windowStart,visibleStart)*pxPerDay
   const days=timelineDayOffset(visibleStart,visibleEnd)+1
   const [preview,setPreview]=useState<{shift?:number;start?:number;end?:number}>({})
   const shift=preview.shift??0
@@ -165,13 +167,13 @@ function TimelineRow({task,index,windowStart,windowEnd,pxPerDay,onOpen,onToggle,
 
   const pVisibleStart=previewStart<windowStart?windowStart:previewStart
   const pVisibleEnd=previewEnd>windowEnd?windowEnd:previewEnd
-  const pLeft=timelineDayOffset(windowStart,pVisibleStart)*pxPerDay
+  const pLeft=labelWidth+timelineDayOffset(windowStart,pVisibleStart)*pxPerDay
   const pDays=Math.max(1,timelineDayOffset(pVisibleStart,pVisibleEnd)+1)
   const deadlineVisible=task.deadline&&task.deadline>=windowStart&&task.deadline<=windowEnd
   return <div className={'timeline-row '+(task.completed?'is-completed ':'')+(task.activeBlockerCount?'is-blocked':'')} style={{top:index*46}}>
-    {deadlineVisible?<span className="timeline-deadline-marker" style={{left:(timelineDayOffset(windowStart,task.deadline!)+0.5)*pxPerDay}} title={'Deadline '+task.deadline}>◆</span>:null}
+    {deadlineVisible?<span className="timeline-deadline-marker" style={{left:labelWidth+(timelineDayOffset(windowStart,task.deadline!)+0.5)*pxPerDay}} title={'Deadline '+task.deadline}>◆</span>:null}
     {task.timelineMilestone
-      ? <button className="timeline-task-milestone" style={{left:(timelineDayOffset(windowStart,previewStart)+0.5)*pxPerDay}} onPointerDown={beginMilestoneMove} onClick={onOpen} title={task.title}><i>◆</i><span>{task.title}</span></button>
+      ? <button className="timeline-task-milestone" style={{left:labelWidth+(timelineDayOffset(windowStart,previewStart)+0.5)*pxPerDay}} onPointerDown={beginMilestoneMove} onClick={onOpen} title={task.title}><i>◆</i><span>{task.title}</span></button>
       : <article className="timeline-bar" style={{left:pLeft,width:Math.max(20,pDays*pxPerDay-2)}}>
           <button className="timeline-bar__resize is-start" aria-label="Resize timeline start" onPointerDown={(e)=>beginResize(e,'start')}/>
           <button className="timeline-bar__main" onPointerDown={beginMove} onDoubleClick={onOpen}>
@@ -183,7 +185,7 @@ function TimelineRow({task,index,windowStart,windowEnd,pxPerDay,onOpen,onToggle,
   </div>
 }
 
-function DependencyOverlay({tasks,start,pxPerDay}:{tasks:TaskPreview[];start:LocalDate;pxPerDay:number}) {
+function DependencyOverlay({tasks,start,pxPerDay,labelWidth}:{tasks:TaskPreview[];start:LocalDate;pxPerDay:number;labelWidth:number}) {
   const index=new Map(tasks.map((task,row)=>[task.id,{task,row}]))
   const links:ReactElement[]=[]
   for(const task of tasks){
@@ -192,8 +194,8 @@ function DependencyOverlay({tasks,start,pxPerDay}:{tasks:TaskPreview[];start:Loc
       const blocker=index.get(blockerId)
       if(!blocker?.task.timelineStart)continue
       const blockerEnd=blocker.task.timelineEnd??blocker.task.timelineStart
-      const x1=(timelineDayOffset(start,blockerEnd)+1)*pxPerDay
-      const x2=timelineDayOffset(start,task.timelineStart!)*pxPerDay
+      const x1=labelWidth+(timelineDayOffset(start,blockerEnd)+1)*pxPerDay
+      const x2=labelWidth+timelineDayOffset(start,task.timelineStart!)*pxPerDay
       const y1=blocker.row*46+23
       const y2=current.row*46+23
       const mid=x1+(x2-x1)/2
