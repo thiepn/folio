@@ -118,6 +118,7 @@ export function useAppData() {
       sections,
       tags,
       favoriteLists: lists.filter((list) => list.favorite),
+      favoriteTags: tags.filter((tag) => tag.favorite),
       archivedFolders: allFolders.filter((folder) => folder.archived),
       archivedLists: allLists.filter((list) => list.archived),
       archivedTags: allTags.filter((tag) => tag.archived),
