@@ -4,6 +4,8 @@ import type { TaskCreateInput, TaskUpdateInput } from '../repositories/taskRepos
 import { taskRepository } from '../repositories/taskRepository'
 import type { UndoableMutation } from './undo'
 import { recurrenceService } from './recurrenceService'
+import { attachmentService } from './attachmentService'
+import { contentSearchService } from './contentSearchService'
 
 export type UndoableTaskMutation = UndoableMutation
 
@@ -184,6 +186,8 @@ export const taskService = {
     }))
     const copyId = idMap.get(source.id)!
     await db.tasks.bulkAdd(copies)
+    for (const copy of copies) await contentSearchService.indexTask(copy)
+    for (const original of ordered) await attachmentService.cloneOwner('task', original.id, 'task', idMap.get(original.id)!)
     return {
       id: copyId,
       undo: {
@@ -203,6 +207,7 @@ export const taskService = {
     await db.transaction('rw', db.tasks, async () => {
       await Promise.all(ids.map((taskId) => db.tasks.update(taskId, { deletedAt: now, updatedAt: now })))
     })
+    await Promise.all(ids.map((taskId) => contentSearchService.remove('task', taskId)))
     return {
       message: 'Task moved to trash',
       undo: async () => { await taskRepository.bulkReplace(taskSnapshots) },
@@ -222,6 +227,10 @@ export const taskService = {
         updatedAt: now,
       })))
     })
+    for (const item of previous) {
+      const restored = await db.tasks.get(item.id)
+      if (restored) await contentSearchService.indexTask(restored)
+    }
     return {
       message: 'Task restored',
       undo: async () => { await taskRepository.bulkReplace(previous) },
