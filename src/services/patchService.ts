@@ -260,6 +260,7 @@ function upsertSeriesOccurrence(workspace: Workspace, touch: (type: SnapshotType
       taskId: task.id,
       title: task.title,
       kind: 'task',
+      timeZone: series.timezone,
       start,
       end: new Date(new Date(start).getTime() + fields.blockDurationMinutes * 60_000).toISOString(),
     }, crypto.randomUUID(), now)
@@ -488,7 +489,7 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
         } else if (op.entity === 'habit') {
           const current = workspace.habits.get(op.id)!; touch('habit', op.id); workspace.habits.set(op.id, { ...current, archived: true, archivedAt: current.archivedAt ?? now, updatedAt: now }); if (current.kind === 'duration' && current.countsTowardCapacity) for (const plan of workspace.dailyPlans.values()) if (plan.status === 'committed' && scheduleMatches(current.schedule, plan.date)) markPlanDraft(workspace, touch, plan.date, now); operationSummaries.push({ operationId: `op-${index + 1}`, op: 'delete', entity: 'habit', targetId: op.id, label: current.title })
         } else if (op.entity === 'timeBlock') {
-          const current = workspace.timeBlocks.get(op.id)!; touch('timeBlock', op.id); workspace.timeBlocks.delete(op.id); markPlanDraft(workspace, touch, localDateFromIso(current.start), now); operationSummaries.push({ operationId: `op-${index + 1}`, op: 'delete', entity: 'timeBlock', targetId: op.id, label: current.title })
+          const current = workspace.timeBlocks.get(op.id)!; touch('timeBlock', op.id); workspace.timeBlocks.delete(op.id); markPlanDraft(workspace, touch, dateKeyInTimeZone(current.start, current.timeZone ?? document.timezone), now); operationSummaries.push({ operationId: `op-${index + 1}`, op: 'delete', entity: 'timeBlock', targetId: op.id, label: current.title })
         } else {
           const current = workspace.recurringSeries.get(op.id)!; touch('recurringSeries', op.id); const next = { ...current, status: 'archived' as const, updatedAt: now }; workspace.recurringSeries.set(op.id, next); reconcileSeries(workspace, touch, next, false, now); operationSummaries.push({ operationId: `op-${index + 1}`, op: 'delete', entity: 'recurringSeries', targetId: op.id, label: current.title })
         }
