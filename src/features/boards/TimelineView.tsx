@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useMemo, useState, type DragEvent, type PointerEvent as ReactPointerEvent, type ReactElement } from 'react'
 import { Button } from '../../components/ui/Button'
 import { addLocalDays, addLocalMonths, formatLocalDate, localDateToDate, startOfLocalMonth, startOfLocalWeek } from '../../domain/date'
 import type { LocalDate } from '../../domain/models'
@@ -184,7 +184,7 @@ function TimelineRow({task,index,windowStart,windowEnd,pxPerDay,onOpen,onToggle,
 
 function DependencyOverlay({tasks,start,pxPerDay}:{tasks:TaskPreview[];start:LocalDate;pxPerDay:number}) {
   const index=new Map(tasks.map((task,row)=>[task.id,{task,row}]))
-  const links:JSX.Element[]=[]
+  const links:ReactElement[]=[]
   for(const task of tasks){
     const current=index.get(task.id)!
     for(const blockerId of task.blockedByTaskIds??[]){
