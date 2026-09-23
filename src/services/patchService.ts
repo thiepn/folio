@@ -8,6 +8,7 @@ import type {
   PatchSnapshot,
   ProjectEntity,
   RecurringSeriesEntity,
+  TagEntity,
   TaskEntity,
   TimeBlockEntity,
 } from '../domain/models'
@@ -349,16 +350,29 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
     if (op.op === 'update' && op.entity === 'recurringSeries') return op.changes.taskTemplate?.tags ?? []
     return []
   })
-  const canonicalTags = patchTagNames.length ? await organizationRepository.resolveTagNames(patchTagNames) : []
-  const tagByName = new Map(canonicalTags.map((tag) => [tag.normalizedName, tag]))
+  const existingTags = await organizationRepository.listTags(true)
+  const tagByName = new Map(existingTags.map((tag) => [tag.normalizedName, tag]))
+  const newTags: TagEntity[] = []
+  for (const rawName of patchTagNames) {
+    const name = rawName.trim().replace(/^#/, '').replace(/\s+/g, ' ')
+    const normalizedName = normalizeTagName(name)
+    if (!normalizedName || tagByName.has(normalizedName)) continue
+    const tag: TagEntity = {
+      id: crypto.randomUUID(), name, normalizedName, favorite: false, archived: false,
+      sortOrder: Date.now() + newTags.length, createdAt: now, updatedAt: now,
+    }
+    tagByName.set(normalizedName, tag)
+    newTags.push(tag)
+  }
   const canonicalizeTags = (names: string[] = []) => {
-    const rows = names.map((name) => tagByName.get(normalizeTagName(name))).filter(Boolean)
+    const rows = [...new Set(names.map(normalizeTagName))].map((name) => tagByName.get(name)).filter(Boolean)
     return { tags: rows.map((tag) => tag!.name), tagIds: rows.map((tag) => tag!.id) }
   }
 
   let createdBatchId = ''
 
-  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.dailyPlanItems, db.patchBatches], async () => {
+  await db.transaction('rw', [db.projects, db.tasks, db.habits, db.timeBlocks, db.recurringSeries, db.dailyPlans, db.dailyPlanItems, db.patchBatches, db.tags], async () => {
+    if (newTags.length) await db.tags.bulkAdd(newTags)
     // Optimistic concurrency is rechecked inside the write transaction, not only during Preview.
     for (const op of document.operations) if (op.op !== 'create') {
       const current = op.entity === 'project' ? await db.projects.get(op.id) : op.entity === 'task' ? await db.tasks.get(op.id) : op.entity === 'habit' ? await db.habits.get(op.id) : op.entity === 'timeBlock' ? await db.timeBlocks.get(op.id) : await db.recurringSeries.get(op.id)
