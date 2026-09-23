@@ -73,8 +73,12 @@ export function QuickAddModal({ open, projects, defaultStatus = 'todo', defaultP
     today,
   }), [defaultStatus, defaultProjectId, initialPlannedDate, today])
 
-  const parsed = useMemo(() => parseQuickCapture(capture.replace(/?
-[sS]*$/, ''), projects, defaults), [capture, projects, defaults])
+  const lineBreak = String.fromCharCode(10)
+  const carriageReturn = String.fromCharCode(13)
+  const firstLine = capture.includes(lineBreak)
+    ? capture.slice(0, capture.indexOf(lineBreak)).split(carriageReturn).join('')
+    : capture
+  const parsed = useMemo(() => parseQuickCapture(firstLine, projects, defaults), [firstLine, projects, defaults])
   const batch = useMemo(() => parseQuickCaptureBatch(capture, projects, defaults), [capture, projects, defaults])
   const batchMode = batch.length > 1
 
