@@ -123,9 +123,9 @@ function removeSpan(text: string, start: number, end: number) {
 
 function cleanTitle(value: string) {
   return value
-    .replace(/s+/g, ' ')
-    .replace(/^[-–—,:;]+s*/, '')
-    .replace(/s*[-–—,:;]+$/, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[-–—,:;]+\s*/, '')
+    .replace(/\s*[-–—,:;]+$/, '')
     .trim()
 }
 
@@ -149,13 +149,13 @@ function upcomingMonthDate(month: number, day: number, today: LocalDate, explici
 }
 
 function parseDatePhrase(input: string, today: LocalDate): LocalDate | undefined {
-  const cleaned = input.trim().toLowerCase().replace(/[,.;]+$/, '').replace(/s+/g, ' ')
+  const cleaned = input.trim().toLowerCase().replace(/[,.;]+$/, '').replace(/\s+/g, ' ')
   if (cleaned === 'today' || cleaned === 'tonight') return today
   if (['tomorrow', 'tmr', 'tmrw'].includes(cleaned)) return addLocalDays(today, 1)
   if (cleaned === 'day after tomorrow') return addLocalDays(today, 2)
-  if (/^d{4}-d{2}-d{2}$/.test(cleaned)) return cleaned as LocalDate
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) return cleaned as LocalDate
 
-  let match = cleaned.match(/^ins+(d+)s+(day|days|week|weeks|month|months)$/)
+  let match = cleaned.match(/^in\s+(\d+)\s+(day|days|week|weeks|month|months)$/)
   if (match) {
     const amount = Math.max(0, Number(match[1]))
     return match[2].startsWith('day') ? addLocalDays(today, amount)
@@ -222,27 +222,27 @@ function dateLabel(date: LocalDate, today: LocalDate) {
 
 function durationFromText(value: string): number | undefined {
   const cleaned = value.toLowerCase().trim()
-  let match = cleaned.match(/^(d+(?:.d+)?)s*(?:hours?|hrs?|h)$/)
+  let match = cleaned.match(/^(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)$/)
   if (match) return Math.round(Number(match[1]) * 60)
-  match = cleaned.match(/^(d+)s*(?:minutes?|mins?|m)$/)
+  match = cleaned.match(/^(\d+)\s*(?:minutes?|mins?|m)$/)
   if (match) return Number(match[1])
-  match = cleaned.replace(/s+/g, '').match(/^(d+)h(?:(d+)m)?$/)
+  match = cleaned.replace(/\s+/g, '').match(/^(\d+)h(?:(\d+)m)?$/)
   if (match) return Number(match[1]) * 60 + Number(match[2] ?? 0)
   return undefined
 }
 
 function parseTimeText(value: string): number | undefined {
-  const cleaned = value.trim().toLowerCase().replace(/./g, '')
+  const cleaned = value.trim().toLowerCase().replace(/\./g, '')
   if (cleaned === 'noon') return 12 * 60
   if (cleaned === 'midnight') return 0
-  let match = cleaned.match(/^(d{1,2})(?::(d{2}))?s*(am|pm)$/)
+  let match = cleaned.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/)
   if (match) {
     let hour = Number(match[1]) % 12
     if (match[3] === 'pm') hour += 12
     const minute = Number(match[2] ?? 0)
     return minute <= 59 ? hour * 60 + minute : undefined
   }
-  match = cleaned.match(/^([01]?d|2[0-3]):([0-5]d)$/)
+  match = cleaned.match(/^([01]?\d|2[0-3]):([0-5]\d)$/)
   return match ? Number(match[1]) * 60 + Number(match[2]) : undefined
 }
 
@@ -265,7 +265,7 @@ function resolveProject(query: string, projects: CaptureProject[]) {
 }
 
 function weekdayList(value: string) {
-  return unique(value.split(/[s,/&+]+/).flatMap((token) => {
+  return unique(value.split(/[\s,/&+]+/).flatMap((token) => {
     const day = DATE_WORDS.get(token.trim().toLowerCase().slice(0, 3))
     return day === undefined ? [] : [day]
   }))
@@ -308,20 +308,20 @@ function parseRecurrence(working: string, today: LocalDate): { working: string; 
   const warnings: CaptureWarning[] = []
   let span: RegExpMatchArray | null = null
 
-  const afterLegacy = text.match(/(?:^|s)after:(d+)(d|w|m|y)(?=s|$)/i)
-  const afterNatural = text.match(/(?:^|s)(?:everys+)?(d+)s*(day|days|week|weeks|month|months|year|years)s+afters+completion(?=s|$)/i)
-    ?? text.match(/(?:^|s)afters+completions+(?:everys+)?(d+)s*(day|days|week|weeks|month|months|year|years)(?=s|$)/i)
+  const afterLegacy = text.match(/(?:^|\s)after:(\d+)(d|w|m|y)(?=\s|$)/i)
+  const afterNatural = text.match(/(?:^|\s)(?:every\s+)?(\d+)\s*(day|days|week|weeks|month|months|year|years)\s+after\s+completion(?=\s|$)/i)
+    ?? text.match(/(?:^|\s)after\s+completion\s+(?:every\s+)?(\d+)\s*(day|days|week|weeks|month|months|year|years)(?=\s|$)/i)
 
   const monthlyOrdinal = text.match(new RegExp(`(?:^|\\s)(?:every|each)\\s+(?:(\\d+)\\s+)?months?\\s+(?:on\\s+)?(1st|2nd|3rd|4th|5th|first|second|third|fourth|fifth|last)\\s+(${WEEKDAY_PATTERN})(?=\\s|$)`, 'i'))
-  const monthlyLastDay = text.match(/(?:^|s)(?:every|each)s+(?:(d+)s+)?months?s+(?:ons+)?(?:thes+)?lasts+day(?=s|$)/i)
-  const monthlyDates = text.match(/(?:^|s)(?:every|each)s+(?:(d+)s+)?months?s+(?:ons+)?(?:days+)?((?:d{1,2}(?:st|nd|rd|th)?)(?:s*[,/&+]s*d{1,2}(?:st|nd|rd|th)?)*)(?=s|$)/i)
+  const monthlyLastDay = text.match(/(?:^|\s)(?:every|each)\s+(?:(\d+)\s+)?months?\s+(?:on\s+)?(?:the\s+)?last\s+day(?=\s|$)/i)
+  const monthlyDates = text.match(/(?:^|\s)(?:every|each)\s+(?:(\d+)\s+)?months?\s+(?:on\s+)?(?:day\s+)?((?:\d{1,2}(?:st|nd|rd|th)?)(?:\s*[,/&+]\s*\d{1,2}(?:st|nd|rd|th)?)*)(?=\s|$)/i)
   const yearlyDate = text.match(new RegExp(`(?:^|\\s)(?:every|each)\\s+(?:(\\d+)\\s+)?years?\\s+(?:on\\s+)?(${MONTH_PATTERN})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?=\\s|$)`, 'i'))
   const weeklyOn = text.match(new RegExp(`(?:^|\\s)(?:every|each)\\s+(?:(\\d+)\\s+)?weeks?\\s+(?:on\\s+)?((?:${WEEKDAY_PATTERN})(?:\\s*[,/&+]\\s*${WEEKDAY_PATTERN})*)(?=\\s|$)`, 'i'))
-  const weekdays = text.match(/(?:^|s)(?:every|each)s+weekdays?(?=s|$)/i)
+  const weekdays = text.match(/(?:^|\s)(?:every|each)\s+weekdays?(?=\s|$)/i)
   const weeklyList = text.match(new RegExp(`(?:^|\\s)(?:every|each)\\s+((?:${WEEKDAY_PATTERN})(?:\\s*[,/&+]\\s*${WEEKDAY_PATTERN})+)(?=\\s|$)`, 'i'))
   const weeklySingle = text.match(new RegExp(`(?:^|\\s)(?:every|each)\\s+(${WEEKDAY_PATTERN})(?=\\s|$)`, 'i'))
-  const generic = text.match(/(?:^|s)(?:every|each)s+(?:(d+)s*)?(day|days|week|weeks|month|months|year|years)(?=s|$)/i)
-  const star = text.match(/(?:^|s)*(?=s|$)/)
+  const generic = text.match(/(?:^|\s)(?:every|each)\s+(?:(\d+)\s*)?(day|days|week|weeks|month|months|year|years)(?=\s|$)/i)
+  const star = text.match(/(?:^|\s)\*(?=\s|$)/)
 
   if (afterLegacy) {
     const units: Record<string, CompletionIntervalUnit> = { d:'day', w:'week', m:'month', y:'year' }
@@ -385,7 +385,7 @@ function parseRecurrence(working: string, today: LocalDate): { working: string; 
       } else warnings.push({ code: 'invalid-recurrence', message: `${until[0].trim()} is not a valid recurrence end date.` })
     }
 
-    const count = text.match(/(?:^|s)(?:x|fors+)(d+)(?:s+times?)?(?=s|$)/i)
+    const count = text.match(/(?:^|\s)(?:x|for\s+)(\d+)(?:\s+times?)?(?=\s|$)/i)
     if (count && count.index !== undefined) {
       recurrence.count = Math.max(1, Number(count[1]))
       recognized.push({ kind: 'recurrence', source: count[0].trim(), label: `${recurrence.count} times` })
@@ -418,7 +418,7 @@ function parseReminders(working: string, today: LocalDate): { working: string; r
   }
 
   // Deadline-relative: "remind 1 day before deadline at 09:00".
-  const deadlineRegex = /(?:^|s)remind(?:s+me)?s+(d+)s*(day|days|d)s+befores+(?:due|deadline)(?:s+ats+(noon|midnight|d{1,2}(?::d{2})?s*(?:am|pm)|(?:[01]?d|2[0-3]):[0-5]d))?(?=s|$)/gi
+  const deadlineRegex = /(?:^|\s)remind(?:\s+me)?\s+(\d+)\s*(day|days|d)\s+before\s+(?:due|deadline)(?:\s+at\s+(noon|midnight|\d{1,2}(?::\d{2})?\s*(?:am|pm)|(?:[01]?\d|2[0-3]):[0-5]\d))?(?=\s|$)/gi
   const deadlineMatches = [...text.matchAll(deadlineRegex)]
   for (const match of deadlineMatches.reverse()) {
     const minute = match[3] ? parseTimeText(match[3]) : 9 * 60
@@ -430,7 +430,7 @@ function parseReminders(working: string, today: LocalDate): { working: string; r
   }
 
   // Block-relative: "remind 30m before" / "remind 2h before start".
-  const beforeRegex = /(?:^|s)(?:remind(?:s+me)?s+|reminder:)(d+)s*(m|min|minutes?|h|hours?)s+before(?:s+(?:start|block))?(?=s|$)/gi
+  const beforeRegex = /(?:^|\s)(?:remind(?:\s+me)?\s+|reminder:)(\d+)\s*(m|min|minutes?|h|hours?)\s+before(?:\s+(?:start|block))?(?=\s|$)/gi
   const beforeMatches = [...text.matchAll(beforeRegex)]
   for (const match of beforeMatches.reverse()) {
     const unit = match[2].toLowerCase()
@@ -443,7 +443,7 @@ function parseReminders(working: string, today: LocalDate): { working: string; r
   }
 
   // Planned-day clock reminder: "remind at 09:00".
-  const atRegex = /(?:^|s)remind(?:s+me)?s+ats+(noon|midnight|d{1,2}(?::d{2})?s*(?:am|pm)|(?:[01]?d|2[0-3]):[0-5]d)(?=s|$)/gi
+  const atRegex = /(?:^|\s)remind(?:\s+me)?\s+at\s+(noon|midnight|\d{1,2}(?::\d{2})?\s*(?:am|pm)|(?:[01]?\d|2[0-3]):[0-5]\d)(?=\s|$)/gi
   const atMatches = [...text.matchAll(atRegex)]
   for (const match of atMatches.reverse()) {
     const minute = parseTimeText(match[1])
@@ -475,7 +475,7 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
   const warnings: CaptureWarning[] = []
 
   // Explicit project selectors: ~Analysis, project:Analysis, project:"Analysis III".
-  const explicitProjects = [...working.matchAll(/(?:^|s)(?:~|project:|list:)(?:"([^"]+)"|'([^']+)'|([^s#~]+))/gi)]
+  const explicitProjects = [...working.matchAll(/(?:^|\s)(?:~|project:|list:)(?:"([^"]+)"|'([^']+)'|([^\s#~]+))/gi)]
   let projectApplied = false
   for (const match of explicitProjects.reverse()) {
     const query = match[1] ?? match[2] ?? match[3] ?? ''
@@ -515,7 +515,7 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
   }
 
   // Explicit Inbox / To-do intent.
-  const statusMatches = [...working.matchAll(/(?:^|s)(@(inbox|todo)|inbox:)(?=s|$)/gi)]
+  const statusMatches = [...working.matchAll(/(?:^|\s)(@(inbox|todo)|inbox:)(?=\s|$)/gi)]
   for (const [index, match] of statusMatches.reverse().entries()) {
     if (index === 0) {
       status = (match[2] ?? 'inbox').toLowerCase() === 'todo' ? 'todo' : 'inbox'
@@ -551,7 +551,7 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
   }
 
   // Priority: legacy markers plus p1/p2/p3 and "priority high".
-  const priorityMatches = [...working.matchAll(/(?:^|s)(!(?:critical|high|normal|1|2|3)|p[123]|priority(?::|s+)(?:critical|high|normal))(?=s|$)/gi)]
+  const priorityMatches = [...working.matchAll(/(?:^|\s)(!(?:critical|high|normal|1|2|3)|p[123]|priority(?::|\s+)(?:critical|high|normal))(?=\s|$)/gi)]
   for (const [index, match] of priorityMatches.reverse().entries()) {
     const marker = match[1].toLowerCase()
     if (index === 0) {
@@ -562,7 +562,7 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
   }
 
   // Duration: 45m, 1h30m, "for 90 minutes", "for 1.5 hours".
-  const durationMatches = [...working.matchAll(/(?:^|s)(?:fors+)?(d+h(?:s*d+m)?|d+(?:.d+)?s*(?:hours?|hrs?|h)|d+s*(?:minutes?|mins?|m))(?=s|$)/gi)]
+  const durationMatches = [...working.matchAll(/(?:^|\s)(?:for\s+)?(\d+h(?:\s*\d+m)?|\d+(?:\.\d+)?\s*(?:hours?|hrs?|h)|\d+\s*(?:minutes?|mins?|m))(?=\s|$)/gi)]
   for (const [index, match] of durationMatches.reverse().entries()) {
     const parsed = durationFromText(match[1])
     if (parsed && parsed >= 1 && parsed <= 24 * 60 && index === 0) {
@@ -573,7 +573,7 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
   }
 
   // Time ranges infer both exact start and estimate: "2pm-3:30pm".
-  const rangeRegex = /(?:^|s)(noon|midnight|d{1,2}(?::d{2})?s*(?:am|pm)|(?:[01]?d|2[0-3]):[0-5]d)s*[-–]s*(noon|midnight|d{1,2}(?::d{2})?s*(?:am|pm)|(?:[01]?d|2[0-3]):[0-5]d)(?=s|$)/gi
+  const rangeRegex = /(?:^|\s)(noon|midnight|\d{1,2}(?::\d{2})?\s*(?:am|pm)|(?:[01]?\d|2[0-3]):[0-5]\d)\s*[-–]\s*(noon|midnight|\d{1,2}(?::\d{2})?\s*(?:am|pm)|(?:[01]?\d|2[0-3]):[0-5]\d)(?=\s|$)/gi
   const ranges = [...working.matchAll(rangeRegex)]
   if (ranges.length) {
     const selected = ranges[ranges.length - 1]
@@ -589,7 +589,7 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
   }
 
   // Exact time: at 2pm, 2:30 pm, noon, 14:00.
-  const timeRegex = /(?:^|s)(?:at:|ats+)?(noon|midnight|d{1,2}(?::d{2})?s*(?:am|pm)|(?:[01]?d|2[0-3]):[0-5]d)(?=s|$)/gi
+  const timeRegex = /(?:^|\s)(?:at:|at\s+)?(noon|midnight|\d{1,2}(?::\d{2})?\s*(?:am|pm)|(?:[01]?\d|2[0-3]):[0-5]\d)(?=\s|$)/gi
   const timeMatches = [...working.matchAll(timeRegex)]
   for (const [index, match] of timeMatches.reverse().entries()) {
     const minute = parseTimeText(match[1])
@@ -665,8 +665,7 @@ export function parseQuickCapture(raw: string, projects: CaptureProject[], defau
 }
 
 export function parseQuickCaptureBatch(raw: string, projects: CaptureProject[], defaults: CaptureDefaults = {}) {
-  return raw.split(/?
-/)
+  return raw.split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
     .slice(0, 100)
