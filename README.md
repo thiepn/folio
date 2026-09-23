@@ -6,7 +6,7 @@ A local-first personal productivity application with an editorial, low-noise int
 
 **Repository:** `thiepn/folio`
 
-**IndexedDB schema:** `v16`
+**IndexedDB schema:** `v17`
 
 **Status:** release-hardened · GitHub Pages ready
 
@@ -100,9 +100,17 @@ Binary attachments, the global tag taxonomy, advanced recurrence and reminders r
 
 See `docs/TASK_ENGINE_V2_D1.md`.
 
+## D2 — Dates, Scheduling & Recurrence Engine V2
+
+Recurring work now has a substantially deeper date engine: Monday-first calendar-week intervals, multiple monthly dates, month-end clamping, nth/last weekday rules, last-day rules, selected yearly months, and completion-relative day/week/month/year schedules. One-off occurrence edits are persisted as exceptions, `recurrenceDate` remains the logical slot identity, series splits preserve future exceptions, and exact recurring time blocks honor the series time zone across DST transitions.
+
+Recurring templates now also carry the D1 task context—tags, checklist structure, URL, location and pin state. IndexedDB advances to schema v17 while direct backup restore remains compatible from v8 through v17.
+
+See `docs/DATES_RECURRENCE_V2_D2.md`.
+
 ## Data and privacy
 
-Planner data is local-first in IndexedDB. The current database schema is **v16**. Full backups export schema v16, including Task Engine V2 fields and durable review records, and direct restore supports compatible backups from **v8 through v16**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
+Planner data is local-first in IndexedDB. The current database schema is **v17**. Full backups export schema v17, including Task Engine V2 and Recurrence Engine V2 state plus durable review records, and direct restore supports compatible backups from **v8 through v17**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
 
 Fresh installs begin with an empty personal workspace. Optional sample data can be loaded explicitly from Data & storage.
 
@@ -126,7 +134,7 @@ Direct dependency versions and `package-lock.json` are committed for repeatable 
 
 ## Release history
 
-The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v16 data model, and `validate:final` define the current source state.
+The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v17 data model, and `validate:final` define the current source state.
 
 ## v1.1.1 release hardening
 
