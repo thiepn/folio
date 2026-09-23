@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { TaskRow } from '../../components/ui/TaskRow'
+import { Tabs } from '../../components/ui/Tabs'
 import type { TaskPreview } from '../../types/ui'
 import type { SmartFilterGroup, SmartGroupBy, SmartTaskView } from './queryEngine'
+import { KanbanBoard, type KanbanDropTarget } from '../boards/KanbanBoard'
+import { TimelineView } from '../boards/TimelineView'
 
 export function SmartViewGallery({views,results,onOpen,onCreate}:{
   views:SmartTaskView[]
@@ -35,9 +39,12 @@ function SmartViewCard({view,count,onOpen}:{view:SmartTaskView;count:number;onOp
   </button>
 }
 
-export function SmartViewWorkspace({view,tasks,onBack,onOpenTask,onToggleTask,onEdit,onDuplicate,onDelete,onTogglePin}:{
+export function SmartViewWorkspace({view,tasks,today,lists,projects,onBack,onOpenTask,onToggleTask,onEdit,onDuplicate,onDelete,onTogglePin,onBoardDrop,onTimelineSetSpan,onTimelineClear}:{
   view:SmartTaskView
   tasks:TaskPreview[]
+  today:string
+  lists:Array<{id:string;name:string}>
+  projects:Array<{id:string;name:string}>
   onBack:()=>void
   onOpenTask:(id:string)=>void
   onToggleTask:(id:string)=>void
@@ -45,7 +52,11 @@ export function SmartViewWorkspace({view,tasks,onBack,onOpenTask,onToggleTask,on
   onDuplicate:()=>void
   onDelete:()=>void
   onTogglePin:()=>void
+  onBoardDrop:(taskId:string,target:KanbanDropTarget)=>void|Promise<void>
+  onTimelineSetSpan:(taskId:string,start:string,end:string,milestone:boolean)=>void|Promise<void>
+  onTimelineClear:(taskId:string)=>void|Promise<void>
 }) {
+  const [display,setDisplay]=useState<'list'|'board'|'timeline'>('list')
   const groups=groupPreviews(tasks,view.groupBy)
   return <div className="smart-view-workspace">
     <header className="page-header smart-view-workspace__header">
@@ -57,20 +68,23 @@ export function SmartViewWorkspace({view,tasks,onBack,onOpenTask,onToggleTask,on
         {!view.builtin?<Button onClick={onDelete}>Delete</Button>:null}
       </div>
     </header>
+    <Tabs value={display} tabs={[{value:'list',label:'List'},{value:'board',label:'Board'},{value:'timeline',label:'Timeline'}]} onChange={setDisplay} />
     <section className="smart-view-runtime-meta">
       <span><strong>{view.scope==='all'?'All task depths':'Root tasks'}</strong><small>scope</small></span>
       <span><strong>{view.groupBy==='none'?'No grouping':view.groupBy}</strong><small>grouping</small></span>
       <span><strong>{view.sort.map((rule)=>rule.field+' '+(rule.direction==='asc'?'↑':'↓')).join(' · ')||'manual ↑'}</strong><small>sorting</small></span>
       <span><strong>{countRules(view.query)}</strong><small>filter rules</small></span>
     </section>
-    <div className="smart-view-groups">
+    {display==='board'?<KanbanBoard tasks={tasks} lists={lists} projects={projects} mode="status" allowedModes={['status','priority','list','project']} onOpenTask={onOpenTask} onToggleTask={onToggleTask} onDropTask={onBoardDrop}/>:null}
+    {display==='timeline'?<TimelineView tasks={tasks} today={today} title={view.name} onOpenTask={onOpenTask} onToggleTask={onToggleTask} onSetSpan={onTimelineSetSpan} onClearSpan={onTimelineClear}/>:null}
+    {display==='list'?<div className="smart-view-groups">
       {groups.map((group)=><section className="smart-view-result-group" key={group.key}>
         <header><span className="eyebrow">{group.label}</span><strong>{group.tasks.length}</strong></header>
         <div className="task-list">{group.tasks.map((task)=><TaskRow key={task.id} task={task} onOpen={onOpenTask} onToggle={onToggleTask}/>)}</div>
         {!group.tasks.length?<div className="empty-state">No tasks in this group.</div>:null}
       </section>)}
       {!tasks.length?<div className="empty-state smart-view-empty">No tasks match this Smart View.</div>:null}
-    </div>
+    </div>:null}
   </div>
 }
 

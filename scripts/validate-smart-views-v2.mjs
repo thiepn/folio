@@ -29,7 +29,7 @@ const styles=read('src/styles/index.css')
 
 check('D6 validator registered',pkg.scripts?.['validate:smart-views-v2']==='node scripts/validate-smart-views-v2.mjs')
 check('release gate runs D6 validation',pkg.scripts?.['release:verify']?.includes('validate:smart-views-v2'))
-check('D6 intentionally retains schema v19',/DATABASE_SCHEMA_VERSION\s*=\s*19\b/.test(database)&&!database.includes('this.version(20)'))
+check('D6 remains schema-compatible',Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]??0)>=19&&database.includes('this.version(19)'))
 
 check('query engine supports nested groups',engine.includes("type: 'group'")&&engine.includes("operator: SmartLogic")&&engine.includes('children: SmartFilterNode[]'))
 check('query engine supports AND OR NOT',engine.includes("node.operator === 'and'")&&engine.includes('node.negated'))

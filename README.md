@@ -6,7 +6,7 @@ A local-first personal productivity application with an editorial, low-noise int
 
 **Repository:** `thiepn/folio`
 
-**IndexedDB schema:** `v19`
+**IndexedDB schema:** `v20`
 
 **Status:** release-hardened · GitHub Pages ready
 
@@ -150,9 +150,19 @@ All-day and calendar-source metadata live as optional TimeBlock fields, so Index
 
 See `docs/CALENDAR_V2_D7.md`.
 
+## D8 — Kanban & Timeline V2
+
+Folio now has canonical Kanban and Timeline perspectives across Lists, Tags, Smart Views and Projects. Kanban uses existing task organization fields rather than a parallel board database: list Sections are custom columns, with additional status/priority/list/project grouping, sorting, WIP counts and optional project/list/priority swimlanes.
+
+Timeline introduces dedicated `timelineStart`, `timelineEnd` and `timelineMilestone` task fields so multi-day planning does not overload D2 planned dates or deadlines. Timeline supports Day/Week/Month zoom, drag/move/resize, milestones, project milestone overlays, hard-deadline markers, dependency connectors and an unscheduled backlog.
+
+Schema v20 preserves these spans in backup/restore and recurrence exceptions; direct restore remains v8–v20. Import/Patch can exchange task timeline fields while recurring templates intentionally keep absolute timeline spans occurrence-local.
+
+See `docs/KANBAN_TIMELINE_V2_D8.md`.
+
 ## Data and privacy
 
-Planner data is local-first in IndexedDB. The current database schema is **v19**. Full backups export schema v19, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, folders/lists/sections/tags, and durable review records; direct restore supports compatible backups from **v8 through v19**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
+Planner data is local-first in IndexedDB. The current database schema is **v20**. Full backups export schema v20, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, folders/lists/sections/tags, Kanban/Timeline task spans, and durable review records; direct restore supports compatible backups from **v8 through v20**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
 
 Fresh installs begin with an empty personal workspace. Optional sample data can be loaded explicitly from Data & storage.
 
@@ -176,7 +186,7 @@ Direct dependency versions and `package-lock.json` are committed for repeatable 
 
 ## Release history
 
-The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v19 data model, and `validate:final` define the current source state.
+The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v20 data model, and `validate:final` define the current source state.
 
 ## v1.1.1 release hardening
 

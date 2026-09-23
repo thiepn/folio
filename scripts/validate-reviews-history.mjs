@@ -46,7 +46,7 @@ check('v14 backup includes review records', backup.includes('reviewRecords: Revi
 check('legacy backups default review records empty', schemas.includes('reviewRecords: z.array(z.unknown()).default([])'))
 check('backup parser preserves v13 project workflow fields', backupSchemas.includes('nextActionTaskId') && backupSchemas.includes('milestones') && backupSchemas.includes('activity') && backupSchemas.includes('notes:'))
 check('public v14 backup schema exists', exists('public/schema/folio-backup-v14.schema.json'))
-check('interop retains v14 restore compatibility', interop.includes('schema v8–v19'))
+check('interop retains v14 restore compatibility', interop.includes('schema v8–v20'))
 check('reviews-history stylesheet loaded', styles.includes("@import './reviews-history.css';"))
 check('v1.5 release doc exists', exists('docs/REVIEWS_HISTORY_V1_5.md'))
 

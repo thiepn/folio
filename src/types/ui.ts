@@ -29,6 +29,9 @@ export interface TaskPreview {
   completed: boolean
   plannedDate?: string
   deadline?: string
+  timelineStart?: string
+  timelineEnd?: string
+  timelineMilestone?: boolean
   status: 'inbox' | 'todo' | 'completed' | 'cancelled'
   rescheduleCount: number
   createdAt?: string

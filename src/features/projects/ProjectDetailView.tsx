@@ -5,23 +5,28 @@ import { Tabs } from '../../components/ui/Tabs'
 import { TaskRow } from '../../components/ui/TaskRow'
 import type { ProjectSummary } from '../../repositories/projectRepository'
 import type { SchedulePreview, TaskPreview } from '../../types/ui'
+import { KanbanBoard, type KanbanDropTarget } from '../boards/KanbanBoard'
+import { TimelineView } from '../boards/TimelineView'
 
 type ProjectStyle = CSSProperties & { '--project-color': string }
-type ProjectTab = 'tasks' | 'schedule' | 'activity'
+type ProjectTab = 'tasks' | 'board' | 'timeline' | 'schedule' | 'activity'
 type TaskFilter = 'open' | 'ready' | 'blocked' | 'completed' | 'all'
 type TaskSort = 'manual' | 'priority' | 'deadline' | 'planned'
 
-const tabs = [{ value: 'tasks', label: 'Tasks' }, { value: 'schedule', label: 'Schedule' }, { value: 'activity', label: 'Activity' }] as const
+const tabs = [{ value: 'tasks', label: 'Tasks' }, { value: 'board', label: 'Board' }, { value: 'timeline', label: 'Timeline' }, { value: 'schedule', label: 'Schedule' }, { value: 'activity', label: 'Activity' }] as const
 
 export function ProjectDetailView({
-  project, unassigned = false, tasks, schedule, focusThisWeekSeconds = 0,
+  project, unassigned = false, tasks, schedule, lists = [], today, focusThisWeekSeconds = 0,
   onBack, onTaskOpen, onTaskToggle, onTaskMove, onTaskFocus, onAddTask, onEdit, onToggleFavorite, onArchive,
+  onBoardDrop, onTimelineSetSpan, onTimelineClear,
   onSetNextAction, onAddMilestone, onToggleMilestone, onRemoveMilestone,
 }: {
   project?: ProjectSummary
   unassigned?: boolean
   tasks: TaskPreview[]
   schedule: SchedulePreview[]
+  lists?: Array<{id:string;name:string}>
+  today: string
   focusThisWeekSeconds?: number
   onBack: () => void
   onTaskOpen: (id: string) => void
@@ -32,6 +37,9 @@ export function ProjectDetailView({
   onEdit?: () => void
   onToggleFavorite?: () => void
   onArchive?: () => void
+  onBoardDrop: (taskId:string,target:KanbanDropTarget)=>void|Promise<void>
+  onTimelineSetSpan: (taskId:string,start:string,end:string,milestone:boolean)=>void|Promise<void>
+  onTimelineClear: (taskId:string)=>void|Promise<void>
   onSetNextAction?: (taskId?: string) => void
   onAddMilestone?: (title: string, dueDate?: string) => void
   onToggleMilestone?: (milestoneId: string) => void
@@ -171,6 +179,28 @@ export function ProjectDetailView({
         {filteredTasks.length ? filteredTasks.map((task) => <TaskRow key={task.id} task={task} onToggle={onTaskToggle} onOpen={onTaskOpen} actions={<ProjectTaskActions task={task} isNext={project?.nextActionTaskId === task.id} onMove={onTaskMove} onFocus={onTaskFocus} onNext={onSetNextAction} />} />) : <div className="empty-state">No tasks match this view.</div>}
       </Panel>
     </div> : null}
+
+    {tab === 'board' ? <KanbanBoard
+      tasks={tasks}
+      lists={lists}
+      projects={project?[{id:project.id,name:project.name}]:[]}
+      mode="status"
+      allowedModes={['status','priority','list']}
+      onOpenTask={onTaskOpen}
+      onToggleTask={onTaskToggle}
+      onDropTask={onBoardDrop}
+    /> : null}
+
+    {tab === 'timeline' ? <TimelineView
+      tasks={tasks}
+      today={today}
+      title={unassigned?'No project':project?.name??'Project'}
+      milestones={(project?.milestones??[]).map((milestone)=>({id:milestone.id,title:milestone.title,dueDate:milestone.dueDate,completed:Boolean(milestone.completedAt)}))}
+      onOpenTask={onTaskOpen}
+      onToggleTask={onTaskToggle}
+      onSetSpan={onTimelineSetSpan}
+      onClearSpan={onTimelineClear}
+    /> : null}
 
     {tab === 'schedule' ? <Panel title="Scheduled work" meta={`${projectSchedule.length} blocks`}>
       {projectSchedule.length ? <div className="project-schedule-list">{projectSchedule.map((block) => <div className="project-schedule-row" key={block.id}><time>{formatDateTime(block.start)}</time><strong>{block.name}</strong><span>{formatMinutes(block.durationMinutes)}</span></div>)}</div> : <div className="empty-state">No time blocks are linked to this project's tasks yet.</div>}

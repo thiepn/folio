@@ -57,9 +57,16 @@ export const importTaskSchema = z.object({
   status: z.enum(['todo', 'inbox']).default('todo'),
   plannedDate: localDate.optional(),
   deadline: localDate.optional(),
+  timelineStart: localDate.optional(),
+  timelineEnd: localDate.optional(),
+  timelineMilestone: z.boolean().default(false),
   estimatedMinutes: z.number().int().positive().max(1440).optional(),
   tags: z.array(z.string().trim().min(1).max(40)).max(50).default([]),
-}).strict()
+}).strict().superRefine((value, ctx) => {
+  if (value.timelineEnd && !value.timelineStart) ctx.addIssue({ code: 'custom', message: 'Timeline end requires a timeline start.', path: ['timelineEnd'] })
+  if (value.timelineStart && value.timelineEnd && value.timelineEnd < value.timelineStart) ctx.addIssue({ code: 'custom', message: 'Timeline end must not be before timeline start.', path: ['timelineEnd'] })
+  if (value.timelineMilestone && value.timelineStart && value.timelineEnd && value.timelineEnd !== value.timelineStart) ctx.addIssue({ code: 'custom', message: 'Timeline milestones use one date.', path: ['timelineEnd'] })
+})
 
 export const importHabitSchema = z.object({
   ref,

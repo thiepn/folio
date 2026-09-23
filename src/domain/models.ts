@@ -71,6 +71,9 @@ export interface TaskEntity {
   lastOpenStatus?: 'inbox' | 'todo'
   plannedDate?: LocalDate
   deadline?: LocalDate
+  timelineStart?: LocalDate
+  timelineEnd?: LocalDate
+  timelineMilestone: boolean
   estimatedMinutes?: number
   tags: string[]
   tagIds: EntityId[]
@@ -281,6 +284,9 @@ export interface RecurrenceException {
   pinned?: boolean
   plannedDate?: LocalDate | null
   deadline?: LocalDate | null
+  timelineStart?: LocalDate | null
+  timelineEnd?: LocalDate | null
+  timelineMilestone?: boolean
   startMinute?: number
   blockDurationMinutes?: number
 }

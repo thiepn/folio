@@ -58,6 +58,8 @@ import { reviewRecordService } from '../services/reviewRecordService'
 import { reminderService } from '../services/reminderService'
 import { createCapturedBatch, createCapturedItem } from '../services/captureService'
 import { organizationService } from '../services/organizationService'
+import { boardService } from '../services/boardService'
+import { timelineService } from '../services/timelineService'
 import type { UndoableMutation } from '../services/undo'
 import type { TaskUpdateInput } from '../repositories/taskRepository'
 import type { ProjectCreateInput, ProjectUpdateInput } from '../repositories/projectRepository'
@@ -492,6 +494,9 @@ function AppContent() {
     if (Object.prototype.hasOwnProperty.call(effective, 'status')) occurrenceChanges.status = effective.status
     if (Object.prototype.hasOwnProperty.call(effective, 'plannedDate')) occurrenceChanges.plannedDate = effective.plannedDate
     if (Object.prototype.hasOwnProperty.call(effective, 'deadline')) occurrenceChanges.deadline = effective.deadline
+    if (Object.prototype.hasOwnProperty.call(effective, 'timelineStart')) occurrenceChanges.timelineStart = effective.timelineStart
+    if (Object.prototype.hasOwnProperty.call(effective, 'timelineEnd')) occurrenceChanges.timelineEnd = effective.timelineEnd
+    if (Object.prototype.hasOwnProperty.call(effective, 'timelineMilestone')) occurrenceChanges.timelineMilestone = effective.timelineMilestone
     if (Object.prototype.hasOwnProperty.call(effective, 'blockedByTaskIds')) occurrenceChanges.blockedByTaskIds = effective.blockedByTaskIds
     if (Object.prototype.hasOwnProperty.call(effective, 'checklist')) occurrenceChanges.checklist = effective.checklist
     if (Object.prototype.hasOwnProperty.call(effective, 'progressMode')) occurrenceChanges.progressMode = effective.progressMode
@@ -876,12 +881,17 @@ function AppContent() {
             unassigned={selectedProjectId === '__unassigned__'}
             tasks={data.allTasks.filter((task) => selectedProjectId === '__unassigned__' ? (!task.projectId && task.status !== 'inbox') : task.projectId === selectedProjectId)}
             schedule={data.allTimeBlocks}
+            lists={data.lists}
+            today={data.today}
             focusThisWeekSeconds={focusData?.projectWeekSeconds[selectedProjectId === '__unassigned__' ? '__unassigned__' : selectedProjectId] ?? 0}
             onBack={() => setSelectedProjectId(null)}
             onTaskOpen={setSelectedTaskId}
             onTaskToggle={(id) => void toggleTask(id)}
             onTaskMove={(id, target) => void moveTaskDate(id, target)}
             onTaskFocus={(id) => openFocus(id)}
+            onBoardDrop={async (taskId,target) => registerUndo(await boardService.moveTask(taskId,target))}
+            onTimelineSetSpan={async (taskId,start,end,milestone) => registerUndo(await timelineService.setSpan(taskId,start,end,milestone))}
+            onTimelineClear={async (taskId) => registerUndo(await timelineService.clear(taskId))}
             onAddTask={() => openAdd('todo', selectedProjectId === '__unassigned__' ? '' : selectedProjectId)}
             onEdit={selectedProject ? () => { setEditingProjectId(selectedProject.id); setProjectEditorOpen(true) } : undefined}
             onToggleFavorite={selectedProject ? () => void projectService.toggleFavorite(selectedProject.id).then(registerUndo) : undefined}
@@ -892,6 +902,7 @@ function AppContent() {
             onRemoveMilestone={selectedProject ? (milestoneId) => void projectService.removeMilestone(selectedProject.id, milestoneId).then(registerUndo) : undefined}
           /> : <ProjectsView projects={data.projects} unassignedCount={data.unassignedCount} onCreate={() => { setEditingProjectId(null); setProjectEditorOpen(true) }} onOpen={setSelectedProjectId} onArchived={() => setArchivedProjectsOpen(true)} />) : null}
           {view === 'lists' ? <OrganizationView
+            today={data.today}
             projects={data.projects}
             folders={data.folders}
             archivedFolders={data.archivedFolders}
@@ -921,6 +932,9 @@ function AppContent() {
             onDeleteSmartView={async (id) => { const action = await savedViewService.remove(id); registerUndo(action) }}
             onDuplicateSmartView={async (smartView) => { const { id, undo } = smartView.builtin ? await savedViewService.duplicateDefinition(smartView) : await savedViewService.duplicate(smartView.id); registerUndo(undo); setSelectedListId('__smart__:'+id) }}
             onToggleSmartViewPin={async (id) => registerUndo(await savedViewService.togglePin(id))}
+            onBoardDrop={async (taskId,target,context) => registerUndo(await boardService.moveTask(taskId,target,context))}
+            onTimelineSetSpan={async (taskId,start,end,milestone) => registerUndo(await timelineService.setSpan(taskId,start,end,milestone))}
+            onTimelineClear={async (taskId) => registerUndo(await timelineService.clear(taskId))}
             onOpenTask={setSelectedTaskId}
             onToggleTask={(id) => void toggleTask(id)}
             onMoveTask={async (taskId, listId, sectionId) => registerUndo(await organizationService.moveTask(taskId, listId, sectionId))}
@@ -1180,6 +1194,9 @@ function taskUpdateDiff(before: TaskPreview, changes: TaskUpdateInput): TaskUpda
   if (has('status') && changes.status !== before.status) diff.status = changes.status
   if (has('plannedDate') && normalized(changes.plannedDate) !== before.plannedDate) diff.plannedDate = changes.plannedDate
   if (has('deadline') && normalized(changes.deadline) !== before.deadline) diff.deadline = changes.deadline
+  if (has('timelineStart') && normalized(changes.timelineStart) !== before.timelineStart) diff.timelineStart = changes.timelineStart
+  if (has('timelineEnd') && normalized(changes.timelineEnd) !== before.timelineEnd) diff.timelineEnd = changes.timelineEnd
+  if (has('timelineMilestone') && changes.timelineMilestone !== Boolean(before.timelineMilestone)) diff.timelineMilestone = changes.timelineMilestone
   if (has('estimatedMinutes') && normalized(changes.estimatedMinutes) !== before.durationMinutes) diff.estimatedMinutes = changes.estimatedMinutes
   if (has('tags') && !sameValue(changes.tags ?? [], before.tags ?? [])) diff.tags = changes.tags
   if (has('tagIds') && !sameValue(changes.tagIds ?? [], before.tagIds ?? [])) diff.tagIds = changes.tagIds
@@ -1207,6 +1224,7 @@ function recurrenceOverrideDiff(before: TaskPreview, changes: TaskUpdateInput): 
   delete override.progressMode
   delete override.progressPercent
   delete override.comments
+  // Timeline spans are occurrence-specific; they never become recurring-template defaults.
   delete override.sortOrder
   delete override.parentTaskId
 
