@@ -12,7 +12,7 @@
     "validate:release": "node scripts/validate-release.mjs",
     "validate:daily": "node scripts/validate-daily-workflow.mjs",
     "validate:dist": "node scripts/validate-dist.mjs",
-    "release:verify": "npm run validate:final && npm run validate:release && npm run validate:daily && npm run validate:task-project && npm run validate:planner && npm run validate:reviews-history && npm run validate:habits-focus && npm run validate:command-first && npm run validate:task-v2 && npm run validate:recurrence-v2 && npm run validate:reminders && npm run typecheck && npm run build && npm run validate:dist",
+    "release:verify": "npm run validate:final && npm run validate:release && npm run validate:daily && npm run validate:task-project && npm run validate:planner && npm run validate:reviews-history && npm run validate:habits-focus && npm run validate:command-first && npm run validate:task-v2 && npm run validate:recurrence-v2 && npm run validate:reminders && npm run validate:capture-v2 && npm run typecheck && npm run build && npm run validate:dist",
     "manifest:release": "node scripts/generate-release-manifest.mjs",
     "validate:task-project": "node scripts/validate-task-project-workflow.mjs",
     "validate:planner": "node scripts/validate-planner-overhaul.mjs",
@@ -21,7 +21,8 @@
     "validate:command-first": "node scripts/validate-command-first.mjs",
     "validate:task-v2": "node scripts/validate-task-engine-v2.mjs",
     "validate:recurrence-v2": "node scripts/validate-dates-recurrence-v2.mjs",
-    "validate:reminders": "node scripts/validate-reminders-notifications.mjs"
+    "validate:reminders": "node scripts/validate-reminders-notifications.mjs",
+    "validate:capture-v2": "node scripts/validate-capture-v2.mjs"
   },
   "dependencies": {
     "dexie": "4.2.0",
