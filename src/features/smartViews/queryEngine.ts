@@ -384,8 +384,7 @@ function compareByRule(a: TaskEntity,b: TaskEntity,rule:SmartSortRule){
   return rule.direction==='desc' ? -result : result
 }
 
-export function runSmartView(view: SmartTaskView, context: SmartViewContext) {
-  const runtime=prepareRuntime(context)
+function runSmartViewWithRuntime(view: SmartTaskView, context: SmartViewContext, runtime: SmartRuntime) {
   const rows=context.tasks.filter((task)=>{
     if(task.deletedAt || task.status==='cancelled') return false
     if(view.scope==='root' && task.parentTaskId) return false
@@ -396,6 +395,15 @@ export function runSmartView(view: SmartTaskView, context: SmartViewContext) {
     for(const rule of rules){const result=compareByRule(a,b,rule);if(result!==0)return result}
     return a.sortOrder-b.sortOrder || a.id.localeCompare(b.id)
   })
+}
+
+export function runSmartView(view: SmartTaskView, context: SmartViewContext) {
+  return runSmartViewWithRuntime(view,context,prepareRuntime(context))
+}
+
+export function runSmartViews(views: SmartTaskView[], context: SmartViewContext) {
+  const runtime=prepareRuntime(context)
+  return Object.fromEntries(views.map((view)=>[view.id,runSmartViewWithRuntime(view,context,runtime)]))
 }
 
 export function smartGroupKey(task:TaskEntity,groupBy:SmartGroupBy,context:SmartViewContext){
