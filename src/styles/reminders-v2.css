@@ -1,0 +1,305 @@
+/* D3 — Reminders & Notification Engine */
+
+.topbar__reminder-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.topbar__reminder-wrap .icon-button.has-reminders {
+  color: var(--text);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.topbar__reminder-badge {
+  position: absolute;
+  top: -5px;
+  right: -7px;
+  min-width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font: 700 9px var(--font-mono);
+  pointer-events: none;
+}
+
+.reminder-center {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.reminder-center__permission,
+.reminder-center__limits {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  background: var(--surface-input);
+}
+
+.reminder-center__permission strong,
+.reminder-center__limits strong {
+  display: block;
+  margin-top: 5px;
+  font-weight: 600;
+}
+
+.reminder-center__permission p,
+.reminder-center__limits p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.reminder-permission-note {
+  max-width: 180px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.reminder-center__section {
+  display: grid;
+  gap: var(--space-3);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+}
+
+.reminder-list,
+.reminder-upcoming {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.reminder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 58px;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--surface-input);
+}
+
+.reminder-item.is-due {
+  border-left: 2px solid var(--accent);
+}
+
+.reminder-item__copy {
+  min-width: 0;
+}
+
+.reminder-item__copy strong,
+.reminder-item__copy span {
+  display: block;
+}
+
+.reminder-item__copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reminder-item__copy span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.reminder-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.reminder-upcoming button {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: var(--space-3);
+  width: 100%;
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.reminder-upcoming button span {
+  color: var(--muted);
+  font: 10px var(--font-mono);
+}
+
+.reminder-upcoming button strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.reminder-empty {
+  padding: 14px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.reminder-automation {
+  gap: var(--space-4);
+}
+
+.reminder-setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.reminder-setting-row > label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.reminder-setting-row > label span,
+.reminder-setting-row > label strong,
+.reminder-setting-row > label small {
+  display: block;
+}
+
+.reminder-setting-row > label small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.reminder-setting-row > input {
+  min-height: 36px;
+}
+
+.reminder-default-snooze {
+  max-width: 240px;
+}
+
+.task-reminder-section,
+.habit-reminder-section {
+  display: grid;
+  gap: var(--space-3);
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-4);
+}
+
+.task-reminder-list,
+.habit-reminder-list {
+  display: grid;
+  gap: 6px;
+}
+
+.task-reminder-row,
+.habit-reminder-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-input);
+}
+
+.task-reminder-row strong,
+.task-reminder-row span,
+.habit-reminder-list strong,
+.habit-reminder-list span {
+  display: block;
+}
+
+.task-reminder-row strong,
+.habit-reminder-list strong {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.task-reminder-row span,
+.habit-reminder-list span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.task-reminder-row > div:last-child,
+.habit-reminder-list > div > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-reminder-row button,
+.habit-reminder-list button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.mini-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.task-reminder-builder,
+.habit-reminder-add {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-left: 1px solid var(--accent-line);
+  background: rgba(var(--accent-rgb), .035);
+}
+
+.task-reminder-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.mobile-reminder-button.has-reminders {
+  color: var(--accent-text);
+}
+
+@media (max-width: 680px) {
+  .reminder-center__permission,
+  .reminder-center__limits,
+  .reminder-item {
+    flex-direction: column;
+  }
+
+  .reminder-item__actions {
+    justify-content: flex-start;
+  }
+
+  .reminder-setting-row,
+  .task-reminder-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reminder-setting-row > input {
+    width: 140px;
+  }
+
+  .reminder-upcoming button {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
