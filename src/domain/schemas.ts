@@ -69,6 +69,34 @@ export const projectUpdateSchema = projectCreateSchema.partial().extend({
   weeklyTargetMinutes: z.number().int().positive().max(7 * 24 * 60).nullable().optional(),
 })
 
+export const taskProgressModeSchema = z.enum(['auto', 'manual'])
+
+export const taskChecklistItemSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().trim().min(1).max(500),
+  completed: z.boolean().default(false),
+  sortOrder: z.number().finite(),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+  completedAt: isoDateTime.optional(),
+})
+
+export const taskCommentSchema = z.object({
+  id: z.string().min(1),
+  body: z.string().trim().min(1).max(10_000),
+  createdAt: isoDateTime,
+  updatedAt: isoDateTime,
+})
+
+export const taskActivityEntrySchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(['created', 'updated', 'completed', 'reopened', 'subtask', 'comment', 'restored', 'duplicated']),
+  label: z.string().trim().min(1).max(500),
+  at: isoDateTime,
+})
+
+const taskTagsSchema = z.array(z.string().trim().min(1).max(40)).max(50).default([])
+
 export const taskCreateSchema = z.object({
   title: z.string().trim().min(1).max(300),
   description: z.string().max(20_000).default(''),
@@ -79,6 +107,14 @@ export const taskCreateSchema = z.object({
   plannedDate: localDate.optional(),
   deadline: localDate.optional(),
   estimatedMinutes: z.number().int().positive().max(24 * 60).optional(),
+  tags: taskTagsSchema,
+  checklist: z.array(taskChecklistItemSchema).max(500).default([]),
+  progressMode: taskProgressModeSchema.default('auto'),
+  progressPercent: z.number().int().min(0).max(100).default(0),
+  sourceUrl: z.string().trim().url().max(2048).optional(),
+  location: z.string().trim().max(500).optional(),
+  pinned: z.boolean().default(false),
+  comments: z.array(taskCommentSchema).max(500).default([]),
   seriesId: z.string().optional(),
   recurrenceDate: localDate.optional(),
   blockedByTaskIds: z.array(z.string()).max(100).default([]),
@@ -96,6 +132,14 @@ export const taskUpdateSchema = z.object({
   plannedDate: localDate.nullable().optional(),
   deadline: localDate.nullable().optional(),
   estimatedMinutes: z.number().int().positive().max(24 * 60).nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(50).optional(),
+  checklist: z.array(taskChecklistItemSchema).max(500).optional(),
+  progressMode: taskProgressModeSchema.optional(),
+  progressPercent: z.number().int().min(0).max(100).optional(),
+  sourceUrl: z.string().trim().url().max(2048).nullable().optional(),
+  location: z.string().trim().max(500).nullable().optional(),
+  pinned: z.boolean().optional(),
+  comments: z.array(taskCommentSchema).max(500).optional(),
   blockedByTaskIds: z.array(z.string()).max(100).optional(),
   sortOrder: z.number().finite().optional(),
 })
