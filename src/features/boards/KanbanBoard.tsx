@@ -36,8 +36,9 @@ export function KanbanBoard({
   onDropTask: (taskId:string,target:KanbanDropTarget)=>void|Promise<void>
   onAddColumn?: (name:string)=>void|Promise<void>
 }) {
-  const modes=allowedModes?.length?allowedModes:(listId?['section','priority','status']:['status','priority','list','project'])
-  const [mode,setMode]=useState<KanbanGroupMode>(modes.includes(initialMode??modes[0])?(initialMode??modes[0]):modes[0])
+  const modes:KanbanGroupMode[]=allowedModes?.length?allowedModes:(listId?['section','priority','status']:['status','priority','list','project'])
+  const defaultMode:KanbanGroupMode=initialMode&&modes.includes(initialMode)?initialMode:(modes[0]??'status')
+  const [mode,setMode]=useState<KanbanGroupMode>(defaultMode)
   const [sort,setSort]=useState<KanbanSortMode>('manual')
   const [swimlane,setSwimlane]=useState<KanbanSwimlaneMode>('none')
   const [columnName,setColumnName]=useState('')
