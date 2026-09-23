@@ -13,6 +13,8 @@ const DEFAULT_OVERDUE_MINUTE = 9 * 60
 let started = false
 let timer: number | undefined
 let ticking = false
+let wakeHandler: (() => void) | undefined
+let visibilityHandler: (() => void) | undefined
 const listeners = new Set<() => void>()
 
 function emit() { listeners.forEach((listener) => listener()) }
@@ -254,11 +256,12 @@ export const reminderService = {
   start() {
     if (started || typeof window === 'undefined') return
     started = true
-    const wake = () => { void tick() }
-    window.addEventListener('focus', wake)
-    window.addEventListener('online', wake)
-    window.addEventListener('folio:reminder-refresh', wake as EventListener)
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') wake() })
+    wakeHandler = () => { void tick() }
+    visibilityHandler = () => { if (document.visibilityState === 'visible') wakeHandler?.() }
+    window.addEventListener('focus', wakeHandler)
+    window.addEventListener('online', wakeHandler)
+    window.addEventListener('folio:reminder-refresh', wakeHandler as EventListener)
+    document.addEventListener('visibilitychange', visibilityHandler)
     void tick()
   },
 
@@ -266,6 +269,14 @@ export const reminderService = {
     started = false
     if (timer !== undefined && typeof window !== 'undefined') window.clearTimeout(timer)
     timer = undefined
+    if (typeof window !== 'undefined' && wakeHandler) {
+      window.removeEventListener('focus', wakeHandler)
+      window.removeEventListener('online', wakeHandler)
+      window.removeEventListener('folio:reminder-refresh', wakeHandler as EventListener)
+    }
+    if (typeof document !== 'undefined' && visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler)
+    wakeHandler = undefined
+    visibilityHandler = undefined
   },
 
   async todayInReminderZone(reminderId: string) {
