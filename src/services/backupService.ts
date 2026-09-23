@@ -1,6 +1,6 @@
 import { db, DATABASE_SCHEMA_VERSION } from '../db/database'
 import { backupEnvelopeSchema } from '../domain/schemas'
-import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema, backupReviewRecordSchema, backupReminderSchema, backupReminderOccurrenceSchema, backupFolderSchema, backupListSchema, backupSectionSchema, backupTagSchema } from './backupSchemas'
+import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema, backupReviewRecordSchema, backupReminderSchema, backupReminderOccurrenceSchema, backupFolderSchema, backupListSchema, backupSectionSchema, backupTagSchema, backupNoteSchema, backupAttachmentSchema } from './backupSchemas'
 import type {
   CalendarImportBatchEntity,
   DailyPlanEntity,
@@ -22,7 +22,10 @@ import type {
   SettingEntity,
   TaskEntity,
   TimeBlockEntity,
+  NoteEntity,
 } from '../domain/models'
+import { deserializeAttachment, serializeAttachment, type PortableAttachment } from './attachmentService'
+import { contentSearchService } from './contentSearchService'
 
 export const MIN_RESTORABLE_BACKUP_VERSION = 8
 
@@ -51,6 +54,8 @@ export interface BackupEnvelope {
     lists: ListEntity[]
     sections: SectionEntity[]
     tags: TagEntity[]
+    notes: NoteEntity[]
+    attachments: PortableAttachment[]
   }
 }
 
@@ -62,7 +67,7 @@ export interface BackupPreview {
 
 const TABLE_KEYS = [
   'tasks', 'projects', 'habits', 'habitEntries', 'timeBlocks', 'dailyPlans', 'dailyPlanItems',
-  'focusSessions', 'recurringSeries', 'settings', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords', 'reminders', 'reminderOccurrences', 'folders', 'lists', 'sections', 'tags',
+  'focusSessions', 'recurringSeries', 'settings', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords', 'reminders', 'reminderOccurrences', 'folders', 'lists', 'sections', 'tags', 'notes', 'attachments',
 ] as const
 
 function objectRow(value: unknown, label: string): Record<string, unknown> {
@@ -200,6 +205,8 @@ function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): Ba
       lists: (raw.data.lists ?? []).map((row) => backupListSchema.parse(row)) as ListEntity[],
       sections: (raw.data.sections ?? []).map((row) => backupSectionSchema.parse(row)) as SectionEntity[],
       tags: (raw.data.tags ?? []).map((row) => backupTagSchema.parse(row)) as TagEntity[],
+      notes: (raw.data.notes ?? []).map((row) => backupNoteSchema.parse(row)) as NoteEntity[],
+      attachments: (raw.data.attachments ?? []).map((row) => backupAttachmentSchema.parse(row)) as PortableAttachment[],
     },
   }
   upgradeBackupOrganizationV19(normalized)
@@ -230,8 +237,16 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
   const sectionIds = uniqueIds(data.sections, 'sections')
   const tagIds = uniqueIds(data.tags, 'tags')
   uniqueIds(data.tags, 'tags', 'normalizedName')
+  const noteIds = uniqueIds(data.notes, 'notes')
+  uniqueIds(data.attachments, 'attachments')
 
   const warnings: string[] = []
+  for (const note of data.notes) if (note.sourceTaskId && !taskIds.has(note.sourceTaskId)) warnings.push(`Note “${note.title}” references a task that is no longer present; the note will still be restored.`)
+  for (const attachment of data.attachments) {
+    if (attachment.ownerType === 'task' && !taskIds.has(attachment.ownerId)) throw new Error(`Attachment “${attachment.name}” references a missing task.`)
+    if (attachment.ownerType === 'note' && !noteIds.has(attachment.ownerId)) throw new Error(`Attachment “${attachment.name}” references a missing note.`)
+    if (attachment.kind !== 'link' && !attachment.dataBase64) warnings.push(`Attachment “${attachment.name}” has metadata but no binary payload.`)
+  }
   for (const task of data.tasks) {
     if (task.timelineEnd && !task.timelineStart) throw new Error(`Task “${task.title}” has a timeline end without a start.`)
     if (task.timelineStart && task.timelineEnd && task.timelineEnd < task.timelineStart) throw new Error(`Task “${task.title}” has an invalid timeline span.`)
@@ -319,17 +334,18 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
 }
 
 export async function createBackup(): Promise<BackupEnvelope> {
-  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags] = await Promise.all([
+  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, rawAttachments] = await Promise.all([
     db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(),
     db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(),
     db.settings.toArray(), db.importBatches.toArray(), db.patchBatches.toArray(), db.calendarImportBatches.toArray(), db.reviewRecords.toArray(),
-    db.reminders.toArray(), db.reminderOccurrences.toArray(), db.folders.toArray(), db.lists.toArray(), db.sections.toArray(), db.tags.toArray(),
+    db.reminders.toArray(), db.reminderOccurrences.toArray(), db.folders.toArray(), db.lists.toArray(), db.sections.toArray(), db.tags.toArray(), db.notes.toArray(), db.attachments.toArray(),
   ])
+  const attachments = await Promise.all(rawAttachments.map(serializeAttachment))
   return {
     format: 'folio-backup',
     version: DATABASE_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags },
+    data: { tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, attachments },
   }
 }
 
@@ -352,9 +368,10 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
   const d = verified.backup.data
   await db.transaction('rw', [
     db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
-    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords, db.reminders, db.reminderOccurrences, db.folders, db.lists, db.sections, db.tags,
+    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords, db.reminders, db.reminderOccurrences, db.folders, db.lists, db.sections, db.tags, db.notes, db.attachments, db.searchDocuments,
   ], async () => {
       await Promise.all(TABLE_KEYS.map((key) => (db[key] as any).clear()))
+      await db.searchDocuments.clear()
       await db.projects.bulkPut(d.projects)
       await db.recurringSeries.bulkPut(d.recurringSeries)
       await db.tasks.bulkPut(d.tasks)
@@ -375,6 +392,9 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
       await db.lists.bulkPut(d.lists)
       await db.sections.bulkPut(d.sections)
       await db.tags.bulkPut(d.tags)
+      await db.notes.bulkPut(d.notes)
+      await db.attachments.bulkPut(d.attachments.map(deserializeAttachment))
     },
   )
+  await contentSearchService.rebuildAll()
 }
