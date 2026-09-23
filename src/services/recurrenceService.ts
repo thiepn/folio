@@ -32,9 +32,12 @@ function taskFields(series: RecurringSeriesEntity, recurrenceDate: LocalDate) {
     title: exception.title ?? template.title,
     description: exception.description ?? template.description,
     projectId: hasOwn(exception, 'projectId') ? (exception.projectId ?? undefined) : template.projectId,
+    listId: hasOwn(exception, 'listId') ? (exception.listId ?? undefined) : template.listId,
+    sectionId: hasOwn(exception, 'sectionId') ? (exception.sectionId ?? undefined) : template.sectionId,
     priority: exception.priority ?? template.priority,
     estimatedMinutes: hasOwn(exception, 'estimatedMinutes') ? (exception.estimatedMinutes ?? undefined) : template.estimatedMinutes,
     tags: exception.tags ?? template.tags ?? [],
+    tagIds: exception.tagIds ?? template.tagIds ?? [],
     checklist: exception.checklist ?? template.checklist ?? [],
     sourceUrl: hasOwn(exception, 'sourceUrl') ? (exception.sourceUrl ?? undefined) : template.sourceUrl,
     location: hasOwn(exception, 'location') ? (exception.location ?? undefined) : template.location,
@@ -124,9 +127,11 @@ async function applyTemplateChanges(task: TaskEntity, series: RecurringSeriesEnt
   if (changed.includes('title')) patch.title = fields.title
   if (changed.includes('description')) patch.description = fields.description
   if (changed.includes('projectId')) patch.projectId = fields.projectId
+  if (changed.includes('listId')) patch.listId = fields.listId
+  if (changed.includes('sectionId')) patch.sectionId = fields.sectionId
   if (changed.includes('priority')) patch.priority = fields.priority
   if (changed.includes('estimatedMinutes')) patch.estimatedMinutes = fields.estimatedMinutes
-  if (changed.includes('tags')) patch.tags = fields.tags
+  if (changed.includes('tags') || changed.includes('tagIds')) { patch.tags = fields.tags; patch.tagIds = fields.tagIds }
   if (changed.includes('checklist')) patch.checklist = freshChecklist(fields.checklist)
   if (changed.includes('sourceUrl')) patch.sourceUrl = fields.sourceUrl
   if (changed.includes('location')) patch.location = fields.location
@@ -191,9 +196,12 @@ export const recurrenceService = {
         title: task.title,
         description: task.description,
         projectId: task.projectId,
+        listId: task.listId,
+        sectionId: task.sectionId,
         priority: task.priority,
         estimatedMinutes: task.estimatedMinutes,
         tags: task.tags ?? [],
+        tagIds: task.tagIds ?? [],
         checklist: (task.checklist ?? []).map((item) => item.text),
         sourceUrl: task.sourceUrl,
         location: task.location,
