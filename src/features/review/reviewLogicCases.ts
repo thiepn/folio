@@ -2,7 +2,7 @@ import type { ProjectEntity, TaskEntity } from '../../domain/models'
 import { buildRecommendations, projectPaceStatus, staleTaskIssues, postponedTaskIssues, weekElapsedDays } from './reviewLogic'
 
 const baseTask = (partial: Partial<TaskEntity>): TaskEntity => ({
-  id: crypto.randomUUID(), title: 'Task', description: '', priority: 'normal', status: 'todo', tags: [], tagIds: [], checklist: [], progressMode: 'auto', progressPercent: 0, pinned: false, comments: [], activity: [], sortOrder: 1,
+  id: crypto.randomUUID(), title: 'Task', description: '', priority: 'normal', status: 'todo', tags: [], tagIds: [], checklist: [], progressMode: 'auto', progressPercent: 0, timelineMilestone: false, pinned: false, comments: [], activity: [], sortOrder: 1,
   rescheduleCount: 0, blockedByTaskIds: [], createdAt: '2026-07-20T10:00:00.000Z', updatedAt: '2026-08-20T10:00:00.000Z', ...partial,
 })
 
