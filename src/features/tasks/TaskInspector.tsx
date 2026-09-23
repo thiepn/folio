@@ -82,6 +82,9 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
   const [status, setStatus] = useState(task.status)
   const [plannedDate, setPlannedDate] = useState(task.plannedDate ?? '')
   const [deadline, setDeadline] = useState(task.deadline ?? '')
+  const [timelineStart, setTimelineStart] = useState(task.timelineStart ?? '')
+  const [timelineEnd, setTimelineEnd] = useState(task.timelineEnd ?? '')
+  const [timelineMilestone, setTimelineMilestone] = useState(Boolean(task.timelineMilestone))
   const [estimate, setEstimate] = useState(String(task.durationMinutes ?? ''))
   const [tags, setTags] = useState((task.tags ?? []).join(', '))
   const [checklist, setChecklist] = useState<ChecklistItem[]>(task.checklist ?? [])
@@ -118,6 +121,9 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
       || status !== task.status
       || plannedDate !== (task.plannedDate ?? '')
       || deadline !== (task.deadline ?? '')
+      || timelineStart !== (task.timelineStart ?? '')
+      || timelineEnd !== (task.timelineEnd ?? '')
+      || timelineMilestone !== Boolean(task.timelineMilestone)
       || estimate !== String(task.durationMinutes ?? '')
       || currentTags.join('|') !== (task.tags ?? []).join('|')
       || JSON.stringify(checklist) !== JSON.stringify(task.checklist ?? [])
@@ -128,7 +134,7 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
       || pinned !== Boolean(task.pinned)
       || JSON.stringify(comments) !== JSON.stringify(task.comments ?? [])
       || blockedByTaskIds.join('|') !== (task.blockedByTaskIds ?? []).join('|')
-  }, [title, description, projectId, listId, sectionId, priority, status, plannedDate, deadline, estimate, tags, checklist, progressMode, progressPercent, sourceUrl, location, pinned, comments, blockedByTaskIds, task])
+  }, [title, description, projectId, listId, sectionId, priority, status, plannedDate, deadline, timelineStart, timelineEnd, timelineMilestone, estimate, tags, checklist, progressMode, progressPercent, sourceUrl, location, pinned, comments, blockedByTaskIds, task])
 
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
@@ -156,6 +162,9 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
         status,
         plannedDate: plannedDate || null,
         deadline: deadline || null,
+        timelineStart: timelineStart || null,
+        timelineEnd: timelineStart ? (timelineMilestone ? timelineStart : (timelineEnd || timelineStart)) : null,
+        timelineMilestone: timelineStart ? timelineMilestone : false,
         estimatedMinutes: estimate ? Number(estimate) : null,
         tags: parseTags(tags),
         checklist,
@@ -248,6 +257,9 @@ function TaskInspectorForm({ task, subtasks, projects, lists, sections, knownTag
           <label className="field"><span>Estimate</span><input type="number" min="1" max="1440" value={estimate} placeholder="Minutes" onChange={(event) => setEstimate(event.target.value)} /></label>
           <label className="field"><span>Planned day</span><input type="date" value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} /></label>
           <label className="field"><span>Hard deadline</span><input type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} /></label>
+          <label className="field"><span>Timeline start</span><input type="date" value={timelineStart} onChange={(event) => { const next=event.target.value; setTimelineStart(next); if(!next){setTimelineEnd('');setTimelineMilestone(false)} else if(timelineMilestone){setTimelineEnd(next)} }} /></label>
+          <label className="field"><span>Timeline end</span><input type="date" value={timelineEnd} min={timelineStart||undefined} disabled={!timelineStart||timelineMilestone} onChange={(event) => setTimelineEnd(event.target.value)} /></label>
+          <label className="check-field task-timeline-milestone"><input type="checkbox" checked={timelineMilestone} disabled={!timelineStart} onChange={(event) => { setTimelineMilestone(event.target.checked); if(event.target.checked&&timelineStart)setTimelineEnd(timelineStart) }} /><span>Timeline milestone</span></label>
         </div>
       </section>
 
