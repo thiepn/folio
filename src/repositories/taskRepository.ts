@@ -30,6 +30,12 @@ async function resolveOrganization(input: { listId?: string | null; sectionId?: 
   return { listId, sectionId }
 }
 
+function validateTimeline(task: Pick<TaskEntity,'timelineStart'|'timelineEnd'|'timelineMilestone'>) {
+  if (task.timelineEnd && !task.timelineStart) throw new Error('Timeline end requires a timeline start.')
+  if (task.timelineStart && task.timelineEnd && task.timelineEnd < task.timelineStart) throw new Error('Timeline end must not be before timeline start.')
+  if (task.timelineMilestone && task.timelineStart && task.timelineEnd && task.timelineEnd !== task.timelineStart) throw new Error('Timeline milestones use one date.')
+}
+
 async function resolveTags(names: string[], tagIds: string[] = []) {
   if (names.length) {
     const tags = await organizationRepository.resolveTagNames(names)
@@ -153,6 +159,7 @@ export const taskRepository = {
       updatedAt: now,
       completedAt: parsed.status === 'completed' ? now : undefined,
     }
+    validateTimeline(task)
     await db.tasks.add(task)
     return task
   },
@@ -183,6 +190,7 @@ export const taskRepository = {
       activity: appendActivity(current, 'Task updated'),
       updatedAt: new Date().toISOString(),
     }
+    validateTimeline(next)
     await db.tasks.put(next)
     return next
   },
