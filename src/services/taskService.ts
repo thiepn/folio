@@ -233,7 +233,24 @@ export const taskService = {
       plannedDate: plannedDate ?? null,
       status: task.status === 'inbox' ? 'todo' : task.status,
     })
-    return { message: plannedDate ? 'Task rescheduled' : 'Task unplanned', undo: async () => { await taskRepository.replace(previous) } }
+    const taskUndo: UndoableTaskMutation = {
+      message: plannedDate ? 'Task rescheduled' : 'Task unplanned',
+      undo: async () => { await taskRepository.replace(previous) },
+    }
+    if (!task.seriesId || !task.recurrenceDate) return taskUndo
+    try {
+      const exceptionUndo = await recurrenceService.recordOccurrenceException(id, { plannedDate: plannedDate ?? null })
+      return {
+        message: taskUndo.message,
+        undo: async () => {
+          await exceptionUndo.undo()
+          await taskUndo.undo()
+        },
+      }
+    } catch (error) {
+      await taskUndo.undo()
+      throw error
+    }
   },
 
   async processInbox(id: string, options: { plannedDate?: LocalDate; projectId?: string } = {}): Promise<UndoableTaskMutation> {
