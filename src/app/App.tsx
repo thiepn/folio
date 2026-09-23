@@ -28,7 +28,6 @@ import { QuickAddModal } from '../features/capture/QuickAddModal'
 import { ImportPlanModal } from '../features/import/ImportPlanModal'
 import { PatchPlanModal } from '../features/patch/PatchPlanModal'
 import { InteroperabilityModal } from '../features/interop/InteroperabilityModal'
-import type { ParsedRecurrence } from '../features/capture/parser'
 import { RecurrenceEditorModal, type RecurrenceEditorValue } from '../features/recurrence/RecurrenceEditorModal'
 import { TaskInspector } from '../features/tasks/TaskInspector'
 import { TrashDrawer } from '../features/tasks/TrashDrawer'
@@ -56,6 +55,7 @@ import { dependencyService } from '../services/dependencyService'
 import { savedViewService } from '../services/savedViewService'
 import { reviewRecordService } from '../services/reviewRecordService'
 import { reminderService } from '../services/reminderService'
+import { createCapturedBatch, createCapturedItem } from '../services/captureService'
 import type { UndoableMutation } from '../services/undo'
 import type { TaskCreateInput, TaskUpdateInput } from '../repositories/taskRepository'
 import type { ProjectCreateInput, ProjectUpdateInput } from '../repositories/projectRepository'
@@ -892,32 +892,11 @@ function AppContent() {
         defaultPlannedDate={addDefaultPlannedDate ?? data.today}
         onClose={() => setAddOpen(false)}
         onImport={() => { setAddOpen(false); setImportOpen(true) }}
-        onCreate={async (input: TaskCreateInput, schedule, recurrence?: ParsedRecurrence) => {
-          if (recurrence && input.status !== 'inbox') {
-            const startDate = input.plannedDate ?? data.today
-            const deadlineOffsetDays = input.deadline ? Math.max(0, localDayDifference(startDate, input.deadline)) : undefined
-            const { undo } = await recurrenceService.create({
-              title: input.title, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'local', startDate, rule: recurrence,
-              taskTemplate: { title: input.title, description: input.description ?? '', projectId: input.projectId, priority: input.priority ?? 'normal', estimatedMinutes: input.estimatedMinutes, deadlineOffsetDays, startMinute: schedule?.startMinute, blockDurationMinutes: schedule?.durationMinutes },
-            })
-            await dailyPlanningService.markDraft(startDate)
-            registerUndo(undo)
-            return
-          }
-          const { task, undo: taskUndo } = await taskService.createUndoable(input)
-          try {
-            if (input.plannedDate) await dailyPlanningService.markDraft(input.plannedDate)
-            if (schedule) {
-              const { undo: blockUndo } = await timeBlockService.createTaskBlock(task.id, schedule.date, schedule.startMinute, schedule.durationMinutes)
-              registerUndo({
-                message: 'Task and time block added',
-                undo: async () => { await blockUndo.undo(); await taskUndo.undo() },
-              })
-            } else registerUndo(taskUndo)
-          } catch (error) {
-            await taskUndo.undo()
-            throw error
-          }
+        onCreate={async (request) => {
+          registerUndo(await createCapturedItem(request))
+        }}
+        onCreateBatch={async (requests) => {
+          registerUndo(await createCapturedBatch(requests))
         }}
       />
 
