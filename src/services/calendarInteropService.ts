@@ -33,7 +33,7 @@ export interface CalendarExportOptions {
 }
 
 function sameImportedEvent(current: TimeBlockEntity, original: TimeBlockEntity) {
-  return current.id === original.id && current.kind === original.kind && current.taskId === original.taskId && current.title === original.title && current.description === original.description && current.location === original.location && current.start === original.start && current.end === original.end && current.createdAt === original.createdAt && current.updatedAt === original.updatedAt
+  return current.id === original.id && current.kind === original.kind && current.taskId === original.taskId && current.title === original.title && current.description === original.description && current.location === original.location && current.allDay === original.allDay && current.timeZone === original.timeZone && current.source === original.source && current.sourceCalendar === original.sourceCalendar && current.sourceUid === original.sourceUid && current.start === original.start && current.end === original.end && current.createdAt === original.createdAt && current.updatedAt === original.updatedAt
 }
 
 async function duplicateState() {
@@ -106,6 +106,11 @@ export async function applyCalendarImport(preview: CalendarImportPreview): Promi
         description: event.description?.trim() || undefined,
         location: event.location?.trim() || undefined,
         kind: 'event',
+        allDay: Boolean(event.allDay),
+        timeZone: event.timezone,
+        source: 'ics',
+        sourceCalendar: preview.calendarName,
+        sourceUid: event.sourceKey ?? event.uid,
         start: event.start,
         end: event.end,
         createdAt: now,
@@ -193,12 +198,21 @@ export async function exportCalendarIcs(options: CalendarExportOptions): Promise
     lines.push('BEGIN:VEVENT')
     lines.push(`UID:timeblock-${block.id}@folio.local`)
     lines.push(`DTSTAMP:${stamp}`)
-    lines.push(`DTSTART:${utcIcsDate(block.start)}`)
-    lines.push(`DTEND:${utcIcsDate(block.end)}`)
+    if (block.allDay) {
+      const startDate = localDateKey(new Date(block.start)).replaceAll('-', '')
+      const endDate = localDateKey(new Date(block.end)).replaceAll('-', '')
+      lines.push(`DTSTART;VALUE=DATE:${startDate}`)
+      lines.push(`DTEND;VALUE=DATE:${endDate}`)
+    } else {
+      lines.push(`DTSTART:${utcIcsDate(block.start)}`)
+      lines.push(`DTEND:${utcIcsDate(block.end)}`)
+    }
     lines.push(`SUMMARY:${escapeIcsText(block.title)}`)
     if (descriptionParts.length) lines.push(`DESCRIPTION:${escapeIcsText(descriptionParts.join('\n'))}`)
     if (block.location) lines.push(`LOCATION:${escapeIcsText(block.location)}`)
     lines.push(`X-FOLIO-KIND:${block.kind.toUpperCase()}`)
+    if (block.allDay) lines.push('X-FOLIO-ALL-DAY:TRUE')
+    if (block.sourceCalendar) lines.push(`X-FOLIO-SOURCE-CALENDAR:${escapeIcsText(block.sourceCalendar)}`)
     lines.push(`X-FOLIO-TIMEBLOCK-ID:${block.id}`)
     if (task) lines.push(`X-FOLIO-TASK-ID:${task.id}`)
     if (project) lines.push(`X-FOLIO-PROJECT-ID:${project.id}`)
