@@ -40,6 +40,7 @@ check('query engine supports reminder states',engine.includes("expected === 'con
 check('query engine supports readiness',engine.includes('taskBlocked(task, runtime)'))
 check('query engine supports numeric ranges',engine.includes("condition.operator === 'between'")&&engine.includes("typeof from === 'number'"))
 check('query engine supports multi-sort',engine.includes('for(const rule of rules)'))
+check('missing sort values stay last in both directions',engine.includes('function compareOptional')&&engine.includes('if(a===undefined)return 1'))
 check('query engine supports root/all depth scope',engine.includes("view.scope==='root'")&&engine.includes('task.parentTaskId'))
 check('query engine caches dependency tag reminder context',engine.includes('interface SmartRuntime')&&engine.includes('prepareRuntime(context)'))
 check('reminder query state ignores disabled definitions',engine.includes('enabledReminderIds')&&engine.includes('enabledReminderIds.has(occurrence.reminderId)'))
