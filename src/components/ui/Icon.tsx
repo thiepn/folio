@@ -1,7 +1,7 @@
 import type { SVGProps } from 'react'
 
 export type IconName =
-  | 'home' | 'inbox' | 'calendar' | 'folder' | 'habit' | 'review' | 'analytics'
+  | 'home' | 'inbox' | 'calendar' | 'folder' | 'habit' | 'review' | 'analytics' | 'matrix'
   | 'settings' | 'search' | 'focus' | 'plus' | 'close' | 'more'
   | 'check' | 'clock' | 'chevronRight' | 'download' | 'bell'
 
@@ -13,6 +13,7 @@ const paths: Record<IconName, React.ReactNode> = {
   habit: <><path d="M12 20a8 8 0 1 0-8-8" /><path d="m4 17 1-5 5 1" /></>,
   review: <path d="M5 20V10M12 20V4M19 20v-7" />,
   analytics: <><path d="M4 20V12M10 20V7M16 20V4M22 20H2" /><path d="m4 9 6-4 6 2 5-5" /></>,
+  matrix: <><rect x="3" y="3" width="8" height="8" /><rect x="13" y="3" width="8" height="8" /><rect x="3" y="13" width="8" height="8" /><rect x="13" y="13" width="8" height="8" /></>,
   settings: <><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.7-1L14.5 3h-5L9.1 6.1a8 8 0 0 0-1.7 1L5 6.1 3 9.5 5.1 11a7 7 0 0 0 0 2L3 14.5 5 18l2.4-1.1a8 8 0 0 0 1.7 1L9.5 21h5l.4-3.1a8 8 0 0 0 1.7-1L19 18l2-3.5-2.1-1.5a7 7 0 0 0 .1-1z" /></>,
   search: <><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></>,
   focus: <><path d="M8 4H4v4M16 4h4v4M20 16v4h-4M8 20H4v-4" /><circle cx="12" cy="12" r="3" /></>,
