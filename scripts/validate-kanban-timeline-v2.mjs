@@ -40,7 +40,7 @@ const styles=read('src/styles/index.css')
 check('D8 validator registered',pkg.scripts?.['validate:kanban-timeline-v2']==='node scripts/validate-kanban-timeline-v2.mjs')
 check('release gate runs D8 validation',pkg.scripts?.['release:verify']?.includes('validate:kanban-timeline-v2'))
 
-check('current schema preserves v20 timeline migration',Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1]??0)>=20&&database.includes('this.version(20)'))
+check('current schema preserves v20 timeline migration',Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]??0)>=20&&database.includes('this.version(20)'))
 check('v19 to v20 migration registered',database.includes('migrateV19ToV20')&&exists('src/migrations/v19ToV20.ts'))
 check('timeline indexes are present',database.includes('timelineStart,timelineEnd'))
 check('v20 migration normalizes milestone state',migration.includes('timelineMilestone = Boolean'))
