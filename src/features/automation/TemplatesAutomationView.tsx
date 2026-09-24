@@ -39,8 +39,8 @@ export function TemplatesAutomationView({tasks,projects,lists,tags,today,onUndo,
   const templates=useLiveQuery(()=>templateService.listAll(),[],[])??[]
   const rules=useLiveQuery(()=>automationService.listRules(),[],[])??[]
   const logs=useLiveQuery(()=>automationService.listLogs(),[],[])??[]
-  const taskTemplates=templates.filter((item):item is TaskTemplateDefinition=>item.kind==='task')
-  const projectTemplates=templates.filter((item):item is ProjectTemplateDefinition=>item.kind==='project')
+  const taskTemplates=templates.filter((item)=>item.kind==='task') as TaskTemplateDefinition[]
+  const projectTemplates=templates.filter((item)=>item.kind==='project') as ProjectTemplateDefinition[]
   const [anchorDate,setAnchorDate]=useState(today)
   const [templateProjectId,setTemplateProjectId]=useState('')
   const [captureTaskId,setCaptureTaskId]=useState('')
