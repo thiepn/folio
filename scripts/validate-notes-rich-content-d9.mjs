@@ -52,7 +52,7 @@ check('backup restore validates attachment payload integrity',backup.includes('p
 check('selective export includes attachments',selective.includes('portableAttachments')&&selective.includes('notes: selectedNotes'))
 check('content search indexes attachment metadata',search.includes('attachmentIndex')&&search.includes('rebuildOwner'))
 check('content search includes checklist text',search.includes('(task.checklist ?? []).map((item) => item.text)'))
-check('content search self-heals direct task writes',search.includes('async ensureFresh()')&&search.includes('ownerStale'))
+check('content search self-heals direct task writes',search.includes('async ensureFresh')&&search.includes('sources.fingerprint')&&search.includes('rebuildAll'))
 check('rich content stylesheet loaded',styles.includes("@import './notes-rich-content.css';")&&exists('src/styles/notes-rich-content.css'))
 check('public v21 backup schema exists',exists('public/schema/folio-backup-v21.schema.json'))
 check('D9 documentation exists',exists('docs/NOTES_RICH_CONTENT_D9.md'))
