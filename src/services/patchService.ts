@@ -416,9 +416,9 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
           operationSummaries.push({ operationId: `op-${index + 1}`, op: 'create', entity: 'task', targetId: entity.id, label: entity.title })
         } else if (op.entity === 'habit') {
           const value = op.value
-          const entity = makeHabitEntity({ title: value.title, description: value.description, kind: value.kind, target: value.target, schedule: value.schedule, countsTowardCapacity: value.countsTowardCapacity }, crypto.randomUUID(), now, Date.now() + index)
+          const entity = makeHabitEntity({ title: value.title, description: value.description, kind: value.kind, target: value.target, unit: value.unit, color: value.color, schedule: value.schedule, countsTowardCapacity: value.countsTowardCapacity }, crypto.randomUUID(), now, Date.now() + index)
           touch('habit', entity.id); workspace.habits.set(entity.id, entity)
-          if (entity.kind === 'duration' && entity.countsTowardCapacity && entity.schedule.type !== 'times-per-week') for (const plan of workspace.dailyPlans.values()) if (plan.status === 'committed' && scheduleMatches(entity.schedule, plan.date)) markPlanDraft(workspace, touch, plan.date, now)
+          if (entity.kind === 'duration' && entity.countsTowardCapacity && entity.schedule.type !== 'times-per-week' && entity.schedule.type !== 'times-per-month') for (const plan of workspace.dailyPlans.values()) if (plan.status === 'committed' && scheduleMatches(entity.schedule, plan.date)) markPlanDraft(workspace, touch, plan.date, now)
           operationSummaries.push({ operationId: `op-${index + 1}`, op: 'create', entity: 'habit', targetId: entity.id, label: entity.title })
         } else if (op.entity === 'timeBlock') {
           const value: any = op.value
@@ -548,7 +548,14 @@ export async function applyPatch(raw: string | unknown, options: { source?: Patc
       } else if (op.entity === 'habit') {
         const current = workspace.habits.get(op.id)!; const changes: any = op.changes; touch('habit', op.id)
         const nextKind = changes.kind ?? current.kind
-        const next: HabitEntity = { ...current, ...changes, target: nextKind === 'check' ? 1 : (changes.target ?? current.target), countsTowardCapacity: nextKind === 'duration' ? (changes.countsTowardCapacity ?? current.countsTowardCapacity) : false, updatedAt: now }
+        const next: HabitEntity = {
+          ...current, ...changes,
+          target: nextKind === 'check' ? 1 : (changes.target ?? current.target),
+          unit: nextKind === 'quantity' ? (Object.prototype.hasOwnProperty.call(changes, 'unit') ? (changes.unit ?? undefined) : (current.unit ?? 'units')) : undefined,
+          color: Object.prototype.hasOwnProperty.call(changes, 'color') ? (changes.color ?? undefined) : current.color,
+          countsTowardCapacity: nextKind === 'duration' ? (changes.countsTowardCapacity ?? current.countsTowardCapacity) : false,
+          updatedAt: now,
+        }
         workspace.habits.set(op.id, next)
         if ((current.kind === 'duration' && current.countsTowardCapacity) || (next.kind === 'duration' && next.countsTowardCapacity)) for (const plan of workspace.dailyPlans.values()) if (plan.status === 'committed' && (scheduleMatches(current.schedule, plan.date) || scheduleMatches(next.schedule, plan.date))) markPlanDraft(workspace, touch, plan.date, now)
         operationSummaries.push({ operationId: `op-${index + 1}`, op: 'update', entity: 'habit', targetId: op.id, label: current.title })
