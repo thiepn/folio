@@ -8,7 +8,7 @@ import { MarkdownEditor } from './MarkdownEditor'
 import { SafeMarkdown } from './SafeMarkdown'
 import { AttachmentPanel } from './AttachmentPanel'
 
-export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) {
+export function NotesView({ onOpenTask, openNoteId }: { onOpenTask: (id: string) => void; openNoteId?: string }) {
   const allNotes = useLiveQuery(() => noteRepository.listAll(true), [], []) ?? []
   const [showArchived, setShowArchived] = useState(false)
   const notes = useMemo(() => allNotes.filter((note) => showArchived ? note.archived : !note.archived), [allNotes, showArchived])
@@ -24,6 +24,18 @@ export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) 
     if (selectedId && !notes.some((note) => note.id === selectedId)) setSelectedId(notes[0]?.id ?? null)
     else if (!selectedId && notes[0]) setSelectedId(notes[0].id)
   }, [notes, selectedId])
+  useEffect(() => {
+    if (!openNoteId) return
+    const target = allNotes.find((note) => note.id === openNoteId)
+    if (!target) return
+    void (async () => {
+      if (dirty && selectedId !== target.id && !(await save())) return
+      setShowArchived(target.archived)
+      setSelectedId(target.id)
+      setQuery('')
+      setMessage('')
+    })()
+  }, [openNoteId, allNotes])
   useEffect(() => { setTitle(selected?.title ?? ''); setBody(selected?.body ?? '') }, [selected?.id, selected?.updatedAt])
   useEffect(() => {
     let active = true
@@ -36,7 +48,7 @@ export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) 
             const haystack = (note.title + ' ' + markdownToSearchText(note.body)).toLocaleLowerCase().normalize('NFKC')
             return tokens.every((token) => haystack.includes(token))
           })
-          .map((note) => ({ ownerType: 'note', ownerId: note.id, title: note.title, snippet: markdownToSearchText(note.body).slice(0, 180), updatedAt: note.updatedAt }))
+          .map((note) => ({ ownerType: 'note' as const, ownerId: note.id, title: note.title, snippet: markdownToSearchText(note.body).slice(0, 180), updatedAt: note.updatedAt, score: 1, matchedFields: ['content'], archived: true }))
         if (active) setHits(result)
         return
       }
