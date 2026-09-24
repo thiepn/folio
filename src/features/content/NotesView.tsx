@@ -54,12 +54,26 @@ export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) 
     setSelectedId(note.id); setQuery(''); setMessage('')
   }
   async function save() {
-    if (!selected || !title.trim()) return
+    if (!selected || !title.trim()) return false
     await noteService.update(selected.id, { title: title.trim(), body })
     setMessage('Saved')
+    return true
+  }
+  async function selectNote(id: string) {
+    if (dirty && !(await save())) return
+    setSelectedId(id)
+    setMessage('')
+  }
+  async function toggleArchiveView() {
+    if (dirty && !(await save())) return
+    setShowArchived((value) => !value)
+    setSelectedId(null)
+    setQuery('')
+    setMessage('')
   }
   async function archive() {
     if (!selected) return
+    if (dirty && !(await save())) return
     await noteService.archive(selected.id, true)
     setSelectedId(null); setMessage('Note archived')
   }
@@ -82,15 +96,15 @@ export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) 
   }
 
   return <div className="notes-workspace">
-    <header className="notes-page-head"><div><div className="eyebrow">Content workspace</div><h1>{showArchived ? 'Archived notes' : 'Notes'}</h1><p>Markdown notes, research fragments, reference material, and task context. Everything stays local and searchable offline.</p></div><div className="notes-page-actions"><Button onClick={() => { setShowArchived((value) => !value); setSelectedId(null); setQuery(''); setMessage('') }}>{showArchived ? 'Active notes' : 'Archived notes'}</Button>{!showArchived ? <Button variant="primary" onClick={() => void createNote()}>New note</Button> : null}</div></header>
+    <header className="notes-page-head"><div><div className="eyebrow">Content workspace</div><h1>{showArchived ? 'Archived notes' : 'Notes'}</h1><p>Markdown notes, research fragments, reference material, and task context. Everything stays local and searchable offline.</p></div><div className="notes-page-actions"><Button onClick={() => void toggleArchiveView()}>{showArchived ? 'Active notes' : 'Archived notes'}</Button>{!showArchived ? <Button variant="primary" onClick={() => void createNote()}>New note</Button> : null}</div></header>
     <div className="notes-layout">
       <aside className="notes-sidebar">
         <label className="notes-search"><span>{showArchived ? 'Search archived notes' : 'Search tasks & notes'}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={showArchived ? 'Search archived note content…' : 'Search content or attachment names…'} /></label>
         {query.trim() ? <div className="notes-search-results">
-          {noteHits.length ? <section><small>Notes</small>{noteHits.map((hit) => <button key={'n-' + hit.ownerId} onClick={() => { setSelectedId(hit.ownerId); setQuery('') }}><strong>{hit.title}</strong><span>{hit.snippet || 'Note'}</span></button>)}</section> : null}
+          {noteHits.length ? <section><small>Notes</small>{noteHits.map((hit) => <button key={'n-' + hit.ownerId} onClick={() => { void selectNote(hit.ownerId); setQuery('') }}><strong>{hit.title}</strong><span>{hit.snippet || 'Note'}</span></button>)}</section> : null}
           {taskHits.length ? <section><small>Tasks</small>{taskHits.map((hit) => <button key={'t-' + hit.ownerId} onClick={() => onOpenTask(hit.ownerId)}><strong>{hit.title}</strong><span>{hit.snippet || 'Task'}</span></button>)}</section> : null}
           {!hits.length ? <p>No indexed content matches.</p> : null}
-        </div> : <div className="notes-list">{notes.map((note) => <button key={note.id} className={note.id === selectedId ? 'is-active' : ''} onClick={() => setSelectedId(note.id)}><strong>{note.title}</strong><span>{markdownToSearchText(note.body).slice(0, 90) || 'Empty note'}</span><time>{new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(note.updatedAt))}</time></button>)}{!notes.length ? <p>{showArchived ? 'No archived notes.' : 'No standalone notes yet.'}</p> : null}</div>}
+        </div> : <div className="notes-list">{notes.map((note) => <button key={note.id} className={note.id === selectedId ? 'is-active' : ''} onClick={() => void selectNote(note.id)}><strong>{note.title}</strong><span>{markdownToSearchText(note.body).slice(0, 90) || 'Empty note'}</span><time>{new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(note.updatedAt))}</time></button>)}{!notes.length ? <p>{showArchived ? 'No archived notes.' : 'No standalone notes yet.'}</p> : null}</div>}
       </aside>
       <main className="note-editor-pane">
         {selected ? <>
