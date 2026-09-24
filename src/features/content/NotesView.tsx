@@ -55,9 +55,14 @@ export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) 
   }
   async function save() {
     if (!selected || !title.trim()) return false
-    await noteService.update(selected.id, { title: title.trim(), body })
-    setMessage('Saved')
-    return true
+    try {
+      await noteService.update(selected.id, { title: title.trim(), body })
+      setMessage('Saved')
+      return true
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : 'The note could not be saved.')
+      return false
+    }
   }
   async function selectNote(id: string) {
     if (dirty && !(await save())) return
@@ -79,13 +84,17 @@ export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) 
   }
   async function restore() {
     if (!selected) return
-    await noteService.archive(selected.id, false)
-    setSelectedId(null); setMessage('Note restored')
+    try {
+      await noteService.archive(selected.id, false)
+      setSelectedId(null); setMessage('Note restored')
+    } catch (reason) { setMessage(reason instanceof Error ? reason.message : 'The note could not be restored.') }
   }
   async function removePermanently() {
     if (!selected || !window.confirm(`Permanently delete “${selected.title}” and its attachments? This cannot be undone.`)) return
-    await noteService.deletePermanently(selected.id)
-    setSelectedId(null); setMessage('Note permanently deleted')
+    try {
+      await noteService.deletePermanently(selected.id)
+      setSelectedId(null); setMessage('Note permanently deleted')
+    } catch (reason) { setMessage(reason instanceof Error ? reason.message : 'The note could not be deleted.') }
   }
   async function makeTask() {
     if (!selected) return
