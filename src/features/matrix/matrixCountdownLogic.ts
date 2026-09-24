@@ -46,8 +46,12 @@ function dayDiff(from: string, to: string) {
   return Math.round((localDateToDate(to).getTime() - localDateToDate(from).getTime()) / 86_400_000)
 }
 
-function openTask(task: TaskPreview) {
+function matrixTask(task: TaskPreview) {
   return !task.deletedAt && task.status === 'todo' && !task.completed
+}
+
+function countdownTask(task: TaskPreview) {
+  return !task.deletedAt && (task.status === 'todo' || task.status === 'inbox') && !task.completed
 }
 
 export function taskImportance(task: TaskPreview) {
@@ -90,7 +94,7 @@ function matrixSort(a: MatrixTask, b: MatrixTask) {
 }
 
 export function buildMatrix(tasks: TaskPreview[], today: string, horizonDays = 7): MatrixSnapshot {
-  const rows = tasks.filter(openTask).map((task) => {
+  const rows = tasks.filter(matrixTask).map((task) => {
     const important = taskImportance(task)
     const urgency = taskUrgency(task, today, horizonDays)
     return {
@@ -129,7 +133,7 @@ function countdownSort(a: CountdownItem, b: CountdownItem) {
 
 export function buildCountdown(tasks: TaskPreview[], projects: ProjectSummary[], today: string): CountdownSnapshot {
   const items: CountdownItem[] = []
-  for (const task of tasks.filter(openTask)) {
+  for (const task of tasks.filter(countdownTask)) {
     if (!task.deadline) continue
     const daysRemaining = dayDiff(today, task.deadline)
     items.push({
@@ -167,7 +171,7 @@ export function buildCountdown(tasks: TaskPreview[], projects: ProjectSummary[],
     items,
     bands,
     counts: { overdue: bands.overdue.length, today: bands.today.length, week: bands.week.length, month: bands.month.length, later: bands.later.length },
-    nearest: items.find((item) => item.daysRemaining >= 0) ?? items[0],
+    nearest: items.find((item) => item.daysRemaining >= 0) ?? [...items].filter((item) => item.daysRemaining < 0).sort((a, b) => b.daysRemaining - a.daysRemaining)[0],
   }
 }
 
