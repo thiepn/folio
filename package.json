@@ -12,7 +12,7 @@
     "validate:release": "node scripts/validate-release.mjs",
     "validate:daily": "node scripts/validate-daily-workflow.mjs",
     "validate:dist": "node scripts/validate-dist.mjs",
-    "release:verify": "npm run validate:final && npm run validate:release && npm run validate:daily && npm run validate:task-project && npm run validate:planner && npm run validate:reviews-history && npm run validate:habits-focus && npm run validate:command-first && npm run validate:task-v2 && npm run validate:recurrence-v2 && npm run validate:reminders && npm run validate:capture-v2 && npm run validate:organization-v2 && npm run validate:smart-views-v2 && npm run validate:calendar-v2 && npm run validate:kanban-timeline-v2 && npm run validate:d9 && npm run validate:d10 && npm run validate:d11 && npm run validate:d12 && npm run validate:d13 && npm run typecheck && npm run build && npm run validate:dist",
+    "release:verify": "npm run validate:final && npm run validate:release && npm run validate:daily && npm run validate:task-project && npm run validate:planner && npm run validate:reviews-history && npm run validate:habits-focus && npm run validate:command-first && npm run validate:task-v2 && npm run validate:recurrence-v2 && npm run validate:reminders && npm run validate:capture-v2 && npm run validate:organization-v2 && npm run validate:smart-views-v2 && npm run validate:calendar-v2 && npm run validate:kanban-timeline-v2 && npm run validate:d9 && npm run validate:d10 && npm run validate:d11 && npm run validate:d12 && npm run validate:d13 && npm run validate:d14 && npm run typecheck && npm run build && npm run validate:dist",
     "manifest:release": "node scripts/generate-release-manifest.mjs",
     "validate:task-project": "node scripts/validate-task-project-workflow.mjs",
     "validate:planner": "node scripts/validate-planner-overhaul.mjs",
@@ -31,7 +31,8 @@
     "validate:d10": "node scripts/validate-habits-v2-d10.mjs",
     "validate:d11": "node scripts/validate-focus-time-v2-d11.mjs",
     "validate:d12": "node scripts/validate-analytics-d12.mjs",
-    "validate:d13": "node scripts/validate-matrix-countdown-d13.mjs"
+    "validate:d13": "node scripts/validate-matrix-countdown-d13.mjs",
+    "validate:d14": "node scripts/validate-search-v2-d14.mjs"
   },
   "dependencies": {
     "dexie": "4.2.0",
