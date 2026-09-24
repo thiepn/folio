@@ -37,7 +37,19 @@ export const backupTimeBlockSchema = z.object({ id, taskId: id.optional(), title
 })
 export const backupDailyPlanSchema = z.object({ date: localDate, status: z.enum(['draft','committed']), capacityMinutes: z.number().int().positive().optional(), committedAt: iso.optional(), createdAt: iso, updatedAt: iso })
 export const backupDailyPlanItemSchema = z.object({ id, date: localDate, taskId: id, bucket: z.enum(['must','planned','optional']), sortOrder: z.number(), createdAt: iso, updatedAt: iso })
-export const backupFocusSchema = z.object({ id, taskId: id.optional(), taskTitleSnapshot: z.string().optional(), taskEstimateMinutesSnapshot: z.number().int().positive().optional(), projectIdSnapshot: id.optional(), projectNameSnapshot: z.string().optional(), mode: z.enum(['stopwatch','countdown']), targetSeconds: z.number().int().positive().optional(), plannedSeconds: z.number().int().positive().optional(), intention: z.string().optional(), note: z.string().optional(), startedAt: iso, resumedAt: iso.optional(), endedAt: iso.optional(), durationSeconds: z.number().nonnegative(), status: z.enum(['running','paused','finished','cancelled']), createdAt: iso, updatedAt: iso })
+export const backupFocusSchema = z.object({
+  id, taskId: id.optional(), taskTitleSnapshot: z.string().optional(), taskEstimateMinutesSnapshot: z.number().int().positive().optional(),
+  projectIdSnapshot: id.optional(), projectNameSnapshot: z.string().optional(),
+  mode: z.enum(['stopwatch','countdown','pomodoro']), source: z.enum(['timer','manual']).default('timer'),
+  targetSeconds: z.number().int().positive().optional(), plannedSeconds: z.number().int().positive().optional(),
+  intention: z.string().optional(), note: z.string().optional(), context: z.string().optional(), tags: z.array(z.string()).default([]),
+  interruptionCount: z.number().int().nonnegative().default(0),
+  cycle: z.object({ workSeconds:z.number().int().positive(), shortBreakSeconds:z.number().int().positive(), longBreakSeconds:z.number().int().positive(), cyclesBeforeLongBreak:z.number().int().positive() }).optional(),
+  cycleIndex: z.number().int().nonnegative().optional(), phase: z.enum(['focus','short-break','long-break']).optional(),
+  phaseElapsedSeconds: z.number().int().nonnegative().default(0), breakSeconds: z.number().int().nonnegative().default(0),
+  startedAt: iso, resumedAt: iso.optional(), endedAt: iso.optional(), durationSeconds: z.number().nonnegative(),
+  status: z.enum(['running','paused','finished','cancelled']), createdAt: iso, updatedAt: iso,
+})
 const backupRecurrenceExceptionSchema = z.object({
   skip: z.boolean().optional(),
   title: z.string().optional(),
