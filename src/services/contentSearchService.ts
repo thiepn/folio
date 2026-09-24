@@ -41,6 +41,7 @@ interface ParsedQuery {
   types: SearchOwnerType[]
   status?: SearchStatusFilter
   includeArchived?: boolean
+  archivedOnly?: boolean
   dateFrom?: string
   dateTo?: string
 }
@@ -84,6 +85,7 @@ export function parseSearchQuery(value: string): ParsedQuery {
   const types: SearchOwnerType[] = []
   let status: SearchStatusFilter | undefined
   let includeArchived: boolean | undefined
+  let archivedOnly: boolean | undefined
   let dateFrom: string | undefined
   let dateTo: string | undefined
   for (const raw of tokenizeQuery(value)) {
@@ -95,12 +97,12 @@ export function parseSearchQuery(value: string): ParsedQuery {
     }
     if (token === 'status:open' || token === 'is:open') { status = 'open'; continue }
     if (token === 'status:completed' || token === 'is:completed' || token === 'is:done') { status = 'completed'; continue }
-    if (token === 'is:archived') { includeArchived = true; continue }
+    if (token === 'is:archived') { includeArchived = true; archivedOnly = true; continue }
     if (/^after:\d{4}-\d{2}-\d{2}$/.test(token)) { dateFrom = token.slice(6); continue }
     if (/^before:\d{4}-\d{2}-\d{2}$/.test(token)) { dateTo = token.slice(7); continue }
     terms.push(raw)
   }
-  return { terms, types, status, includeArchived, dateFrom, dateTo }
+  return { terms, types, status, includeArchived, archivedOnly, dateFrom, dateTo }
 }
 
 async function attachmentIndex(ownerType: 'task' | 'note', ownerId: string) {
@@ -407,6 +409,7 @@ export const contentSearchService = {
     const types = parsed.types.length ? parsed.types : filters.types ?? []
     const status = parsed.status ?? filters.status
     const includeArchived = parsed.includeArchived ?? filters.includeArchived ?? false
+    const archivedOnly = parsed.archivedOnly ?? false
     const dateFrom = parsed.dateFrom ?? filters.dateFrom
     const dateTo = parsed.dateTo ?? filters.dateTo
     const updatedCutoff = filters.updatedWithinDays ? Date.now() - filters.updatedWithinDays * 86_400_000 : undefined
@@ -415,6 +418,7 @@ export const contentSearchService = {
 
     for (const document of documents) {
       if (types.length && !types.includes(document.ownerType)) continue
+      if (archivedOnly && !document.archived) continue
       if (!includeArchived && document.archived) continue
       if (filters.projectId && document.projectId !== filters.projectId) continue
       if (filters.tagId && !(document.tagIds ?? []).includes(filters.tagId)) continue
