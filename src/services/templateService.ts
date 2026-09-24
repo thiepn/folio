@@ -28,9 +28,12 @@ function unique(values:string[]){return [...new Set(values.map((value)=>value.tr
 function diffDays(anchor:string,value?:string){if(!value)return undefined;return Math.round((new Date(value+'T12:00:00').getTime()-new Date(anchor+'T12:00:00').getTime())/86_400_000)}
 function applyOffset(anchor:string,offset?:number){return offset===undefined?undefined:addLocalDays(anchor,offset)}
 
+function validOffset(value:number|undefined){return value===undefined||(Number.isInteger(value)&&value>=-3650&&value<=3650)}
 function validateNode(node:TaskTemplateNode){
   if(!node.title.trim())throw new Error('Template tasks need a title.')
+  if(node.title.length>300)throw new Error('Template task titles can use at most 300 characters.')
   if(node.estimatedMinutes!==undefined&&(node.estimatedMinutes<1||node.estimatedMinutes>1440))throw new Error('Template task estimate must be between 1 and 1440 minutes.')
+  if(!validOffset(node.plannedOffsetDays)||!validOffset(node.deadlineOffsetDays))throw new Error('Template task date offsets must be whole days between -3650 and 3650.')
   if(node.children.length>50)throw new Error('A template task can have at most 50 direct nested tasks.')
   for(const child of node.children)validateNode(child)
 }
@@ -91,6 +94,9 @@ export const templateService={
   async saveProjectDefinition(input:{id?:string;name:string;description?:string;project:ProjectTemplateDefinition['project'];milestones:ProjectTemplateDefinition['milestones'];tasks:TaskTemplateNode[]}){
     const name=input.name.trim();if(!name)throw new Error('Template name is required.')
     if(!input.project.name.trim())throw new Error('Project template needs a project name.')
+    if(input.project.name.length>120)throw new Error('Project names can use at most 120 characters.')
+    if(!validOffset(input.project.deadlineOffsetDays)||!validOffset(input.project.examOffsetDays))throw new Error('Project date offsets must be whole days between -3650 and 3650.')
+    for(const milestone of input.milestones)if(!validOffset(milestone.dueOffsetDays))throw new Error('Milestone date offsets must be whole days between -3650 and 3650.')
     for(const task of input.tasks)validateNode(task)
     const rows=await custom(),now=new Date().toISOString(),existing=input.id?rows.find((item)=>item.id===input.id):undefined
     if(existing&&existing.kind!=='project')throw new Error('Template kind cannot be changed.')
@@ -126,6 +132,7 @@ export const templateService={
 
   async instantiateTask(id:string,options:{anchorDate?:string;projectId?:string;listId?:string;sectionId?:string}={}){
     const template=await this.get(id);if(!template||template.kind!=='task')throw new Error('Task template not found.')
+    if(options.projectId){const project=await projectRepository.get(options.projectId);if(!project||project.archived)throw new Error('Template target project is unavailable.')}
     const anchor=options.anchorDate??localDateKey(),createdIds:string[]=[]
     const task=await createNode(template.root,anchor,options,createdIds)
     return {task,createdIds,undo:{message:'Task template created',undo:async()=>taskRepository.removePermanently(createdIds)} satisfies UndoableMutation}
