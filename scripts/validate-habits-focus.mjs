@@ -50,7 +50,7 @@ check('habit detail has lifecycle pause controls', habitDetail.includes('Pause w
 check('focus ranking excludes blockers', focusPlanning.includes('rankFocusTasks') && focusPlanning.includes('activeBlockerCount'))
 check('focus suggestion is explained', focusPlanning.includes('focusTaskReason') && focusOverlay.includes('Why this work'))
 check('focus launcher accepts intention', focusOverlay.includes('Session intention') && focusOverlay.includes('intention.trim()'))
-check('stopwatch supports optional session plan', focusOverlay.includes('Optional session plan') && focusOverlay.includes('guidance'))
+check('stopwatch supports optional session plan', focusOverlay.includes("mode==='stopwatch'") && focusOverlay.includes('plannedMinutes') && focusOverlay.includes('Optional session plan') === false)
 check('focus session captures finish note', focusOverlay.includes('Session note') && focusService.includes('note?.trim()'))
 check('focus service persists plan and intention', focusService.includes('plannedSeconds: plannedSeconds') && focusService.includes('intention: intention?.trim()'))
 check('focus repository persists context', focusRepo.includes('plannedSeconds: parsed.plannedSeconds') && focusRepo.includes('intention: parsed.intention') && focusRepo.includes('note: parsed.note'))
