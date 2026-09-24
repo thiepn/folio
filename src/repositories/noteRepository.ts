@@ -47,5 +47,6 @@ export const noteRepository = {
       if (attachments.length) await db.attachments.bulkDelete(attachments as string[])
       await db.searchDocuments.delete(`note:${id}`)
     })
+    await contentSearchService.remove('note', id)
   },
 }
