@@ -27,9 +27,23 @@ export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) 
   useEffect(() => { setTitle(selected?.title ?? ''); setBody(selected?.body ?? '') }, [selected?.id, selected?.updatedAt])
   useEffect(() => {
     let active = true
-    const handle = window.setTimeout(() => { void contentSearchService.search(query).then((result) => { if (active) setHits(result) }) }, 120)
+    const handle = window.setTimeout(() => {
+      if (showArchived) {
+        const tokens = query.toLocaleLowerCase().normalize('NFKC').split(/\s+/).filter(Boolean)
+        const result: ContentSearchHit[] = allNotes
+          .filter((note) => note.archived)
+          .filter((note) => {
+            const haystack = (note.title + ' ' + markdownToSearchText(note.body)).toLocaleLowerCase().normalize('NFKC')
+            return tokens.every((token) => haystack.includes(token))
+          })
+          .map((note) => ({ ownerType: 'note', ownerId: note.id, title: note.title, snippet: markdownToSearchText(note.body).slice(0, 180), updatedAt: note.updatedAt }))
+        if (active) setHits(result)
+        return
+      }
+      void contentSearchService.search(query).then((result) => { if (active) setHits(result) })
+    }, 120)
     return () => { active = false; window.clearTimeout(handle) }
-  }, [query])
+  }, [query, showArchived, allNotes])
 
   const dirty = Boolean(selected && (title.trim() !== selected.title || body !== selected.body))
   const noteHits = useMemo(() => hits.filter((hit) => hit.ownerType === 'note'), [hits])
@@ -71,7 +85,7 @@ export function NotesView({ onOpenTask }: { onOpenTask: (id: string) => void }) 
     <header className="notes-page-head"><div><div className="eyebrow">Content workspace</div><h1>{showArchived ? 'Archived notes' : 'Notes'}</h1><p>Markdown notes, research fragments, reference material, and task context. Everything stays local and searchable offline.</p></div><div className="notes-page-actions"><Button onClick={() => { setShowArchived((value) => !value); setSelectedId(null); setQuery(''); setMessage('') }}>{showArchived ? 'Active notes' : 'Archived notes'}</Button>{!showArchived ? <Button variant="primary" onClick={() => void createNote()}>New note</Button> : null}</div></header>
     <div className="notes-layout">
       <aside className="notes-sidebar">
-        <label className="notes-search"><span>Search tasks & notes</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search content or attachment names…" /></label>
+        <label className="notes-search"><span>{showArchived ? 'Search archived notes' : 'Search tasks & notes'}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={showArchived ? 'Search archived note content…' : 'Search content or attachment names…'} /></label>
         {query.trim() ? <div className="notes-search-results">
           {noteHits.length ? <section><small>Notes</small>{noteHits.map((hit) => <button key={'n-' + hit.ownerId} onClick={() => { setSelectedId(hit.ownerId); setQuery('') }}><strong>{hit.title}</strong><span>{hit.snippet || 'Note'}</span></button>)}</section> : null}
           {taskHits.length ? <section><small>Tasks</small>{taskHits.map((hit) => <button key={'t-' + hit.ownerId} onClick={() => onOpenTask(hit.ownerId)}><strong>{hit.title}</strong><span>{hit.snippet || 'Task'}</span></button>)}</section> : null}
