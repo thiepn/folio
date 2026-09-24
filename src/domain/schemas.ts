@@ -342,6 +342,30 @@ export const focusSessionEditSchema = z.object({
   if (value.startedAt && value.endedAt && Date.parse(value.endedAt) <= Date.parse(value.startedAt)) ctx.addIssue({ code: 'custom', message: 'Focus session end must be after start.', path: ['endedAt'] })
 })
 
+export const focusTemplateDefinitionSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).max(80),
+  mode: focusModeSchema,
+  targetMinutes: z.number().int().min(1).max(1440).optional(),
+  plannedMinutes: z.number().int().min(1).max(1440).optional(),
+  workMinutes: z.number().int().min(1).max(1440).optional(),
+  shortBreakMinutes: z.number().int().min(1).max(240).optional(),
+  longBreakMinutes: z.number().int().min(1).max(480).optional(),
+  cyclesBeforeLongBreak: z.number().int().min(1).max(12).optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
+  context: z.string().trim().max(120).optional(),
+  builtin: z.boolean().optional(),
+}).superRefine((value,ctx)=>{
+  if(value.mode==='countdown'&&!value.targetMinutes) ctx.addIssue({code:'custom',message:'Countdown template requires target minutes.',path:['targetMinutes']})
+  if(value.mode==='pomodoro'&&(!value.workMinutes||!value.shortBreakMinutes||!value.longBreakMinutes||!value.cyclesBeforeLongBreak)) ctx.addIssue({code:'custom',message:'Pomodoro template requires complete cycle settings.',path:['workMinutes']})
+})
+
+export const focusGoalsSchema = z.object({
+  dailyMinutes: z.number().int().min(0).max(1440),
+  weeklyMinutes: z.number().int().min(0).max(10080),
+})
+
+
 export const reminderOwnerTypeSchema = z.enum(['task', 'series', 'habit', 'system'])
 export const reminderTriggerTypeSchema = z.enum(['absolute', 'task-date', 'time-block', 'habit-time', 'daily'])
 export const reminderTaskDateFieldSchema = z.enum(['plannedDate', 'deadline'])
