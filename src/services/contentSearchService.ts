@@ -34,7 +34,7 @@ async function taskDocument(task: TaskEntity): Promise<SearchDocumentEntity> {
   const attachments = await attachmentIndex('task', task.id)
   return {
     id: 'task:' + task.id, ownerType: 'task', ownerId: task.id,
-    text: markdownToSearchText([task.title, task.description, task.location ?? '', task.sourceUrl ?? '', ...(task.tags ?? []), ...(task.comments ?? []).map((comment) => comment.body), attachments.text].join(' ')),
+    text: markdownToSearchText([task.title, task.description, task.location ?? '', task.sourceUrl ?? '', ...(task.tags ?? []), ...(task.checklist ?? []).map((item) => item.text), ...(task.comments ?? []).map((comment) => comment.body), attachments.text].join(' ')),
     updatedAt: attachments.updatedAt > task.updatedAt ? attachments.updatedAt : task.updatedAt,
   }
 }
