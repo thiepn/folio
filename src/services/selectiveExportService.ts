@@ -25,8 +25,8 @@ function inRange(date: string | undefined, from?: string, through?: string) {
 
 export async function createSelectiveExport(options: SelectiveExportOptions): Promise<SelectiveExportEnvelope> {
   if (options.fromDate && options.throughDate && options.throughDate < options.fromDate) throw new Error('Selective export end date must not be before start date.')
-  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, notes, attachments] = await Promise.all([
-    db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(), db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(), db.notes.toArray(), db.attachments.toArray(),
+  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, notes, attachments, habitGroups, habitTemplates] = await Promise.all([
+    db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(), db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(), db.notes.toArray(), db.attachments.toArray(), db.habitGroups.toArray(), db.habitTemplates.toArray(),
   ])
 
   if (options.projectId && !projects.some((project) => project.id === options.projectId)) throw new Error('Selected export Project no longer exists.')
@@ -68,6 +68,9 @@ export async function createSelectiveExport(options: SelectiveExportOptions): Pr
   if (options.projectId) selectedHabitEntries = []
   const selectedHabitIds = new Set(selectedHabitEntries.map((entry) => entry.habitId))
   const selectedHabits = options.projectId ? [] : habits.filter((habit) => !hasDateFilter || selectedHabitIds.has(habit.id))
+  const selectedHabitGroupIds = new Set(selectedHabits.map((habit) => habit.groupId).filter((id): id is string => Boolean(id)))
+  const selectedHabitGroups = habitGroups.filter((group) => selectedHabitGroupIds.has(group.id))
+  const selectedHabitTemplates = options.projectId || hasDateFilter ? [] : habitTemplates
 
   const selectedNotes = notes.filter((note) => note.sourceTaskId ? selectedTaskIds.has(note.sourceTaskId) : !options.projectId && !hasDateFilter)
   const selectedNoteIds = new Set(selectedNotes.map((note) => note.id))
@@ -89,6 +92,8 @@ export async function createSelectiveExport(options: SelectiveExportOptions): Pr
       focusSessions: selectedFocus,
       habits: selectedHabits,
       habitEntries: selectedHabitEntries,
+      habitGroups: selectedHabitGroups,
+      habitTemplates: selectedHabitTemplates,
       notes: selectedNotes,
       attachments: portableAttachments,
     },
