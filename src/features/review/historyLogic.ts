@@ -64,11 +64,11 @@ export function buildHistoryEvents(input: {
       kind: 'focus',
       at,
       title,
-      detail: `${formatMinutes(minutes)} focused${session.projectNameSnapshot ? ` · ${session.projectNameSnapshot}` : ''}`,
+      detail: `${formatMinutes(minutes)} focused${session.source === 'manual' ? ' · manual' : session.mode === 'pomodoro' ? ' · Pomodoro' : ''}${session.projectNameSnapshot ? ` · ${session.projectNameSnapshot}` : ''}${session.interruptionCount ? ` · ${session.interruptionCount} interruption${session.interruptionCount === 1 ? '' : 's'}` : ''}`,
       projectName: session.projectNameSnapshot,
       taskId: session.taskId,
       projectId: session.projectIdSnapshot,
-      extraSearch: [session.intention, session.note].filter(Boolean).join(' '),
+      extraSearch: [session.intention, session.note, session.context, ...(session.tags ?? [])].filter(Boolean).join(' '),
     }))
   }
 
