@@ -18,13 +18,15 @@ async function ensureOwner(ownerType: ContentOwnerType, ownerId: string) {
   if (!owner) throw new Error('The attachment owner no longer exists.')
 }
 
-async function assertQuota(extraBytes: number) {
-  if (extraBytes > MAX_SINGLE_FILE_BYTES) throw new Error('This file is larger than the 100 MB per-file safety limit.')
+async function assertBatchQuota(files: File[]) {
+  const oversized = files.find((file) => file.size > MAX_SINGLE_FILE_BYTES)
+  if (oversized) throw new Error(`“${oversized.name || 'Attachment'}” is larger than the 100 MB per-file safety limit.`)
   if (!navigator.storage?.estimate) return
   const estimate = await navigator.storage.estimate()
   if (estimate.quota == null || estimate.usage == null) return
   const remaining = Math.max(0, estimate.quota - estimate.usage)
-  if (extraBytes + QUOTA_HEADROOM_BYTES > remaining) throw new Error('Not enough local storage remains for this attachment. Export a backup or remove large attachments first.')
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0)
+  if (totalBytes + QUOTA_HEADROOM_BYTES > remaining) throw new Error('Not enough local storage remains for this attachment batch. Export a backup or remove large attachments first.')
 }
 
 async function imageMetadata(file: File) {
@@ -97,9 +99,9 @@ export const attachmentService = {
 
   async addFiles(ownerType: ContentOwnerType, ownerId: string, files: File[]) {
     await ensureOwner(ownerType, ownerId)
+    await assertBatchQuota(files)
     const added: AttachmentEntity[] = []
     for (const file of files) {
-      await assertQuota(file.size)
       const now = new Date().toISOString()
       const [dimensions, audio] = await Promise.all([imageMetadata(file), audioMetadata(file)])
       const row: AttachmentEntity = {
