@@ -12,6 +12,7 @@ import { RuntimeIssueBanner } from '../components/layout/RuntimeIssueBanner'
 import { TodayView } from '../features/today/TodayView'
 import { PlanDayModal } from '../features/today/PlanDayModal'
 import { InboxView } from '../features/inbox/InboxView'
+import { SearchView } from '../features/search/SearchView'
 import { PlannerView } from '../features/planner/PlannerView'
 import { ProjectsView } from '../features/projects/ProjectsView'
 import { OrganizationView } from '../features/organization/OrganizationView'
@@ -76,6 +77,7 @@ import type { ProjectCreateInput, ProjectUpdateInput } from '../repositories/pro
 import type { RecurringSeriesUpdateInput } from '../repositories/recurrenceRepository'
 import type { HabitCreateInput, HabitUpdateInput } from '../repositories/habitRepository'
 import type { NavView, TaskPreview } from '../types/ui'
+import type { ContentSearchHit } from '../services/contentSearchService'
 import type { DailyPlanBucket, ReminderOccurrenceEntity, ReviewKind } from '../domain/models'
 import { CommandPalette, type PowerCommand } from '../features/power/CommandPalette'
 import { buildHabitCommandChildren, buildProjectCommandChildren, buildTaskCommandChildren } from '../features/power/commandBuilders'
@@ -88,7 +90,7 @@ import { currentTaskId, focusRelativeTask } from '../features/power/taskKeyboard
 import { LEGACY_LAST_VIEW_KEY } from '../legacy/compat'
 
 const LAST_VIEW_KEY = 'folio:last-view:v1'
-const NAV_VIEWS: NavView[] = ['today', 'inbox', 'planner', 'projects', 'lists', 'notes', 'habits', 'matrix', 'analytics', 'review']
+const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'projects', 'lists', 'notes', 'habits', 'matrix', 'analytics', 'review']
 
 function initialView(): NavView {
   try {
@@ -145,6 +147,7 @@ function AppContent() {
   const [reviewRecordKind, setReviewRecordKind] = useState<ReviewKind>('daily')
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [searchNoteId, setSearchNoteId] = useState<string | undefined>(undefined)
   const [undoAction, setUndoAction] = useState<UndoableMutation | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false)
@@ -167,7 +170,7 @@ function AppContent() {
   const dailyWrapUpKey = `daily.wrapup.${data?.today ?? localDateKey()}`
   const dailyWrapUp = useLiveQuery(() => settingsRepository.get<string>(dailyWrapUpKey, ''), [dailyWrapUpKey], '') ?? ''
   const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])
-  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
+  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', search: 'Search', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
 
   const selectedTask = useMemo(() => data?.allTasks.find((task) => task.id === selectedTaskId) ?? data?.subtasks.find((task) => task.id === selectedTaskId) ?? null, [data?.allTasks, data?.subtasks, selectedTaskId])
   const selectedSeries = useMemo(() => selectedTask?.seriesId ? data?.recurringSeries.find((series) => series.id === selectedTask.seriesId) ?? null : null, [data?.recurringSeries, selectedTask])
@@ -342,7 +345,7 @@ function AppContent() {
         return
       }
       if (now - goChordAt.current < 900) {
-        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', p: 'planner', o: 'projects', l: 'lists', n: 'notes', h: 'habits', m: 'matrix', a: 'analytics', r: 'review' }
+        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', s: 'search', p: 'planner', o: 'projects', l: 'lists', n: 'notes', h: 'habits', m: 'matrix', a: 'analytics', r: 'review' }
         const next = destination[key]
         goChordAt.current = 0
         setGoChordPending(false)
@@ -690,6 +693,7 @@ function AppContent() {
     const list: PowerCommand[] = [
       { id: 'nav-today', group: 'Navigate', label: 'Go to Today', keywords: 'home daily', run: () => navigate('today') },
       { id: 'nav-inbox', group: 'Navigate', label: 'Go to Inbox', run: () => navigate('inbox') },
+      { id: 'nav-search', group: 'Navigate', label: 'Go to Search', keywords: 'global indexed find fuzzy saved recent filters', run: () => navigate('search') },
       { id: 'nav-planner', group: 'Navigate', label: 'Go to Planner', keywords: 'week calendar upcoming', run: () => navigate('planner') },
       { id: 'nav-projects', group: 'Navigate', label: 'Go to Projects', run: () => navigate('projects') },
       { id: 'nav-lists', group: 'Navigate', label: 'Go to Lists & Tags', keywords: 'lists folders sections tags organize', run: () => navigate('lists') },
@@ -834,6 +838,7 @@ function AppContent() {
   const topbarMeta = view === 'today'
     ? new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date())
     : view === 'inbox' ? `${data.inboxTasks.length} unprocessed`
+      : view === 'search' ? 'Indexed across tasks, notes, projects, habits, reviews, and tags'
       : view === 'projects' && selectedProjectId ? `${selectedProject?.openTaskCount ?? data.unassignedCount} open tasks`
         : view === 'projects' ? `${data.projects.length} active projects`
           : view === 'lists' && selectedListId
@@ -894,6 +899,18 @@ function AppContent() {
             onOpenPlanner={() => navigate('planner')}
             onSaveWrapUp={saveDailyWrapUp}
             onRollForward={() => void rollForwardToday()}
+          /> : null}
+          {view === 'search' ? <SearchView
+            projects={[...data.projects, ...data.archivedProjects]}
+            tags={[...data.tags, ...data.archivedTags]}
+            onOpenResult={(hit: ContentSearchHit) => {
+              if (hit.ownerType === 'task') { setSelectedTaskId(hit.ownerId); return }
+              if (hit.ownerType === 'note') { setSearchNoteId(hit.ownerId); navigate('notes'); return }
+              if (hit.ownerType === 'project') { navigate('projects'); setSelectedProjectId(hit.ownerId); return }
+              if (hit.ownerType === 'habit') { navigate('habits'); if (hit.archived) setArchivedHabitsOpen(true); else setSelectedHabitId(hit.ownerId); return }
+              if (hit.ownerType === 'review') { const record = historyData?.reviewRecords.find((item) => item.id === hit.ownerId); navigate('review'); if (record) { setReviewRecordKind(record.kind); setEditingReviewId(record.id); setReviewRecordOpen(true) } return }
+              if (hit.ownerType === 'tag') { navigate('lists'); setSelectedListId('__tag__:' + hit.ownerId) }
+            }}
           /> : null}
           {view === 'inbox' ? <InboxView tasks={data.inboxTasks} projects={data.projects} onAdd={() => openAdd('inbox')} onTrash={() => setTrashOpen(true)} onToggle={(id) => void toggleTask(id)} onOpen={setSelectedTaskId} onProcess={(id, options) => void taskService.processInbox(id, options).then(async (undo) => { if (options?.plannedDate) await dailyPlanningService.markDraft(options.plannedDate); registerUndo(undo) })} /> : null}
           {view === 'planner' ? <PlannerView
@@ -975,7 +992,7 @@ function AppContent() {
             onMoveTask={async (taskId, listId, sectionId) => registerUndo(await organizationService.moveTask(taskId, listId, sectionId))}
             onAddTask={(listId) => openAdd('todo', '', data.today, listId)}
           /> : null}
-          {view === 'notes' ? <NotesView onOpenTask={setSelectedTaskId} /> : null}
+          {view === 'notes' ? <NotesView onOpenTask={setSelectedTaskId} openNoteId={searchNoteId} onOpenNoteConsumed={() => setSearchNoteId(undefined)} /> : null}
           {view === 'habits' ? <HabitsView
             habits={habitData.habits}
             groups={habitData.groups}
@@ -1036,7 +1053,7 @@ function AppContent() {
         onData={() => setDataOpen(true)}
       />
 
-      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · P Planner · O Projects · L Lists · N Notes · H Habits · M Matrix · A Analytics · R Review</span></div> : null}
+      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · S Search · P Planner · O Projects · L Lists · N Notes · H Habits · M Matrix · A Analytics · R Review</span></div> : null}
       <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
       <ShortcutHelpModal open={shortcutHelpOpen} shortcuts={shortcuts} onClose={() => setShortcutHelpOpen(false)} onConfigure={() => { setShortcutHelpOpen(false); setKeyboardSettingsOpen(true) }} />
       <KeyboardSettingsDrawer open={keyboardSettingsOpen} value={shortcuts} onClose={() => setKeyboardSettingsOpen(false)} onSave={(next) => void settingsRepository.set('power.shortcuts', next)} />
