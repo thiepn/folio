@@ -53,7 +53,7 @@ check('workspace supports Web Share API',view.includes('navigator.share')&&view.
 check('workspace has download and clipboard fallbacks',view.includes('downloadFile')&&view.includes('Copy summary')&&view.includes('Copy JSON'))
 check('receive flow supports file and pasted JSON',view.includes('Load .json package')&&view.includes('paste a Folio share package'))
 check('receive flow previews before import',view.includes('Preview package')&&view.includes('previewReceive'))
-check('view-only receive hides import',view.includes("preview.importable?<Button variant="primary""))
+check('view-only receive hides import',view.includes("preview.importable?<Button variant=\"primary\""))
 check('collaboration history surface exists',view.includes('Share history')&&view.includes('collaborationService.clearHistory'))
 check('Share navigation type exists',uiTypes.includes("'share'"))
 check('desktop and mobile navigation expose Share',sidebar.includes("view: 'share'")&&mobile.includes("view: 'share'")&&mobileNav.includes("active === 'share'"))
