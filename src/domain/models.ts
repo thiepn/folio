@@ -364,6 +364,101 @@ export interface FocusSessionEntity {
   updatedAt: IsoDateTime
 }
 
+export type FolioTemplateKind = 'task' | 'project'
+
+export interface TaskTemplateNode {
+  title: string
+  description: string
+  priority: TaskPriority
+  estimatedMinutes?: number
+  tags: string[]
+  checklist: string[]
+  plannedOffsetDays?: number
+  deadlineOffsetDays?: number
+  children: TaskTemplateNode[]
+}
+
+export interface TaskTemplateDefinition {
+  id: EntityId
+  kind: 'task'
+  name: string
+  description: string
+  root: TaskTemplateNode
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+  builtin?: boolean
+}
+
+export interface ProjectTemplateDefinition {
+  id: EntityId
+  kind: 'project'
+  name: string
+  description: string
+  project: {
+    name: string
+    description: string
+    notes: string
+    color?: string
+    icon?: string
+    type: ProjectType
+    weeklyTargetMinutes?: number
+    deadlineOffsetDays?: number
+    examOffsetDays?: number
+  }
+  milestones: Array<{ title: string; dueOffsetDays?: number }>
+  tasks: TaskTemplateNode[]
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+  builtin?: boolean
+}
+
+export type FolioTemplateDefinition = TaskTemplateDefinition | ProjectTemplateDefinition
+
+export type AutomationTriggerType = 'task-created' | 'task-completed' | 'daily' | 'manual'
+
+export interface AutomationCondition {
+  projectId?: EntityId
+  tagId?: EntityId
+  priority?: TaskPriority
+  titleContains?: string
+  status?: 'inbox' | 'todo' | 'completed'
+  hasDeadline?: boolean
+  dueWithinDays?: number
+}
+
+export type AutomationAction =
+  | { type: 'set-priority'; priority: TaskPriority }
+  | { type: 'add-tag'; tagName: string }
+  | { type: 'move-project'; projectId?: EntityId }
+  | { type: 'move-list'; listId?: EntityId }
+  | { type: 'plan-offset'; days: number }
+  | { type: 'deadline-offset'; days: number }
+  | { type: 'create-task-template'; templateId: EntityId }
+
+export interface AutomationRuleDefinition {
+  id: EntityId
+  name: string
+  enabled: boolean
+  trigger: AutomationTriggerType
+  conditions: AutomationCondition
+  actions: AutomationAction[]
+  lastRunAt?: IsoDateTime
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface AutomationRunLogEntry {
+  id: EntityId
+  ruleId: EntityId
+  ruleName: string
+  trigger: AutomationTriggerType
+  status: 'success' | 'skipped' | 'error'
+  taskId?: EntityId
+  taskTitle?: string
+  message: string
+  at: IsoDateTime
+}
+
 export interface FocusTemplateDefinition {
   id: EntityId
   name: string
