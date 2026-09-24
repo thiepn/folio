@@ -123,7 +123,8 @@ function dayCount(from:LocalDate,through:LocalDate){
 }
 function inRange(date:string|undefined,from:LocalDate,through:LocalDate){return Boolean(date&&date>=from&&date<=through)}
 function dateOf(iso?:string){return iso?localDateKey(new Date(iso)):undefined}
-function rootActiveTask(task:TaskEntity){return !task.parentTaskId&&!task.deletedAt&&task.status!=='cancelled'}
+function rootTask(task:TaskEntity){return !task.parentTaskId&&task.status!=='cancelled'}
+function currentlyRelevantTask(task:TaskEntity){return rootTask(task)&&(!task.deletedAt||Boolean(task.completedAt))}
 function durationMinutes(start:string,end:string){return Math.max(0,Math.round((Date.parse(end)-Date.parse(start))/60_000))}
 function timeBucket(iso:string){
   const hour=new Date(iso).getHours()
@@ -167,7 +168,7 @@ function dailyRows(input:AnalyticsInput,from:LocalDate,through:LocalDate):Analyt
     const habitMinutes=input.habits.reduce((sum,habit)=>sum+habitCapacityForDate(habit,entries,date),0)
     const plannedMinutes=plannedTaskMinutes+habitMinutes
     const plannedCompleted=plannedTasks.filter((task)=>completedOnOrBefore(task,date)).length
-    const completedTasks=input.tasks.filter(rootActiveTask).filter((task)=>dateOf(task.completedAt)===date).length
+    const completedTasks=input.tasks.filter(rootTask).filter((task)=>dateOf(task.completedAt)===date).length
     const focusSeconds=finished.filter((session)=>dateOf(session.startedAt)===date).reduce((sum,row)=>sum+row.durationSeconds,0)
     const scheduledMinutes=input.timeBlocks.filter((block)=>block.kind==='task'&&dateOf(block.start)===date).reduce((sum,block)=>sum+durationMinutes(block.start,block.end),0)
     const capacityMinutes=planMap.get(date)?.capacityMinutes??input.defaultCapacity
@@ -192,7 +193,7 @@ function habitStats(input:AnalyticsInput,from:LocalDate,through:LocalDate){
 
 function calibrationRows(input:AnalyticsInput,from:LocalDate,through:LocalDate):AnalyticsCalibrationRow[]{
   const allFinished=input.focusSessions.filter((session)=>session.status==='finished')
-  return input.tasks.filter(rootActiveTask).filter((task)=>inRange(dateOf(task.completedAt),from,through)).flatMap((task)=>{
+  return input.tasks.filter(rootTask).filter((task)=>inRange(dateOf(task.completedAt),from,through)).flatMap((task)=>{
     const related=allFinished.filter((session)=>session.taskId===task.id)
     const estimate=related.find((session)=>session.taskEstimateMinutesSnapshot)?.taskEstimateMinutesSnapshot??task.estimatedMinutes
     if(!estimate)return []
@@ -204,9 +205,9 @@ function calibrationRows(input:AnalyticsInput,from:LocalDate,through:LocalDate):
 }
 
 function summary(input:AnalyticsInput,from:LocalDate,through:LocalDate,daily:AnalyticsDailyRow[],habits:AnalyticsHabitRow[]):AnalyticsPeriodSummary{
-  const roots=input.tasks.filter(rootActiveTask)
+  const roots=input.tasks.filter(rootTask)
   const completed=roots.filter((task)=>inRange(dateOf(task.completedAt),from,through))
-  const due=roots.filter((task)=>inRange(task.deadline,from,through))
+  const due=roots.filter(currentlyRelevantTask).filter((task)=>inRange(task.deadline,from,through))
   const overdue=due.filter((task)=>{const completedDate=dateOf(task.completedAt);return !completedDate||completedDate>task.deadline!})
   const finished=input.focusSessions.filter((session)=>session.status==='finished'&&inRange(dateOf(session.startedAt),from,through))
   const plannedTasks=daily.reduce((sum,row)=>sum+row.plannedTasks,0)
@@ -244,7 +245,7 @@ function weekdayRows(daily:AnalyticsDailyRow[]):AnalyticsPatternRow[]{
 }
 
 function timeRows(input:AnalyticsInput,from:LocalDate,through:LocalDate):AnalyticsPatternRow[]{
-  const roots=input.tasks.filter(rootActiveTask)
+  const roots=input.tasks.filter(rootTask)
   return ['morning','afternoon','evening','night'].map((key)=>{
     const sessions=input.focusSessions.filter((row)=>row.status==='finished'&&inRange(dateOf(row.startedAt),from,through)&&timeBucket(row.startedAt)===key)
     const tasks=roots.filter((task)=>task.completedAt&&inRange(dateOf(task.completedAt),from,through)&&timeBucket(task.completedAt)===key)
@@ -259,7 +260,7 @@ function projectRows(input:AnalyticsInput,from:LocalDate,through:LocalDate):Anal
   for(const project of input.projects) map.set(project.id,{id:project.id,name:project.name,color:project.color,completedTasks:0,focusSeconds:0,openTasks:input.tasks.filter((task)=>task.projectId===project.id&&rootActiveTask(task)&&(task.status==='todo'||task.status==='inbox')).length,velocityPerWeek:0})
   const unassigned={id:'__unassigned__',name:'No project',completedTasks:0,focusSeconds:0,openTasks:input.tasks.filter((task)=>!task.projectId&&rootActiveTask(task)&&(task.status==='todo'||task.status==='inbox')).length,velocityPerWeek:0}
   map.set(unassigned.id,unassigned)
-  for(const task of input.tasks.filter(rootActiveTask).filter((task)=>inRange(dateOf(task.completedAt),from,through))){const id=task.projectId??'__unassigned__';const row=map.get(id);if(row)row.completedTasks++}
+  for(const task of input.tasks.filter(rootTask).filter((task)=>inRange(dateOf(task.completedAt),from,through))){const id=task.projectId??'__unassigned__';const row=map.get(id);if(row)row.completedTasks++}
   for(const session of input.focusSessions.filter((row)=>row.status==='finished'&&inRange(dateOf(row.startedAt),from,through))){const id=sessionProjectId(session,taskMap)??'__unassigned__';const row=map.get(id);if(row)row.focusSeconds+=session.durationSeconds}
   for(const row of map.values())row.velocityPerWeek=Math.round(row.completedTasks/weeks*10)/10
   return [...map.values()].filter((row)=>row.completedTasks||row.focusSeconds||row.openTasks).sort((a,b)=>b.focusSeconds-a.focusSeconds||b.completedTasks-a.completedTasks||a.name.localeCompare(b.name))
@@ -270,7 +271,7 @@ function reportRows(input:AnalyticsInput,daily:AnalyticsDailyRow[],from:LocalDat
   return keys.map((key)=>{
     const rows=daily.filter((row)=>(mode==='month'?row.date.slice(0,7):row.date.slice(0,4))===key)
     const start=rows[0]?.date??from,end=rows.at(-1)?.date??through
-    const roots=input.tasks.filter(rootActiveTask)
+    const roots=input.tasks.filter(rootTask)
     const due=roots.filter((task)=>task.deadline&&task.deadline>=start&&task.deadline<=end)
     const overdue=due.filter((task)=>{const completed=dateOf(task.completedAt);return !completed||completed>task.deadline!})
     const planned=rows.reduce((sum,row)=>sum+row.plannedTasks,0),done=rows.reduce((sum,row)=>sum+row.plannedCompleted,0)
