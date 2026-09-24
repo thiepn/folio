@@ -277,7 +277,7 @@
                   "target": {
                     "type": "integer",
                     "minimum": 1,
-                    "maximum": 1440
+                    "maximum": 100000
                   },
                   "schedule": {
                     "type": "object",
@@ -305,6 +305,11 @@
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 7
+                      },
+                      "timesPerMonth": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 31
                       }
                     },
                     "required": [
@@ -313,6 +318,15 @@
                   },
                   "countsTowardCapacity": {
                     "type": "boolean"
+                  },
+                  "unit": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}$"
                   }
                 },
                 "required": [
@@ -977,7 +991,7 @@
                   "target": {
                     "type": "integer",
                     "minimum": 1,
-                    "maximum": 1440
+                    "maximum": 100000
                   },
                   "schedule": {
                     "type": "object",
@@ -1005,6 +1019,11 @@
                         "type": "integer",
                         "minimum": 1,
                         "maximum": 7
+                      },
+                      "timesPerMonth": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 31
                       }
                     },
                     "required": [
@@ -1013,6 +1032,15 @@
                   },
                   "countsTowardCapacity": {
                     "type": "boolean"
+                  },
+                  "unit": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "color": {
+                    "type": "string",
+                    "pattern": "^#[0-9A-Fa-f]{6}$"
                   }
                 }
               }
