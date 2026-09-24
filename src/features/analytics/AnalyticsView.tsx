@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { addLocalDays, localDateKey } from '../../domain/date'
 import { useAnalyticsData } from '../../hooks/useAnalyticsData'
+import type { AnalyticsPatternRow } from './analyticsLogic'
 
 type Preset = '30d' | '90d' | '12m' | 'ytd' | 'custom'
 
@@ -47,7 +48,7 @@ export function AnalyticsView() {
   }
 
   const strongestFocusDay = useMemo(() => data?.weekdays.reduce((best, row) => row.focusSeconds > best.focusSeconds ? row : best, data.weekdays[0]) ?? null, [data])
-  const strongestPlanDay = useMemo(() => data?.weekdays.filter((row) => row.plannedTasks).reduce((best, row) => best == null || (row.planRate ?? -1) > (best.planRate ?? -1) ? row : best, null as (typeof data.weekdays[number] | null)) ?? null, [data])
+  const strongestPlanDay = useMemo(() => data?.weekdays.filter((row) => row.plannedTasks).reduce((best, row) => best == null || (row.planRate ?? -1) > (best.planRate ?? -1) ? row : best, null as AnalyticsPatternRow | null) ?? null, [data])
   const peakTime = useMemo(() => data?.timeOfDay.reduce((best, row) => row.focusSeconds > best.focusSeconds ? row : best, data.timeOfDay[0]) ?? null, [data])
   const maxWeeklyFocus = data ? maxOf(data.weekly.map((row) => row.focusSeconds)) : 1
   const maxWeeklyCompleted = data ? maxOf(data.weekly.map((row) => row.completedTasks)) : 1
