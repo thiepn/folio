@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Tabs } from '../../components/ui/Tabs'
-import type { AutomationAction, AutomationTriggerType, ListEntity, ProjectTemplateDefinition, TagEntity, TaskPriority, TaskTemplateNode } from '../../domain/models'
+import type { AutomationAction, AutomationTriggerType, ListEntity, ProjectTemplateDefinition, TagEntity, TaskPriority, TaskTemplateDefinition, TaskTemplateNode } from '../../domain/models'
 import type { ProjectSummary } from '../../repositories/projectRepository'
 import type { TaskPreview } from '../../types/ui'
 import { automationService } from '../../services/automationService'
@@ -39,8 +39,8 @@ export function TemplatesAutomationView({tasks,projects,lists,tags,today,onUndo,
   const templates=useLiveQuery(()=>templateService.listAll(),[],[])??[]
   const rules=useLiveQuery(()=>automationService.listRules(),[],[])??[]
   const logs=useLiveQuery(()=>automationService.listLogs(),[],[])??[]
-  const taskTemplates=templates.filter((item)=>item.kind==='task')
-  const projectTemplates=templates.filter((item)=>item.kind==='project')
+  const taskTemplates=templates.filter((item):item is TaskTemplateDefinition=>item.kind==='task')
+  const projectTemplates=templates.filter((item):item is ProjectTemplateDefinition=>item.kind==='project')
   const [anchorDate,setAnchorDate]=useState(today)
   const [templateProjectId,setTemplateProjectId]=useState('')
   const [captureTaskId,setCaptureTaskId]=useState('')
