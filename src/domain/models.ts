@@ -6,7 +6,8 @@ export type TaskPriority = 'normal' | 'high' | 'critical'
 export type TaskStatus = 'inbox' | 'todo' | 'completed' | 'cancelled'
 export type ProjectType = 'standard' | 'academic'
 export type ProjectStatus = 'active' | 'on-hold' | 'completed'
-export type HabitKind = 'check' | 'duration'
+export type HabitKind = 'check' | 'quantity' | 'duration'
+export type HabitScheduleType = 'daily' | 'weekdays' | 'selected-days' | 'times-per-week' | 'times-per-month'
 export type HabitEntryStatus = 'open' | 'completed' | 'skipped'
 export type TimeBlockKind = 'task' | 'event'
 export type FocusMode = 'stopwatch' | 'countdown'
@@ -235,22 +236,53 @@ export interface HabitPausePeriod {
   createdAt: IsoDateTime
 }
 
+export interface HabitSchedule {
+  type: HabitScheduleType
+  weekdays?: number[]
+  timesPerWeek?: number
+  timesPerMonth?: number
+}
+
 export interface HabitEntity {
   id: EntityId
   title: string
   description: string
   kind: HabitKind
   target: number
-  schedule: {
-    type: 'daily' | 'weekdays' | 'selected-days' | 'times-per-week'
-    weekdays?: number[]
-    timesPerWeek?: number
-  }
+  unit?: string
+  color?: string
+  groupId?: EntityId
+  schedule: HabitSchedule
   countsTowardCapacity: boolean
   pauses: HabitPausePeriod[]
   archived: boolean
   archivedAt?: IsoDateTime
   sortOrder: number
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface HabitGroupEntity {
+  id: EntityId
+  name: string
+  color?: string
+  sortOrder: number
+  collapsed: boolean
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface HabitTemplateEntity {
+  id: EntityId
+  name: string
+  description: string
+  kind: HabitKind
+  target: number
+  unit?: string
+  color?: string
+  schedule: HabitSchedule
+  countsTowardCapacity: boolean
+  builtin?: boolean
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
 }
