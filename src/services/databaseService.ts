@@ -8,6 +8,8 @@ import { focusService } from './focusService'
 import { initializeStorageSafety } from './storageSafetyService'
 import { attachmentService } from './attachmentService'
 import { contentSearchService } from './contentSearchService'
+import { automationService } from './automationService'
+import { localDateKey } from '../domain/date'
 
 export interface DatabaseHealth {
   schemaVersion: number
@@ -104,6 +106,7 @@ export async function initializeDatabase() {
   await initializeStorageSafety()
   await attachmentService.cleanupOrphans()
   await contentSearchService.rebuildAll()
+  await automationService.runDaily(localDateKey())
 }
 
 async function migrateLegacyLocalStorage() {
