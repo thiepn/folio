@@ -1,6 +1,6 @@
 import { db } from '../db/database'
 import { addLocalDays, atTimeInZone, dateKeyInTimeZone, localDateRange } from '../domain/date'
-import { habitScheduledForDate } from '../domain/habit'
+import { habitPausedForDate, habitScheduledForDate } from '../domain/habit'
 import type {
   LocalDate,
   ReminderEntity,
@@ -137,14 +137,23 @@ async function desiredTaskOccurrences(reminder: ReminderEntity, nowMs: number) {
   return rows
 }
 
+function habitReminderDateEligible(habit: Awaited<ReturnType<typeof db.habits.get>> extends infer H ? Exclude<H, undefined> : never, reminder: ReminderEntity, date: LocalDate) {
+  if (habitPausedForDate(habit, date)) return false
+  const flexible = habit.schedule.type === 'times-per-week' || habit.schedule.type === 'times-per-month'
+  if (!flexible) return habitScheduledForDate(habit, date)
+  if (!reminder.weekdays?.length) return true
+  const weekday = new Date(`${date}T12:00:00`).getDay()
+  return reminder.weekdays.includes(weekday)
+}
+
 async function desiredHabitOccurrences(reminder: ReminderEntity, now: Date) {
   if (reminder.triggerType !== 'habit-time' || reminder.minuteOfDay === undefined) return [] as ReminderOccurrenceEntity[]
   const habit = await db.habits.get(reminder.ownerId)
-  if (!habit || habit.archived || habit.schedule.type === 'times-per-week') return []
+  if (!habit || habit.archived) return []
   const today = dateKeyInTimeZone(now, reminder.timeZone)
   const dates = localDateRange(today, HORIZON_DAYS + 1)
   return dates
-    .filter((date) => habitScheduledForDate(habit, date))
+    .filter((date) => habitReminderDateEligible(habit, reminder, date))
     .map((date) => {
       const fireAt = atTimeInZone(date, reminder.minuteOfDay!, reminder.timeZone)
       const sourceKey = `habit:${habit.id}:${date}:${reminder.minuteOfDay}`
@@ -247,7 +256,7 @@ export async function reminderSuppressionReason(occurrence: ReminderOccurrenceEn
     const date = dateKeyInTimeZone(occurrence.scheduledFor, reminder.timeZone)
     const entry = await db.habitEntries.get(`${habit.id}:${date}`)
     if (entry?.status === 'completed' || entry?.status === 'skipped') return 'Habit is already resolved for this date.'
-    if (!habitScheduledForDate(habit, date)) return 'Habit is not scheduled for this date.'
+    if (!habitReminderDateEligible(habit, reminder, date)) return 'Habit is not scheduled for this reminder date.'
   }
 
   if (reminder.ownerType === 'system' && reminder.ownerId === 'daily-planning') {
