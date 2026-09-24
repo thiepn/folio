@@ -28,8 +28,9 @@ const quadrantMeta: Record<MatrixQuadrant, { title: string; eyebrow: string; des
   later: { title: 'Later / reconsider', eyebrow: 'Not urgent + normal priority', description: 'Low-pressure work. Keep only what still deserves future capacity.', action: 'Review scope' },
 }
 
-function TaskCard({ row, onOpenTask, onSetImportant, onPlanToday, onComplete }: {
+function TaskCard({ row, today, onOpenTask, onSetImportant, onPlanToday, onComplete }: {
   row: ReturnType<typeof buildMatrix>['tasks'][number]
+  today: string
   onOpenTask: (id: string) => void
   onSetImportant: (id: string, important: boolean) => void
   onPlanToday: (id: string) => void
@@ -44,7 +45,7 @@ function TaskCard({ row, onOpenTask, onSetImportant, onPlanToday, onComplete }: 
     </button>
     <div className="matrix-task-card__actions">
       <button onClick={() => onSetImportant(task.id, !row.important)}>{row.important ? 'Set normal' : 'Mark important'}</button>
-      {task.plannedDate !== undefined && task.plannedDate === new Date().toISOString().slice(0, 10) ? null : <button onClick={() => onPlanToday(task.id)}>Today</button>}
+      {task.plannedDate === today ? null : <button onClick={() => onPlanToday(task.id)}>Today</button>}
       <button onClick={() => onComplete(task.id)}>Done</button>
     </div>
   </article>
@@ -102,7 +103,7 @@ function MatrixPanel({ tasks, projects, today, onOpenTask, onOpenProject, onSetI
         return <section className={'matrix-quadrant matrix-quadrant--' + key} key={key}>
           <header><div><span>{meta.eyebrow}</span><h2>{meta.title}</h2></div><strong>{rows.length}</strong></header>
           <p>{meta.description}</p>
-          <div className="matrix-quadrant__body">{rows.map((row) => <TaskCard key={row.task.id} row={row} onOpenTask={onOpenTask} onSetImportant={onSetImportant} onPlanToday={onPlanToday} onComplete={onComplete} />)}{!rows.length ? <div className="matrix-empty">No tasks in this quadrant.</div> : null}</div>
+          <div className="matrix-quadrant__body">{rows.map((row) => <TaskCard key={row.task.id} row={row} today={today} onOpenTask={onOpenTask} onSetImportant={onSetImportant} onPlanToday={onPlanToday} onComplete={onComplete} />)}{!rows.length ? <div className="matrix-empty">No tasks in this quadrant.</div> : null}</div>
           <footer>{meta.action}</footer>
         </section>
       })}
