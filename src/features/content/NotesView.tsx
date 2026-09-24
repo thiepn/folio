@@ -8,7 +8,7 @@ import { MarkdownEditor } from './MarkdownEditor'
 import { SafeMarkdown } from './SafeMarkdown'
 import { AttachmentPanel } from './AttachmentPanel'
 
-export function NotesView({ onOpenTask, openNoteId }: { onOpenTask: (id: string) => void; openNoteId?: string }) {
+export function NotesView({ onOpenTask, openNoteId, onOpenNoteConsumed }: { onOpenTask: (id: string) => void; openNoteId?: string; onOpenNoteConsumed?: () => void }) {
   const allNotes = useLiveQuery(() => noteRepository.listAll(true), [], []) ?? []
   const [showArchived, setShowArchived] = useState(false)
   const notes = useMemo(() => allNotes.filter((note) => showArchived ? note.archived : !note.archived), [allNotes, showArchived])
@@ -34,8 +34,9 @@ export function NotesView({ onOpenTask, openNoteId }: { onOpenTask: (id: string)
       setSelectedId(target.id)
       setQuery('')
       setMessage('')
+      onOpenNoteConsumed?.()
     })()
-  }, [openNoteId, allNotes])
+  }, [openNoteId, allNotes, onOpenNoteConsumed])
   useEffect(() => { setTitle(selected?.title ?? ''); setBody(selected?.body ?? '') }, [selected?.id, selected?.updatedAt])
   useEffect(() => {
     let active = true
