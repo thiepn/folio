@@ -10,6 +10,7 @@ const destinations: { view: NavView; label: string; note: string; icon: IconName
   { view: 'notes', label: 'Notes', note: 'Markdown notes, attachments and indexed reference content', icon: 'review' },
   { view: 'habits', label: 'Habits', note: 'Rhythms, flexible schedules and weekly adherence', icon: 'habit' },
   { view: 'automation', label: 'Automate', note: 'Templates, rules and automation run history', icon: 'automation' },
+  { view: 'share', label: 'Share', note: 'View-only snapshots, copyable packages and handoff history', icon: 'share' },
   { view: 'matrix', label: 'Matrix', note: 'Urgency, importance, deadlines and countdowns', icon: 'matrix' },
   { view: 'analytics', label: 'Analytics', note: 'Trends, workload, focus, habits and reports', icon: 'analytics' },
   { view: 'review', label: 'Review', note: 'Planning feedback and weekly review', icon: 'review' },
