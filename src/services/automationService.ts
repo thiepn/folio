@@ -165,12 +165,18 @@ export const automationService={
     await writeRules(rows.map((item)=>item.id===id?{...item,enabled,updatedAt:now()}:item))
   },
 
-  async handleTaskEvent(trigger:'task-created'|'task-completed',taskId:string,today=localDateKey()){
-    const task=await taskRepository.get(taskId);if(!task)return
+  async handleTaskEvent(trigger:'task-created'|'task-completed',taskId:string,today=localDateKey()):Promise<UndoableMutation|null>{
+    const task=await taskRepository.get(taskId);if(!task)return null
     const rules=(await readRules()).filter((rule)=>rule.enabled&&rule.trigger===trigger)
+    const undos:UndoableMutation[]=[]
     for(const rule of rules){
-      try{await executeRule(rule,await taskRepository.get(taskId)??task,trigger,today)}catch{/* Logged; source task mutation must still succeed. */}
+      try{
+        const result=await executeRule(rule,await taskRepository.get(taskId)??task,trigger,today)
+        if(result)undos.push(result.undo)
+      }catch{/* Logged; source task mutation must still succeed. */}
     }
+    if(!undos.length)return null
+    return {message:'Automation side effects undone',undo:async()=>{for(const action of [...undos].reverse())await action.undo()}}
   },
 
   async runDaily(today=localDateKey()){
