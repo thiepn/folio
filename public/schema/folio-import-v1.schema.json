@@ -235,7 +235,8 @@
             "daily",
             "weekdays",
             "selected-days",
-            "times-per-week"
+            "times-per-week",
+            "times-per-month"
           ]
         },
         "weekdays": {
@@ -282,6 +283,7 @@
         "kind": {
           "enum": [
             "check",
+            "quantity",
             "duration"
           ],
           "default": "check"
