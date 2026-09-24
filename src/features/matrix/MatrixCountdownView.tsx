@@ -83,7 +83,7 @@ function MatrixPanel({ tasks, projects, today, onOpenTask, onOpenProject, onSetI
 
   return <>
     <section className="matrix-toolbar">
-      <div><span className="eyebrow">Urgency horizon</span><div className="matrix-horizon">{[1, 3, 7, 14].map((days) => <button key={days} className={horizon === days ? 'is-active' : ''} onClick={() => setHorizon(days)}>{days === 1 ? 'Today' : days + ' days'}</button>)}</div><small>Urgent means due by {formatLocalDate(matrixHorizonDate(today, horizon), { month: 'short', day: 'numeric' })}, overdue, or already planned.</small></div>
+      <div><span className="eyebrow">Urgency horizon</span><div className="matrix-horizon">{[0, 3, 7, 14].map((days) => <button key={days} className={horizon === days ? 'is-active' : ''} onClick={() => setHorizon(days)}>{days === 0 ? 'Today' : days + ' days'}</button>)}</div><small>Urgent means due by {formatLocalDate(matrixHorizonDate(today, horizon), { month: 'short', day: 'numeric' })}, overdue, or already planned.</small></div>
       <label className="matrix-search"><span>Filter matrix</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Task, project, tag…" /></label>
     </section>
 
