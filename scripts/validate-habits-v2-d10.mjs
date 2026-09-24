@@ -33,7 +33,7 @@ const styles=read('src/styles/habits-focus.css')
 
 check('D10 validator registered',pkg.scripts?.['validate:d10']==='node scripts/validate-habits-v2-d10.mjs')
 check('release gate runs D10',pkg.scripts?.['release:verify']?.includes('validate:d10'))
-check('database schema v22',/DATABASE_SCHEMA_VERSION\s*=\s*22\b/.test(database)&&database.includes('this.version(22)'))
+check('D10 remains schema-compatible',Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1]??0)>=22&&database.includes('this.version(22)'))
 check('v21 to v22 migration registered',database.includes('migrateV21ToV22')&&migration.includes("tx.table('habits')"))
 check('quantity habit kind exists',models.includes("'quantity'")&&schemas.includes("'quantity'"))
 check('monthly frequency exists',models.includes("'times-per-month'")&&schemas.includes("'times-per-month'")&&schemas.includes('timesPerMonth'))
@@ -57,7 +57,7 @@ check('structured patch supports quantity monthly habits',patcher.includes("'qua
 check('public import advertises quantity monthly habits',publicImport.includes('"quantity"')&&publicImport.includes('"times-per-month"')&&publicImport.includes('"timesPerMonth"'))
 check('public patch advertises quantity monthly habits',publicPatch.includes('"quantity"')&&publicPatch.includes('"times-per-month"')&&publicPatch.includes('"timesPerMonth"'))
 check('public v22 backup schema exists',exists('public/schema/folio-backup-v22.schema.json'))
-check('interop advertises schema v22',interop.includes('Schema v22 · complete planner state + rich content + Habits V2')&&interop.includes('schema v8–v22'))
+check('interop preserves D10 backup compatibility',interop.includes('Schema v23 · complete planner state + rich content + Habits V2 + Focus V2')&&interop.includes('schema v8–v23'))
 check('Habit V2 styles exist',styles.includes('D10 — Habits V2')&&styles.includes('habit-history-grid--v2')&&styles.includes('habit-template-list'))
 check('D10 documentation exists',exists('docs/HABITS_V2_D10.md'))
 
