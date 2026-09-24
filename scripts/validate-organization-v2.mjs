@@ -167,10 +167,10 @@ check('backup validates recurrence organization overrides', backup.includes('exc
 check('legacy backups are upgraded into canonical v19 tags', backup.includes('upgradeBackupOrganizationV19') && backup.includes('legacyTagIdFor') && backup.includes('task.tagIds = idsFor(task.tags)'))
 check('restore writes organization tables', backup.includes('db.folders.bulkPut') && backup.includes('db.tags.bulkPut'))
 check('database health includes organization tables', databaseService.includes('db.folders.count()') && databaseService.includes('db.tags.count()'))
-check('interop retains v19 organization backup state', interop.includes('Schema v21 · complete planner state + rich content') && interop.includes('restorePreview.counts.lists'))
+check('interop retains v19 organization backup state', interop.includes('Schema v22 · complete planner state + rich content + Habits V2') && interop.includes('restorePreview.counts.lists'))
 check('data health exposes organization counts', dataDrawer.includes('<dt>Lists</dt>') && dataDrawer.includes('<dt>Tags</dt>'))
 check('public v19 backup schema remains available', exists('public/schema/folio-backup-v19.schema.json'))
-check('restore range now covers v8 through v21', interop.includes('schema v8–v21'))
+check('restore range now covers v8 through v22', interop.includes('schema v8–v22'))
 
 check('D5 stylesheet loaded', styles.includes("@import './organization-v2.css';"))
 check('D5 merge and metadata controls are styled', read('src/styles/organization-v2.css').includes('.tag-merge-row') && read('src/styles/organization-v2.css').includes('.list-metadata-editor'))
