@@ -11,15 +11,17 @@ export const projectTypeSchema = z.enum(['standard', 'academic'])
 export const projectStatusSchema = z.enum(['active', 'on-hold', 'completed'])
 export const reviewKindSchema = z.enum(['daily', 'weekly', 'monthly'])
 
-export const habitKindSchema = z.enum(['check', 'duration'])
+export const habitKindSchema = z.enum(['check', 'quantity', 'duration'])
 export const habitEntryStatusSchema = z.enum(['open', 'completed', 'skipped'])
 export const habitScheduleSchema = z.object({
-  type: z.enum(['daily', 'weekdays', 'selected-days', 'times-per-week']),
+  type: z.enum(['daily', 'weekdays', 'selected-days', 'times-per-week', 'times-per-month']),
   weekdays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
   timesPerWeek: z.number().int().min(1).max(7).optional(),
+  timesPerMonth: z.number().int().min(1).max(31).optional(),
 }).superRefine((value, ctx) => {
   if (value.type === 'selected-days' && (!value.weekdays || value.weekdays.length === 0)) ctx.addIssue({ code: 'custom', message: 'Choose at least one weekday.', path: ['weekdays'] })
   if (value.type === 'times-per-week' && !value.timesPerWeek) ctx.addIssue({ code: 'custom', message: 'Choose how many times per week.', path: ['timesPerWeek'] })
+  if (value.type === 'times-per-month' && !value.timesPerMonth) ctx.addIssue({ code: 'custom', message: 'Choose how many times per month.', path: ['timesPerMonth'] })
 })
 
 export const habitPausePeriodSchema = z.object({
@@ -35,15 +37,38 @@ export const habitCreateSchema = z.object({
   title: z.string().trim().min(1).max(160),
   description: z.string().max(10_000).default(''),
   kind: habitKindSchema.default('check'),
-  target: z.number().int().positive().max(24 * 60).default(1),
+  target: z.number().int().positive().max(100_000).default(1),
+  unit: z.string().trim().min(1).max(40).optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  groupId: z.string().optional(),
   schedule: habitScheduleSchema,
   countsTowardCapacity: z.boolean().default(false),
   pauses: z.array(habitPausePeriodSchema).default([]),
 })
 
 export const habitUpdateSchema = habitCreateSchema.partial().extend({
+  groupId: z.string().nullable().optional(),
   archived: z.boolean().optional(),
   sortOrder: z.number().finite().optional(),
+})
+
+export const habitGroupCreateSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  sortOrder: z.number().finite().optional(),
+  collapsed: z.boolean().default(false),
+})
+export const habitGroupUpdateSchema = habitGroupCreateSchema.partial()
+
+export const habitTemplateCreateSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  description: z.string().max(10_000).default(''),
+  kind: habitKindSchema.default('check'),
+  target: z.number().int().positive().max(100_000).default(1),
+  unit: z.string().trim().min(1).max(40).optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  schedule: habitScheduleSchema,
+  countsTowardCapacity: z.boolean().default(false),
 })
 
 
@@ -376,6 +401,8 @@ export const backupEnvelopeSchema = z.object({
     tags: z.array(z.unknown()).default([]),
     notes: z.array(z.unknown()).default([]),
     attachments: z.array(z.unknown()).default([]),
+    habitGroups: z.array(z.unknown()).default([]),
+    habitTemplates: z.array(z.unknown()).default([]),
   }),
 }).transform((value) => ({ ...value, format: 'folio-backup' as const }))
 
