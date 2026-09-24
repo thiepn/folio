@@ -29,6 +29,7 @@ import { HabitTemplatesDrawer } from '../features/habits/HabitTemplatesDrawer'
 import { ReviewView } from '../features/review/ReviewView'
 import { AnalyticsView } from '../features/analytics/AnalyticsView'
 import { MatrixCountdownView } from '../features/matrix/MatrixCountdownView'
+import { TemplatesAutomationView } from '../features/automation/TemplatesAutomationView'
 import { ReviewWorkflowModal } from '../features/review/ReviewWorkflowModal'
 import { ReviewRecordModal } from '../features/review/ReviewRecordModal'
 import { QuickAddModal } from '../features/capture/QuickAddModal'
@@ -60,6 +61,7 @@ import { timeBlockService } from '../services/timeBlockService'
 import { recurrenceService } from '../services/recurrenceService'
 import { focusService } from '../services/focusService'
 import { focusSettingsService } from '../services/focusSettingsService'
+import { automationService } from '../services/automationService'
 import { habitService } from '../services/habitService'
 import { habitGroupService } from '../services/habitGroupService'
 import { habitInputFromTemplate, habitTemplateService } from '../services/habitTemplateService'
@@ -90,7 +92,7 @@ import { currentTaskId, focusRelativeTask } from '../features/power/taskKeyboard
 import { LEGACY_LAST_VIEW_KEY } from '../legacy/compat'
 
 const LAST_VIEW_KEY = 'folio:last-view:v1'
-const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'projects', 'lists', 'notes', 'habits', 'matrix', 'analytics', 'review']
+const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'projects', 'lists', 'notes', 'habits', 'automation', 'matrix', 'analytics', 'review']
 
 function initialView(): NavView {
   try {
@@ -170,7 +172,7 @@ function AppContent() {
   const dailyWrapUpKey = `daily.wrapup.${data?.today ?? localDateKey()}`
   const dailyWrapUp = useLiveQuery(() => settingsRepository.get<string>(dailyWrapUpKey, ''), [dailyWrapUpKey], '') ?? ''
   const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])
-  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', search: 'Search', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
+  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', search: 'Search', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', automation: 'Automate', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
 
   const selectedTask = useMemo(() => data?.allTasks.find((task) => task.id === selectedTaskId) ?? data?.subtasks.find((task) => task.id === selectedTaskId) ?? null, [data?.allTasks, data?.subtasks, selectedTaskId])
   const selectedSeries = useMemo(() => selectedTask?.seriesId ? data?.recurringSeries.find((series) => series.id === selectedTask.seriesId) ?? null : null, [data?.recurringSeries, selectedTask])
@@ -195,7 +197,7 @@ function AppContent() {
   }, [])
 
   useEffect(() => {
-    const reconcile = () => { if (document.visibilityState === 'visible') void focusService.reconcileActive() }
+    const reconcile = () => { if (document.visibilityState === 'visible') { void focusService.reconcileActive(); void automationService.runDaily(localDateKey()) } }
     window.addEventListener('focus', reconcile)
     window.addEventListener('pageshow', reconcile)
     document.addEventListener('visibilitychange', reconcile)
@@ -345,7 +347,7 @@ function AppContent() {
         return
       }
       if (now - goChordAt.current < 900) {
-        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', s: 'search', p: 'planner', o: 'projects', l: 'lists', n: 'notes', h: 'habits', m: 'matrix', a: 'analytics', r: 'review' }
+        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', s: 'search', p: 'planner', o: 'projects', l: 'lists', n: 'notes', h: 'habits', u: 'automation', m: 'matrix', a: 'analytics', r: 'review' }
         const next = destination[key]
         goChordAt.current = 0
         setGoChordPending(false)
@@ -699,6 +701,7 @@ function AppContent() {
       { id: 'nav-lists', group: 'Navigate', label: 'Go to Lists & Tags', keywords: 'lists folders sections tags organize', run: () => navigate('lists') },
       { id: 'nav-notes', group: 'Navigate', label: 'Go to Notes', keywords: 'markdown content attachments files research', run: () => navigate('notes') },
       { id: 'nav-habits', group: 'Navigate', label: 'Go to Habits', run: () => navigate('habits') },
+      { id: 'nav-automation', group: 'Navigate', label: 'Go to Templates & automation', keywords: 'automate automation template reusable workflow rule trigger action', run: () => navigate('automation') },
       { id: 'nav-matrix', group: 'Navigate', label: 'Go to Matrix & countdown', keywords: 'eisenhower urgency importance deadline countdown pressure horizon', run: () => navigate('matrix') },
       { id: 'nav-analytics', group: 'Navigate', label: 'Go to Analytics', keywords: 'statistics trends reports productivity focus habits workload velocity', run: () => navigate('analytics') },
       { id: 'nav-review', group: 'Navigate', label: 'Go to Review', run: () => navigate('review') },
@@ -850,6 +853,7 @@ function AppContent() {
             : view === 'lists' ? `${data.lists.length} active lists · ${data.tags.length} tags · ${data.customSmartViews.length} smart views`
           : view === 'notes' ? 'Markdown · attachments · offline search'
           : view === 'habits' ? `${habitData.dueToday} due today`
+            : view === 'automation' ? 'Reusable templates, explicit rules, and run history'
             : view === 'matrix' ? 'Urgency, importance, and approaching deadlines'
             : view === 'analytics' ? 'Trends, patterns, velocity, and reports'
             : view === 'review' ? 'Review, learn, replan'
@@ -1008,6 +1012,16 @@ function AppContent() {
             onToggle={(id) => void toggleHabit(id)}
             onIncrement={(id, value) => void incrementHabit(id, value)}
           /> : null}
+          {view === 'automation' ? <TemplatesAutomationView
+            tasks={[...data.allTasks, ...data.subtasks]}
+            projects={[...data.projects, ...data.archivedProjects]}
+            lists={[...data.lists, ...data.archivedLists]}
+            tags={[...data.tags, ...data.archivedTags]}
+            today={data.today}
+            onUndo={registerUndo}
+            onOpenTask={setSelectedTaskId}
+            onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }}
+          /> : null}
           {view === 'matrix' ? <MatrixCountdownView
             tasks={data.allTasks}
             projects={data.projects}
@@ -1053,7 +1067,7 @@ function AppContent() {
         onData={() => setDataOpen(true)}
       />
 
-      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · S Search · P Planner · O Projects · L Lists · N Notes · H Habits · M Matrix · A Analytics · R Review</span></div> : null}
+      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · S Search · P Planner · O Projects · L Lists · N Notes · H Habits · U Automate · M Matrix · A Analytics · R Review</span></div> : null}
       <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
       <ShortcutHelpModal open={shortcutHelpOpen} shortcuts={shortcuts} onClose={() => setShortcutHelpOpen(false)} onConfigure={() => { setShortcutHelpOpen(false); setKeyboardSettingsOpen(true) }} />
       <KeyboardSettingsDrawer open={keyboardSettingsOpen} value={shortcuts} onClose={() => setKeyboardSettingsOpen(false)} onSave={(next) => void settingsRepository.set('power.shortcuts', next)} />
