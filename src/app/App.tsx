@@ -906,10 +906,10 @@ function AppContent() {
             onOpenResult={(hit: ContentSearchHit) => {
               if (hit.ownerType === 'task') { setSelectedTaskId(hit.ownerId); return }
               if (hit.ownerType === 'note') { setSearchNoteId(hit.ownerId); navigate('notes'); return }
-              if (hit.ownerType === 'project') { navigate('projects'); setSelectedProjectId(hit.ownerId); return }
-              if (hit.ownerType === 'habit') { navigate('habits'); if (hit.archived) setArchivedHabitsOpen(true); else setSelectedHabitId(hit.ownerId); return }
+              if (hit.ownerType === 'project') { navigate('projects'); if (hit.archived) { setSelectedProjectId(null); setArchivedProjectsOpen(true) } else setSelectedProjectId(hit.ownerId); return }
+              if (hit.ownerType === 'habit') { navigate('habits'); if (hit.archived) { setSelectedHabitId(null); setArchivedHabitsOpen(true) } else setSelectedHabitId(hit.ownerId); return }
               if (hit.ownerType === 'review') { const record = historyData?.reviewRecords.find((item) => item.id === hit.ownerId); navigate('review'); if (record) { setReviewRecordKind(record.kind); setEditingReviewId(record.id); setReviewRecordOpen(true) } return }
-              if (hit.ownerType === 'tag') { navigate('lists'); setSelectedListId('__tag__:' + hit.ownerId) }
+              if (hit.ownerType === 'tag') { navigate('lists'); setSelectedListId(hit.archived ? null : '__tag__:' + hit.ownerId) }
             }}
           /> : null}
           {view === 'inbox' ? <InboxView tasks={data.inboxTasks} projects={data.projects} onAdd={() => openAdd('inbox')} onTrash={() => setTrashOpen(true)} onToggle={(id) => void toggleTask(id)} onOpen={setSelectedTaskId} onProcess={(id, options) => void taskService.processInbox(id, options).then(async (undo) => { if (options?.plannedDate) await dailyPlanningService.markDraft(options.plannedDate); registerUndo(undo) })} /> : null}
