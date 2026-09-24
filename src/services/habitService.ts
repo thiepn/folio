@@ -2,6 +2,7 @@ import { addLocalDays } from '../domain/date'
 import { habitPausedForDate } from '../domain/habit'
 import { habitRepository, type HabitCreateInput, type HabitUpdateInput } from '../repositories/habitRepository'
 import type { HabitEntryEntity, HabitPausePeriod, LocalDate } from '../domain/models'
+import { reminderService } from './reminderService'
 import type { UndoableMutation } from './undo'
 
 function now() { return new Date().toISOString() }
@@ -14,26 +15,25 @@ async function mutateEntry(habitId: string, date: LocalDate, transform: (habitTa
   const next = transform(habit.target, previous)
   if (next) await habitRepository.putEntry(next)
   else await habitRepository.removeEntry(habitId, date)
-  return {
-    message,
-    undo: async () => { if (previous) await habitRepository.putEntry(previous); else await habitRepository.removeEntry(habitId, date) },
-  }
+  return { message, undo: async () => { if (previous) await habitRepository.putEntry(previous); else await habitRepository.removeEntry(habitId, date) } }
+}
+
+async function refreshReminders() {
+  await reminderService.reconcile()
 }
 
 export const habitService = {
   async create(input: HabitCreateInput): Promise<{ habitId: string; undo: UndoableMutation }> {
     const habit = await habitRepository.create(input)
-    return {
-      habitId: habit.id,
-      undo: { message: 'Habit created', undo: async () => { await habitRepository.remove(habit.id) } },
-    }
+    return { habitId: habit.id, undo: { message: 'Habit created', undo: async () => { await habitRepository.remove(habit.id); await refreshReminders() } } }
   },
 
   async update(habitId: string, input: HabitUpdateInput): Promise<UndoableMutation> {
     const previous = await habitRepository.get(habitId)
     if (!previous) throw new Error('Habit not found.')
     await habitRepository.update(habitId, input)
-    return { message: 'Habit updated', undo: async () => { await habitRepository.replace(previous) } }
+    await refreshReminders()
+    return { message: 'Habit updated', undo: async () => { await habitRepository.replace(previous); await refreshReminders() } }
   },
 
   async pause(habitId: string, startDate: LocalDate, through?: LocalDate): Promise<UndoableMutation> {
@@ -43,12 +43,10 @@ export const habitService = {
     const pauses = [...(previous.pauses ?? [])]
     const activeIndex = pauses.findIndex((period) => startDate >= period.startDate && (!period.endDate || startDate <= period.endDate))
     if (activeIndex >= 0) pauses[activeIndex] = { ...pauses[activeIndex], endDate: through }
-    else {
-      const period: HabitPausePeriod = { id: crypto.randomUUID(), startDate, endDate: through, createdAt: now() }
-      pauses.push(period)
-    }
+    else pauses.push({ id: crypto.randomUUID(), startDate, endDate: through, createdAt: now() })
     await habitRepository.replace({ ...previous, pauses, updatedAt: now() })
-    return { message: through ? 'Habit paused through selected date' : 'Habit paused', undo: async () => { await habitRepository.replace(previous) } }
+    await refreshReminders()
+    return { message: through ? 'Habit paused through selected date' : 'Habit paused', undo: async () => { await habitRepository.replace(previous); await refreshReminders() } }
   },
 
   async resume(habitId: string, date: LocalDate): Promise<UndoableMutation> {
@@ -60,27 +58,30 @@ export const habitService = {
     if (pauses[index].startDate >= date) pauses.splice(index, 1)
     else pauses[index] = { ...pauses[index], endDate: addLocalDays(date, -1) }
     await habitRepository.replace({ ...previous, pauses, updatedAt: now() })
-    return { message: 'Habit resumed', undo: async () => { await habitRepository.replace(previous) } }
+    await refreshReminders()
+    return { message: 'Habit resumed', undo: async () => { await habitRepository.replace(previous); await refreshReminders() } }
   },
 
   async archive(habitId: string): Promise<UndoableMutation> {
     const previous = await habitRepository.get(habitId)
     if (!previous) throw new Error('Habit not found.')
     await habitRepository.update(habitId, { archived: true })
-    return { message: 'Habit archived', undo: async () => { await habitRepository.replace(previous) } }
+    await refreshReminders()
+    return { message: 'Habit archived', undo: async () => { await habitRepository.replace(previous); await refreshReminders() } }
   },
 
   async restore(habitId: string): Promise<UndoableMutation> {
     const previous = await habitRepository.get(habitId)
     if (!previous) throw new Error('Habit not found.')
     await habitRepository.update(habitId, { archived: false })
-    return { message: 'Habit restored', undo: async () => { await habitRepository.replace(previous) } }
+    await refreshReminders()
+    return { message: 'Habit restored', undo: async () => { await habitRepository.replace(previous); await refreshReminders() } }
   },
 
   async setValue(habitId: string, date: LocalDate, value: number): Promise<UndoableMutation> {
     return mutateEntry(habitId, date, (target, previous) => {
-      const safe = Math.max(0, Math.min(target, Math.round(value)))
-      if (safe === 0 && !previous) return undefined
+      const safe = Math.max(0, Math.round(value))
+      if (safe === 0) return undefined
       const timestamp = now()
       return {
         id: `${habitId}:${date}`, habitId, date, value: safe,
@@ -108,14 +109,17 @@ export const habitService = {
     return mutateEntry(habitId, date, (_target, previous) => {
       const timestamp = now()
       return { id: `${habitId}:${date}`, habitId, date, value: 0, status: 'skipped', skippedAt: timestamp, updatedAt: timestamp }
-    }, 'Habit skipped for today')
+    }, 'Habit marked as rest day')
   },
 
   async unskip(habitId: string, date: LocalDate): Promise<UndoableMutation> {
     return mutateEntry(habitId, date, (_target, previous) => {
-      if (!previous) return undefined
-      if (previous.status !== 'skipped') return previous
-      return { ...previous, value: 0, status: 'open', skippedAt: undefined, completedAt: undefined, updatedAt: now() }
-    }, 'Habit restored for today')
+      if (!previous || previous.status !== 'skipped') return previous
+      return undefined
+    }, 'Habit rest day cleared')
+  },
+
+  async clearEntry(habitId: string, date: LocalDate): Promise<UndoableMutation> {
+    return mutateEntry(habitId, date, () => undefined, 'Habit history entry cleared')
   },
 }
