@@ -40,7 +40,7 @@ const styles=read('src/styles/index.css')
 check('D8 validator registered',pkg.scripts?.['validate:kanban-timeline-v2']==='node scripts/validate-kanban-timeline-v2.mjs')
 check('release gate runs D8 validation',pkg.scripts?.['release:verify']?.includes('validate:kanban-timeline-v2'))
 
-check('current schema preserves v20 timeline migration',/DATABASE_SCHEMA_VERSION\s*=\s*21\b/.test(database)&&database.includes('this.version(20)'))
+check('current schema preserves v20 timeline migration',Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1]??0)>=20&&database.includes('this.version(20)'))
 check('v19 to v20 migration registered',database.includes('migrateV19ToV20')&&exists('src/migrations/v19ToV20.ts'))
 check('timeline indexes are present',database.includes('timelineStart,timelineEnd'))
 check('v20 migration normalizes milestone state',migration.includes('timelineMilestone = Boolean'))
@@ -110,7 +110,7 @@ check('patch execution validates and preserves timeline fields',patchService.inc
 check('public backup v20 schema exists',exists('public/schema/folio-backup-v20.schema.json'))
 check('public import schema advertises timeline fields',read('public/schema/folio-import-v1.schema.json').includes('"timelineStart"')&&read('public/schema/folio-import-v1.schema.json').includes('"timelineMilestone"'))
 check('public patch schema advertises timeline fields',read('public/schema/folio-patch-v1.schema.json').includes('"timelineStart"')&&read('public/schema/folio-patch-v1.schema.json').includes('"timelineMilestone"'))
-check('interop advertises v8 through v21 restore',interop.includes('Schema v21 · complete planner state + rich content')&&interop.includes('schema v8–v21'))
+check('interop advertises v8 through v22 restore',interop.includes('Schema v22 · complete planner state + rich content + Habits V2')&&interop.includes('schema v8–v22'))
 
 check('D8 stylesheet loaded',styles.includes("@import './boards-timeline-v2.css';"))
 check('D8 documentation exists',exists('docs/KANBAN_TIMELINE_V2_D8.md'))
