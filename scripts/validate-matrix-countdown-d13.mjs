@@ -27,7 +27,7 @@ check('matrix logic exists',logic.includes('buildMatrix')&&logic.includes('Matri
 check('importance maps to existing priority',logic.includes("task.priority === 'high' || task.priority === 'critical'"))
 check('urgency uses deadline horizon and planned date',logic.includes('deadline')&&logic.includes('horizonDays')&&logic.includes('task.plannedDate <= today'))
 check('matrix has four quadrants',logic.includes("'do' | 'schedule' | 'delegate' | 'later'")&&view.includes('Do now')&&view.includes('Schedule')&&view.includes('Quick / delegate')&&view.includes('Later / reconsider'))
-check('urgency horizon controls exist',view.includes('Urgency horizon')&&view.includes('[1, 3, 7, 14]'))
+check('urgency horizon controls exist',view.includes('Urgency horizon')&&view.includes('[0, 3, 7, 14]'))
 check('matrix actions mutate existing task fields',app.includes('onSetImportant')&&app.includes("taskService.update(id, { priority })")&&app.includes('onPlanToday')&&app.includes("moveToDate(id, 'today'"))
 check('matrix completion remains undoable',app.includes("taskService.setCompleted(id, true).then(registerUndo)"))
 check('countdown logic combines task and project deadlines',logic.includes("kind: 'task'")&&logic.includes("kind: 'project'"))
