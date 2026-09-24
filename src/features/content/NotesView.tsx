@@ -19,6 +19,7 @@ export function NotesView({ onOpenTask, openNoteId, onOpenNoteConsumed }: { onOp
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<ContentSearchHit[]>([])
   const [message, setMessage] = useState('')
+  const dirty = Boolean(selected && (title.trim() !== selected.title || body !== selected.body))
 
   useEffect(() => {
     if (selectedId && !notes.some((note) => note.id === selectedId)) setSelectedId(notes[0]?.id ?? null)
@@ -58,7 +59,6 @@ export function NotesView({ onOpenTask, openNoteId, onOpenNoteConsumed }: { onOp
     return () => { active = false; window.clearTimeout(handle) }
   }, [query, showArchived, allNotes])
 
-  const dirty = Boolean(selected && (title.trim() !== selected.title || body !== selected.body))
   const noteHits = useMemo(() => hits.filter((hit) => hit.ownerType === 'note'), [hits])
   const taskHits = useMemo(() => hits.filter((hit) => hit.ownerType === 'task'), [hits])
 
