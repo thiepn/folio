@@ -8,9 +8,10 @@ const priority = z.enum(['normal', 'high', 'critical'])
 const projectType = z.enum(['standard', 'academic'])
 
 export const importHabitScheduleSchema = z.object({
-  type: z.enum(['daily', 'weekdays', 'selected-days', 'times-per-week']),
+  type: z.enum(['daily', 'weekdays', 'selected-days', 'times-per-week', 'times-per-month']),
   weekdays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
   timesPerWeek: z.number().int().min(1).max(7).optional(),
+  timesPerMonth: z.number().int().min(1).max(31).optional(),
 }).strict()
 
 export const importRecurrenceRuleSchema = z.object({
@@ -72,8 +73,10 @@ export const importHabitSchema = z.object({
   ref,
   title: z.string().trim().min(1).max(160),
   description: z.string().max(10_000).default(''),
-  kind: z.enum(['check', 'duration']),
-  target: z.number().int().positive().max(1440).default(1),
+  kind: z.enum(['check', 'quantity', 'duration']),
+  target: z.number().int().positive().max(100_000).default(1),
+  unit: z.string().trim().min(1).max(40).optional(),
+  color: color.optional(),
   schedule: importHabitScheduleSchema,
   countsTowardCapacity: z.boolean().default(false),
 }).strict()
