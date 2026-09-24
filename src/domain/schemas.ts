@@ -289,8 +289,15 @@ export const timeBlockUpdateSchema = z.object({
 })
 
 
-export const focusModeSchema = z.enum(['stopwatch', 'countdown'])
+export const focusModeSchema = z.enum(['stopwatch', 'countdown', 'pomodoro'])
 export const focusSessionStatusSchema = z.enum(['running', 'paused', 'finished', 'cancelled'])
+
+export const focusCycleSettingsSchema = z.object({
+  workSeconds: z.number().int().min(60).max(24 * 60 * 60),
+  shortBreakSeconds: z.number().int().min(60).max(4 * 60 * 60),
+  longBreakSeconds: z.number().int().min(60).max(8 * 60 * 60),
+  cyclesBeforeLongBreak: z.number().int().min(1).max(12),
+})
 
 export const focusSessionCreateSchema = z.object({
   taskId: z.string().optional(),
@@ -299,12 +306,40 @@ export const focusSessionCreateSchema = z.object({
   projectIdSnapshot: z.string().optional(),
   projectNameSnapshot: z.string().trim().min(1).max(120).optional(),
   mode: focusModeSchema.default('stopwatch'),
+  source: z.enum(['timer','manual']).default('timer'),
   targetSeconds: z.number().int().positive().max(24 * 60 * 60).optional(),
   plannedSeconds: z.number().int().positive().max(24 * 60 * 60).optional(),
   intention: z.string().trim().max(240).optional(),
-  note: z.string().trim().max(2000).optional(),
+  note: z.string().trim().max(4000).optional(),
+  context: z.string().trim().max(120).optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
+  interruptionCount: z.number().int().nonnegative().max(10_000).default(0),
+  cycle: focusCycleSettingsSchema.optional(),
+  cycleIndex: z.number().int().nonnegative().max(10_000).optional(),
+  phase: z.enum(['focus','short-break','long-break']).optional(),
+  phaseElapsedSeconds: z.number().int().nonnegative().max(24 * 60 * 60).default(0),
+  breakSeconds: z.number().int().nonnegative().max(365 * 24 * 60 * 60).default(0),
+  startedAt: isoDateTime.optional(),
+  endedAt: isoDateTime.optional(),
+  durationSeconds: z.number().int().nonnegative().max(365 * 24 * 60 * 60).default(0),
+  status: focusSessionStatusSchema.default('running'),
 }).superRefine((value, ctx) => {
   if (value.mode === 'countdown' && !value.targetSeconds) ctx.addIssue({ code: 'custom', message: 'Countdown sessions require a target duration.', path: ['targetSeconds'] })
+  if (value.mode === 'pomodoro' && !value.cycle) ctx.addIssue({ code: 'custom', message: 'Pomodoro sessions require cycle settings.', path: ['cycle'] })
+  if (value.source === 'manual' && (!value.startedAt || !value.endedAt || value.status !== 'finished')) ctx.addIssue({ code: 'custom', message: 'Manual time entries require start/end timestamps and finished status.', path: ['source'] })
+})
+
+export const focusSessionEditSchema = z.object({
+  taskId: z.string().nullable().optional(),
+  startedAt: isoDateTime.optional(),
+  endedAt: isoDateTime.optional(),
+  durationSeconds: z.number().int().nonnegative().max(365 * 24 * 60 * 60).optional(),
+  note: z.string().trim().max(4000).nullable().optional(),
+  context: z.string().trim().max(120).nullable().optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
+  interruptionCount: z.number().int().nonnegative().max(10_000).optional(),
+}).superRefine((value, ctx) => {
+  if (value.startedAt && value.endedAt && Date.parse(value.endedAt) <= Date.parse(value.startedAt)) ctx.addIssue({ code: 'custom', message: 'Focus session end must be after start.', path: ['endedAt'] })
 })
 
 export const reminderOwnerTypeSchema = z.enum(['task', 'series', 'habit', 'system'])
