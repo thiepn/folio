@@ -7,6 +7,7 @@ import type { SmartTaskView } from '../../features/smartViews/queryEngine'
 const nav: { view: NavView; label: string; icon: IconName }[] = [
   { view: 'today', label: 'Today', icon: 'home' },
   { view: 'inbox', label: 'Inbox', icon: 'inbox' },
+  { view: 'search', label: 'Search', icon: 'search' },
   { view: 'planner', label: 'Planner', icon: 'calendar' },
   { view: 'projects', label: 'Projects', icon: 'folder' },
   { view: 'lists', label: 'Lists', icon: 'folder' },
