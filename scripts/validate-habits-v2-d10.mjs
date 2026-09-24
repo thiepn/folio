@@ -33,7 +33,7 @@ const styles=read('src/styles/habits-focus.css')
 
 check('D10 validator registered',pkg.scripts?.['validate:d10']==='node scripts/validate-habits-v2-d10.mjs')
 check('release gate runs D10',pkg.scripts?.['release:verify']?.includes('validate:d10'))
-check('D10 remains schema-compatible',Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1]??0)>=22&&database.includes('this.version(22)'))
+check('D10 remains schema-compatible',Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]??0)>=22&&database.includes('this.version(22)'))
 check('v21 to v22 migration registered',database.includes('migrateV21ToV22')&&migration.includes("tx.table('habits')"))
 check('quantity habit kind exists',models.includes("'quantity'")&&schemas.includes("'quantity'"))
 check('monthly frequency exists',models.includes("'times-per-month'")&&schemas.includes("'times-per-month'")&&schemas.includes('timesPerMonth'))
