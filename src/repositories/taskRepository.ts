@@ -215,5 +215,6 @@ export const taskRepository = {
       if (attachments.length) await db.attachments.bulkDelete(attachments as string[])
       await db.searchDocuments.bulkDelete(ids.map((id) => `task:${id}`))
     })
+    await Promise.all(ids.map((id) => contentSearchService.remove('task', id)))
   },
 }
