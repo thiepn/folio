@@ -73,10 +73,13 @@ async function setCompletedTask(id: string, completed: boolean): Promise<Undoabl
     }
   })
   const recurrenceUndo = completed ? await recurrenceService.onTaskCompleted(id, now) : null
-  if (completed) await automationService.handleTaskEvent('task-completed', id)
+  const automationUndo = completed ? await automationService.handleTaskEvent('task-completed', id) : null
   return {
-    message: completed ? (recurrenceUndo ? 'Task completed · next occurrence created' : 'Task completed') : 'Task reopened',
+    message: completed
+      ? [recurrenceUndo ? 'Task completed · next occurrence created' : 'Task completed', automationUndo ? 'automation applied' : ''].filter(Boolean).join(' · ')
+      : 'Task reopened',
     undo: async () => {
+      if (automationUndo) await automationUndo.undo()
       if (recurrenceUndo) await recurrenceUndo.undo()
       await taskRepository.bulkReplace(previous)
     },
@@ -94,12 +97,15 @@ export const taskService = {
   async createUndoable(input: TaskCreateInput): Promise<{ task: TaskEntity; undo: UndoableTaskMutation }> {
     const normalized = input.status === 'inbox' ? { ...input, plannedDate: undefined } : input
     const task = await taskRepository.create(normalized)
-    await automationService.handleTaskEvent('task-created', task.id)
+    const automationUndo = await automationService.handleTaskEvent('task-created', task.id)
     return {
       task,
       undo: {
-        message: 'Task added',
-        undo: async () => { await taskRepository.removePermanently([task.id]) },
+        message: automationUndo ? 'Task added · automation applied' : 'Task added',
+        undo: async () => {
+          if (automationUndo) await automationUndo.undo()
+          await taskRepository.removePermanently([task.id])
+        },
       },
     }
   },
