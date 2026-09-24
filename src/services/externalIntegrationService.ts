@@ -180,7 +180,7 @@ export const externalIntegrationService={
     if(intent.type==='capture'){
       if(intent.projectId){const project=await projectRepository.get(intent.projectId);if(!project||project.archived)throw new Error('External capture target project is unavailable.')}
       const description=[intent.text,intent.url].filter(Boolean).join('\n\n')
-      const {task,undo}=await taskService.createUndoable({title:intent.title,description,status:intent.plannedDate?'todo':'inbox',plannedDate:intent.plannedDate,projectId:intent.projectId,sourceUrl:intent.url})
+      const {task,undo}=await taskService.createUndoable({title:intent.title,description,status:intent.plannedDate||intent.projectId?'todo':'inbox',plannedDate:intent.plannedDate,projectId:intent.projectId,sourceUrl:intent.url})
       await record('capture',task.title,intent.source)
       return {undo,open:{type:'task',id:task.id}}
     }
