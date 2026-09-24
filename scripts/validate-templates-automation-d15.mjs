@@ -50,6 +50,7 @@ check('daily automations run on startup',databaseService.includes('automationSer
 check('daily automations recheck on app visibility and focus',app.includes('automationService.runDaily(localDateKey())')&&app.includes("visibilitychange")&&app.includes("pageshow"))
 check('task lifecycle triggers automation',taskService.includes("handleTaskEvent('task-created'")&&taskService.includes("handleTaskEvent('task-completed'"))
 check('automation side effects participate in undo',taskService.includes('automationUndo')&&automation.includes("message:'Automation side effects undone'"))
+check('automation supports non-mutating rule testing',automation.includes('async testRule')&&view.includes('Rule matches this task.'))
 check('manual automation returns undo',automation.includes('async runManual')&&automation.includes('return result.undo'))
 check('recurring work remains separate from automation engine',taskService.includes('recurrenceService.onTaskCompleted')&&!automation.includes('recurringSeries'))
 check('workspace exposes Templates Automations and Run log',view.includes("value:'templates'")&&view.includes("value:'automations'")&&view.includes("value:'log'"))
