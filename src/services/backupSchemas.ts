@@ -25,7 +25,10 @@ export const backupProjectSchema = z.object({
 })
 const backupHabitPauseSchema = z.object({ id, startDate: localDate, endDate: localDate.optional(), createdAt: iso })
 export const backupHabitSchema = z.object({
-  id, title: z.string(), description: z.string(), kind: z.enum(['check','duration']), target: z.number().int().positive(), schedule: z.object({ type: z.enum(['daily','weekdays','selected-days','times-per-week']), weekdays: z.array(z.number().int().min(0).max(6)).optional(), timesPerWeek: z.number().int().min(1).max(7).optional() }), countsTowardCapacity: z.boolean(), pauses: z.array(backupHabitPauseSchema).default([]), archived: z.boolean(), archivedAt: iso.optional(), sortOrder: z.number(), createdAt: iso, updatedAt: iso,
+  id, title: z.string(), description: z.string(), kind: z.enum(['check','quantity','duration']), target: z.number().int().positive(),
+  unit: z.string().optional(), color: z.string().optional(), groupId: id.optional(),
+  schedule: z.object({ type: z.enum(['daily','weekdays','selected-days','times-per-week','times-per-month']), weekdays: z.array(z.number().int().min(0).max(6)).optional(), timesPerWeek: z.number().int().min(1).max(7).optional(), timesPerMonth: z.number().int().min(1).max(31).optional() }),
+  countsTowardCapacity: z.boolean(), pauses: z.array(backupHabitPauseSchema).default([]), archived: z.boolean(), archivedAt: iso.optional(), sortOrder: z.number(), createdAt: iso, updatedAt: iso,
 })
 export const backupHabitEntrySchema = z.object({ id, habitId: id, date: localDate, value: z.number(), status: z.enum(['open','completed','skipped']), completedAt: iso.optional(), skippedAt: iso.optional(), updatedAt: iso })
 export const backupTimeBlockSchema = z.object({ id, taskId: id.optional(), title: z.string(), description: z.string().optional(), location: z.string().optional(), kind: z.enum(['task','event']), allDay: z.boolean().default(false), timeZone: z.string().optional(), source: z.enum(['folio','ics']).default('folio'), sourceCalendar: z.string().optional(), sourceUid: z.string().optional(), start: iso, end: iso, createdAt: iso, updatedAt: iso }).superRefine((value, ctx) => {
@@ -154,6 +157,13 @@ export const backupAttachmentSchema = z.object({
   url: z.string().optional(), width: z.number().int().positive().optional(), height: z.number().int().positive().optional(), durationSeconds: z.number().nonnegative().optional(), dataBase64: z.string().optional(), createdAt: iso, updatedAt: iso,
 })
 
+export const backupHabitGroupSchema = z.object({ id, name: z.string(), color: z.string().optional(), sortOrder: z.number(), collapsed: z.boolean(), createdAt: iso, updatedAt: iso })
+export const backupHabitTemplateSchema = z.object({
+  id, name: z.string(), description: z.string(), kind: z.enum(['check','quantity','duration']), target: z.number().int().positive(),
+  unit: z.string().optional(), color: z.string().optional(),
+  schedule: z.object({ type: z.enum(['daily','weekdays','selected-days','times-per-week','times-per-month']), weekdays: z.array(z.number().int().min(0).max(6)).optional(), timesPerWeek: z.number().int().min(1).max(7).optional(), timesPerMonth: z.number().int().min(1).max(31).optional() }),
+  countsTowardCapacity: z.boolean(), builtin: z.boolean().optional(), createdAt: iso, updatedAt: iso,
+})
 export const backupSettingSchema = z.object({ key: z.string().min(1), value: z.unknown(), updatedAt: iso })
 const provenanceType = z.enum(['project','task','habit','timeBlock','recurringSeries'])
 const snapshot = z.object({ type: z.enum(['project','task','habit','timeBlock','recurringSeries','dailyPlan','dailyPlanItem']), id, value: z.unknown() })
