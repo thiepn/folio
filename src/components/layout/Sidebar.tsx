@@ -12,6 +12,7 @@ const nav: { view: NavView; label: string; icon: IconName }[] = [
   { view: 'lists', label: 'Lists', icon: 'folder' },
   { view: 'notes', label: 'Notes', icon: 'review' },
   { view: 'habits', label: 'Habits', icon: 'habit' },
+  { view: 'matrix', label: 'Matrix', icon: 'matrix' },
   { view: 'analytics', label: 'Analytics', icon: 'analytics' },
   { view: 'review', label: 'Review', icon: 'review' },
 ]
