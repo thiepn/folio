@@ -70,7 +70,16 @@ function monthlyTarget(habit: HabitEntity, date: LocalDate, rangeStart = monthSt
   return proportionalTarget(habit.schedule.timesPerMonth ?? 1, habit, rangeStart, rangeEnd, denominator)
 }
 
-export function habitWeekProgress(habit: HabitEntity, entries: HabitEntryEntity[], date: LocalDate) {
+export interface HabitPeriodProgress {
+  completed: number
+  target: number
+  skipped: number
+  due: number
+  label: string
+  period: 'week' | 'month'
+}
+
+export function habitWeekProgress(habit: HabitEntity, entries: HabitEntryEntity[], date: LocalDate): HabitPeriodProgress {
   if (habit.schedule.type === 'times-per-month') return habitPeriodProgress(habit, entries, date)
   const start = startOfLocalWeek(date)
   const dates = localDateRange(start, 7)
@@ -89,7 +98,7 @@ export function habitWeekProgress(habit: HabitEntity, entries: HabitEntryEntity[
   return { completed, target: eligible.length, skipped, due: dueDates.length, label: eligible.length ? `${completed} / ${eligible.length} due so far` : habitCurrentPause(habit, date) ? 'Paused' : 'No due days yet', period: 'week' as const }
 }
 
-export function habitPeriodProgress(habit: HabitEntity, entries: HabitEntryEntity[], date: LocalDate) {
+export function habitPeriodProgress(habit: HabitEntity, entries: HabitEntryEntity[], date: LocalDate): HabitPeriodProgress {
   if (habit.schedule.type !== 'times-per-month') return habitWeekProgress(habit, entries, date)
   const start = monthStart(date)
   const end = monthEnd(date)
