@@ -257,8 +257,8 @@ function projectRows(input:AnalyticsInput,from:LocalDate,through:LocalDate):Anal
   const taskMap=new Map(input.tasks.map((task)=>[task.id,task]))
   const weeks=Math.max(1,dayCount(from,through)/7)
   const map=new Map<string,AnalyticsProjectRow>()
-  for(const project of input.projects) map.set(project.id,{id:project.id,name:project.name,color:project.color,completedTasks:0,focusSeconds:0,openTasks:input.tasks.filter((task)=>task.projectId===project.id&&rootActiveTask(task)&&(task.status==='todo'||task.status==='inbox')).length,velocityPerWeek:0})
-  const unassigned={id:'__unassigned__',name:'No project',completedTasks:0,focusSeconds:0,openTasks:input.tasks.filter((task)=>!task.projectId&&rootActiveTask(task)&&(task.status==='todo'||task.status==='inbox')).length,velocityPerWeek:0}
+  for(const project of input.projects) map.set(project.id,{id:project.id,name:project.name,color:project.color,completedTasks:0,focusSeconds:0,openTasks:input.tasks.filter((task)=>task.projectId===project.id&&rootTask(task)&&!task.deletedAt&&(task.status==='todo'||task.status==='inbox')).length,velocityPerWeek:0})
+  const unassigned={id:'__unassigned__',name:'No project',completedTasks:0,focusSeconds:0,openTasks:input.tasks.filter((task)=>!task.projectId&&rootTask(task)&&!task.deletedAt&&(task.status==='todo'||task.status==='inbox')).length,velocityPerWeek:0}
   map.set(unassigned.id,unassigned)
   for(const task of input.tasks.filter(rootTask).filter((task)=>inRange(dateOf(task.completedAt),from,through))){const id=task.projectId??'__unassigned__';const row=map.get(id);if(row)row.completedTasks++}
   for(const session of input.focusSessions.filter((row)=>row.status==='finished'&&inRange(dateOf(row.startedAt),from,through))){const id=sessionProjectId(session,taskMap)??'__unassigned__';const row=map.get(id);if(row)row.focusSeconds+=session.durationSeconds}
