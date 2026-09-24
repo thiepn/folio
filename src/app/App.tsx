@@ -37,6 +37,8 @@ import { TaskInspector } from '../features/tasks/TaskInspector'
 import { TrashDrawer } from '../features/tasks/TrashDrawer'
 import { UndoToast } from '../features/tasks/UndoToast'
 import { FocusOverlay } from '../features/focus/FocusOverlay'
+import { FocusMiniTimer } from '../features/focus/FocusMiniTimer'
+import { FocusHistoryDrawer } from '../features/focus/FocusHistoryDrawer'
 import { ReminderCenterDrawer } from '../features/reminders/ReminderCenterDrawer'
 import { applyAppearance } from '../lib/theme'
 import { useAppData } from '../hooks/useAppData'
@@ -54,6 +56,7 @@ import { projectService } from '../services/projectService'
 import { timeBlockService } from '../services/timeBlockService'
 import { recurrenceService } from '../services/recurrenceService'
 import { focusService } from '../services/focusService'
+import { focusSettingsService } from '../services/focusSettingsService'
 import { habitService } from '../services/habitService'
 import { habitGroupService } from '../services/habitGroupService'
 import { habitInputFromTemplate, habitTemplateService } from '../services/habitTemplateService'
@@ -125,6 +128,7 @@ function AppContent() {
   const [archivedProjectsOpen, setArchivedProjectsOpen] = useState(false)
   const [trashOpen, setTrashOpen] = useState(false)
   const [focusOpen, setFocusOpen] = useState(false)
+  const [focusHistoryOpen, setFocusHistoryOpen] = useState(false)
   const [focusPreferredTaskId, setFocusPreferredTaskId] = useState<string | undefined>(undefined)
   const [planDayOpen, setPlanDayOpen] = useState(false)
   const [habitEditorOpen, setHabitEditorOpen] = useState(false)
@@ -186,6 +190,18 @@ function AppContent() {
   }, [])
 
   useEffect(() => {
+    const reconcile = () => { if (document.visibilityState === 'visible') void focusService.reconcileActive() }
+    window.addEventListener('focus', reconcile)
+    window.addEventListener('pageshow', reconcile)
+    document.addEventListener('visibilitychange', reconcile)
+    return () => {
+      window.removeEventListener('focus', reconcile)
+      window.removeEventListener('pageshow', reconcile)
+      document.removeEventListener('visibilitychange', reconcile)
+    }
+  }, [])
+
+  useEffect(() => {
     const handleUrlAction = async () => {
       const url = new URL(window.location.href)
       const occurrenceId = url.searchParams.get('reminderOccurrence')
@@ -221,6 +237,7 @@ function AppContent() {
       setAddOpen(false)
       setTrashOpen(false)
       setFocusOpen(false)
+      setFocusHistoryOpen(false)
       setPlanDayOpen(false)
       setHabitEditorOpen(false)
       setArchivedHabitsOpen(false)
@@ -683,6 +700,7 @@ function AppContent() {
       { id: 'open-smart-views', group: 'Navigate', label: 'Go to Smart Views', keywords: 'filter query saved smart dynamic view create', run: () => { navigate('lists'); setSelectedListId(null) } },
       { id: 'create-habit', group: 'Create', label: 'New habit', keywords: 'create habit routine', run: () => { navigate('habits'); setEditingHabitId(null); setHabitEditorOpen(true) } },
       { id: 'focus', group: 'Execute', label: focusData?.activeSession ? 'Resume Focus' : 'Start Focus', shortcut: shortcuts.focus, run: () => openFocus() },
+      { id: 'focus-history', group: 'Execute', label: 'Focus time log & analytics', keywords: 'focus history time tracking manual sessions analytics pomodoro', run: () => { setFocusOpen(false); setFocusHistoryOpen(true) } },
       { id: 'plan-day', group: 'Plan', label: 'Plan today', note: 'Open the guided daily planning workflow', run: () => { navigate('today'); setPlanDayOpen(true) } },
       { id: 'weekly-review', group: 'Review', label: 'Start weekly review', run: () => { navigate('review'); setReviewWorkflowOpen(true) } },
       { id: 'select-visible', group: 'Selection', label: 'Select all visible tasks', shortcut: 'mod+a', run: selection.selectVisible },
@@ -1209,14 +1227,49 @@ function AppContent() {
         todaySeconds={focusData?.todaySeconds ?? 0}
         weekSeconds={focusData?.weekSeconds ?? 0}
         weekSessionCount={focusData?.weekSessionCount ?? 0}
+        templates={focusData?.templates ?? []}
+        dailyGoalPercent={focusData?.dailyGoalPercent ?? 0}
+        weeklyGoalPercent={focusData?.weeklyGoalPercent ?? 0}
         onClose={() => setFocusOpen(false)}
-        onStart={async (taskId, mode, targetSeconds, plannedSeconds, intention) => { await focusService.start(taskId, mode, targetSeconds, plannedSeconds, intention); setFocusPreferredTaskId(taskId) }}
+        onHistory={() => { setFocusOpen(false); setFocusHistoryOpen(true) }}
+        onStart={async (taskId, mode, targetSeconds, plannedSeconds, intention, options) => { await focusService.start(taskId, mode, targetSeconds, plannedSeconds, intention, options); setFocusPreferredTaskId(taskId) }}
+        onSaveTemplate={async (template) => { await focusSettingsService.saveTemplate(template) }}
+        onDeleteTemplate={async (id) => { await focusSettingsService.removeTemplate(id) }}
         onPause={async (id) => { await focusService.pause(id) }}
         onResume={async (id) => { await focusService.resume(id) }}
+        onInterrupt={async (id) => { await focusService.interrupt(id) }}
+        onCompletePhase={async (id) => { await focusService.completePhase(id) }}
         onFinish={async (id, note) => { await focusService.finish(id, note); setFocusOpen(false) }}
         onFinishTask={async (id, taskId, note) => { await focusService.finish(id, note); if (taskId) registerUndo(await taskService.setCompleted(taskId, true)); setFocusOpen(false) }}
         onCancel={async (id) => { await focusService.cancel(id); setFocusOpen(false) }}
       />
+
+      <FocusHistoryDrawer
+        open={focusHistoryOpen}
+        sessions={focusData?.sessions ?? []}
+        tasks={[...data.allTasks, ...data.subtasks].filter((task) => !task.deletedAt && task.status !== 'cancelled')}
+        dailyTrend={focusData?.dailyTrend ?? []}
+        projectBreakdown={focusData?.projectBreakdown ?? []}
+        taskBreakdown={focusData?.taskBreakdown ?? []}
+        goals={focusData?.goals ?? { dailyMinutes: 60, weeklyMinutes: 300 }}
+        weekSeconds={focusData?.weekSeconds ?? 0}
+        todaySeconds={focusData?.todaySeconds ?? 0}
+        interruptionCount={focusData?.interruptionCount ?? 0}
+        manualWeekSeconds={focusData?.manualWeekSeconds ?? 0}
+        onClose={() => setFocusHistoryOpen(false)}
+        onSetGoals={async (dailyMinutes, weeklyMinutes) => { await focusSettingsService.setGoals({ dailyMinutes, weeklyMinutes }) }}
+        onAddManual={async (input) => { const { undo } = await focusService.createManual(input); registerUndo(undo) }}
+        onEdit={async (id, input) => { registerUndo(await focusService.editFinished(id, input)) }}
+        onDelete={async (id) => { registerUndo(await focusService.removeFinished(id)) }}
+      />
+
+      {focusData?.activeSession && !focusOpen ? <FocusMiniTimer
+        session={focusData.activeSession}
+        onOpen={() => openFocus(focusData.activeSession?.taskId)}
+        onPause={(id) => void focusService.pause(id)}
+        onResume={(id) => void focusService.resume(id)}
+        onNext={(id) => void focusService.completePhase(id)}
+      /> : null}
       <UndoToast
         action={undoAction}
         onDismiss={() => setUndoAction(null)}
