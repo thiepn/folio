@@ -3,7 +3,7 @@ import type {
   FolioTemplateDefinition, ListEntity, NoteEntity, ProjectEntity, ReviewRecordEntity,
   SectionEntity, TaskEntity,
 } from '../domain/models'
-import { attachmentService, deserializeAttachment, serializeAttachment, type PortableAttachment } from './attachmentService'
+import { deserializeAttachment, serializeAttachment, type PortableAttachment } from './attachmentService'
 import { contentSearchService } from './contentSearchService'
 import { noteRepository } from '../repositories/noteRepository'
 import { organizationRepository } from '../repositories/organizationRepository'
@@ -167,6 +167,7 @@ async function importAttachments(attachments:PortableAttachment[],taskMap:Map<st
 export const collaborationService={
   async listHistory(){return historyRows()},
   async clearHistory(){await settingsRepository.set(HISTORY_KEY,[])},
+  async recordViewed(pkg:CollaborationPackage){await addHistory({direction:'received',shareId:pkg.shareId,title:pkg.title,scope:pkg.scope,access:pkg.access,status:'viewed'})},
 
   async createPackage(input:{scope:CollaborationScope;entityId:string;access:CollaborationAccess;message?:string;includeAttachments?:boolean}):Promise<CollaborationPackage>{
     const allTasks=await db.tasks.toArray()
@@ -210,6 +211,11 @@ export const collaborationService={
     const attachments=Array.isArray(pkg.payload.attachments)?pkg.payload.attachments:[]
     const sections=Array.isArray(pkg.payload.sections)?pkg.payload.sections:[]
     const warnings:string[]=[]
+    if(pkg.scope==='task'&&!tasks.length)throw new Error('Shared task package has no task.')
+    if(pkg.scope==='project'&&!pkg.payload.project)throw new Error('Shared project package has no project.')
+    if(pkg.scope==='list'&&!pkg.payload.list)throw new Error('Shared list package has no list.')
+    if(pkg.scope==='review'&&!pkg.payload.review)throw new Error('Shared review package has no review.')
+    if(pkg.scope==='template'&&!pkg.payload.template)throw new Error('Shared template package has no template.')
     const taskIds=new Set(tasks.map((task)=>task.id))
     for(const task of tasks)if(task.parentTaskId&&!taskIds.has(task.parentTaskId))warnings.push('A shared task references a parent outside this package and will be rejected on import.')
     if(pkg.access==='view')warnings.push('View-only package: preview is allowed, but importing is disabled.')
