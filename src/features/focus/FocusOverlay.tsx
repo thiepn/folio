@@ -184,7 +184,7 @@ export function FocusOverlay({ open, activeSession, tasks, preferredTaskId, task
   const reached=countdownReached(activeSession,now)
   const phaseTarget=focusPhaseTargetSeconds(activeSession)
   const planSeconds=activeSession.mode==='pomodoro'?phaseTarget:(activeSession.targetSeconds??activeSession.plannedSeconds)
-  const planPercent=planSeconds?Math.round(Math.min(100,((planSeconds-display)/planSeconds)*100)):undefined
+  const planPercent=planSeconds?Math.round(Math.min(100,((activeSession.mode==='stopwatch'?elapsed:(planSeconds-display))/planSeconds)*100)):undefined
   const phaseLabel=activeSession.mode==='pomodoro'?focusPhaseLabel(activeSession.phase):activeSession.mode==='countdown'?'Countdown':'Open focus'
   return <div ref={dialogRef} className="focus-overlay focus-overlay--v2" role="dialog" aria-modal="true" aria-label="Focus session" tabIndex={-1}>
     <button className="focus-overlay__close" onClick={onClose}>Minimize</button>
