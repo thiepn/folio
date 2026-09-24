@@ -91,6 +91,20 @@ function uniqueIds(rows: unknown[], label: string, idKey = 'id') {
   return seen
 }
 
+function portableAttachmentByteLength(value: string) {
+  if (value.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(value)) return -1
+  const padding = value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0
+  return Math.max(0, Math.floor(value.length * 3 / 4) - padding)
+}
+
+function validPortableLink(value: string | undefined) {
+  if (!value) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch { return false }
+}
+
 function normalizeImportBatch(batch: any): ImportBatchEntity {
   const { affectedEntityIds: _legacyIds, ...rest } = batch
   return {
@@ -245,7 +259,15 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
   for (const attachment of data.attachments) {
     if (attachment.ownerType === 'task' && !taskIds.has(attachment.ownerId)) throw new Error(`Attachment “${attachment.name}” references a missing task.`)
     if (attachment.ownerType === 'note' && !noteIds.has(attachment.ownerId)) throw new Error(`Attachment “${attachment.name}” references a missing note.`)
-    if (attachment.kind !== 'link' && attachment.dataBase64 === undefined) throw new Error(`Attachment “${attachment.name}” is missing its binary payload.`)
+    if (attachment.kind === 'link') {
+      if (!validPortableLink(attachment.url)) throw new Error(`Link attachment “${attachment.name}” has an invalid URL.`)
+      if (attachment.size !== 0) throw new Error(`Link attachment “${attachment.name}” has an invalid stored size.`)
+      continue
+    }
+    if (attachment.dataBase64 === undefined) throw new Error(`Attachment “${attachment.name}” is missing its binary payload.`)
+    const byteLength = portableAttachmentByteLength(attachment.dataBase64)
+    if (byteLength < 0) throw new Error(`Attachment “${attachment.name}” contains invalid base64 data.`)
+    if (byteLength !== attachment.size) throw new Error(`Attachment “${attachment.name}” binary size does not match its metadata.`)
   }
   for (const task of data.tasks) {
     if (task.timelineEnd && !task.timelineStart) throw new Error(`Task “${task.title}” has a timeline end without a start.`)
