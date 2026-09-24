@@ -23,6 +23,8 @@ import { HabitsView } from '../features/habits/HabitsView'
 import { HabitEditorModal } from '../features/habits/HabitEditorModal'
 import { HabitDetailDrawer } from '../features/habits/HabitDetailDrawer'
 import { ArchivedHabitsDrawer } from '../features/habits/ArchivedHabitsDrawer'
+import { HabitGroupsDrawer } from '../features/habits/HabitGroupsDrawer'
+import { HabitTemplatesDrawer } from '../features/habits/HabitTemplatesDrawer'
 import { ReviewView } from '../features/review/ReviewView'
 import { ReviewWorkflowModal } from '../features/review/ReviewWorkflowModal'
 import { ReviewRecordModal } from '../features/review/ReviewRecordModal'
@@ -53,6 +55,8 @@ import { timeBlockService } from '../services/timeBlockService'
 import { recurrenceService } from '../services/recurrenceService'
 import { focusService } from '../services/focusService'
 import { habitService } from '../services/habitService'
+import { habitGroupService } from '../services/habitGroupService'
+import { habitInputFromTemplate, habitTemplateService } from '../services/habitTemplateService'
 import { dependencyService } from '../services/dependencyService'
 import { savedViewService } from '../services/savedViewService'
 import { reviewRecordService } from '../services/reviewRecordService'
@@ -127,6 +131,8 @@ function AppContent() {
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null)
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null)
   const [archivedHabitsOpen, setArchivedHabitsOpen] = useState(false)
+  const [habitGroupsOpen, setHabitGroupsOpen] = useState(false)
+  const [habitTemplatesOpen, setHabitTemplatesOpen] = useState(false)
   const [recurrenceEditorOpen, setRecurrenceEditorOpen] = useState(false)
   const [reviewWorkflowOpen, setReviewWorkflowOpen] = useState(false)
   const [reviewRecordOpen, setReviewRecordOpen] = useState(false)
@@ -218,6 +224,8 @@ function AppContent() {
       setPlanDayOpen(false)
       setHabitEditorOpen(false)
       setArchivedHabitsOpen(false)
+      setHabitGroupsOpen(false)
+      setHabitTemplatesOpen(false)
       setSelectedHabitId(null)
       setRecurrenceEditorOpen(false)
       setReviewWorkflowOpen(false)
@@ -763,7 +771,7 @@ function AppContent() {
         group: 'Habit',
         label: habit.title,
         note: [habit.scheduleLabel ?? '', habit.progress ?? '', `${habit.streak ?? 0} streak`].filter(Boolean).join(' · '),
-        keywords: `${habit.description ?? ''} ${habit.scheduleLabel ?? ''}`,
+        keywords: `${habit.description ?? ''} ${habit.scheduleLabel ?? ''} ${habit.unit ?? ''} ${habit.groupId ? habitData?.groups.find((group) => group.id === habit.groupId)?.name ?? '' : ''}`,
         searchOnly: true,
         run: () => { navigate('habits'); setSelectedHabitId(habit.id) },
       })
@@ -944,7 +952,21 @@ function AppContent() {
             onAddTask={(listId) => openAdd('todo', '', data.today, listId)}
           /> : null}
           {view === 'notes' ? <NotesView onOpenTask={setSelectedTaskId} /> : null}
-          {view === 'habits' ? <HabitsView habits={habitData.habits} weeklyAdherence={habitData.weeklyAdherence} dueToday={habitData.dueToday} longestStreak={habitData.longestStreak} pausedCount={habitData.pausedCount} onCreate={() => { setEditingHabitId(null); setHabitEditorOpen(true) }} onArchived={() => setArchivedHabitsOpen(true)} onOpen={setSelectedHabitId} onToggle={(id) => void toggleHabit(id)} onIncrement={(id, minutes) => void incrementHabit(id, minutes)} /> : null}
+          {view === 'habits' ? <HabitsView
+            habits={habitData.habits}
+            groups={habitData.groups}
+            weeklyAdherence={habitData.weeklyAdherence}
+            dueToday={habitData.dueToday}
+            longestStreak={habitData.longestStreak}
+            pausedCount={habitData.pausedCount}
+            onCreate={() => { setEditingHabitId(null); setHabitEditorOpen(true) }}
+            onGroups={() => setHabitGroupsOpen(true)}
+            onTemplates={() => setHabitTemplatesOpen(true)}
+            onArchived={() => setArchivedHabitsOpen(true)}
+            onOpen={setSelectedHabitId}
+            onToggle={(id) => void toggleHabit(id)}
+            onIncrement={(id, value) => void incrementHabit(id, value)}
+          /> : null}
           {view === 'review' ? <ReviewView
             snapshot={reviewData}
             recentCompleted={data.allTasks.filter((task) => task.completed).sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))}
@@ -1036,6 +1058,7 @@ function AppContent() {
       <HabitEditorModal
         open={habitEditorOpen}
         habit={editingHabit}
+        groups={habitData.groups}
         onClose={() => { setHabitEditorOpen(false); setEditingHabitId(null) }}
         onCreate={createHabit}
         onUpdate={updateHabit}
@@ -1053,8 +1076,14 @@ function AppContent() {
         onToggle={() => selectedHabitId && void toggleHabit(selectedHabitId)}
         onIncrement={(minutes) => selectedHabitId && void incrementHabit(selectedHabitId, minutes)}
         onSkip={() => selectedHabitId && void toggleHabitSkip(selectedHabitId)}
+        groupName={selectedHabit?.groupId ? habitData.groups.find((group) => group.id === selectedHabit.groupId)?.name : undefined}
         onPause={(through) => selectedHabitId && void habitService.pause(selectedHabitId, data.today, through).then(async (undo) => { registerUndo(undo); await dailyPlanningService.markDraft(data.today) })}
         onResume={() => selectedHabitId && void habitService.resume(selectedHabitId, data.today).then(async (undo) => { registerUndo(undo); await dailyPlanningService.markDraft(data.today) })}
+        onSetHistoryValue={(date, value) => selectedHabitId && void habitService.setValue(selectedHabitId, date, value).then(registerUndo)}
+        onHistoryComplete={(date) => selectedHabitId && selectedHabit && void habitService.setValue(selectedHabitId, date, selectedHabit.target).then(registerUndo)}
+        onHistorySkip={(date) => selectedHabitId && void habitService.skip(selectedHabitId, date).then(registerUndo)}
+        onHistoryClear={(date) => selectedHabitId && void habitService.clearEntry(selectedHabitId, date).then(registerUndo)}
+        onSaveTemplate={() => selectedHabitId && void habitTemplateService.saveFromHabit(selectedHabitId).then(registerUndo)}
       />
 
       <ArchivedHabitsDrawer
@@ -1062,6 +1091,32 @@ function AppContent() {
         habits={habitData.archivedHabits}
         onClose={() => setArchivedHabitsOpen(false)}
         onRestore={(id) => void habitService.restore(id).then(async (undo) => { registerUndo(undo); await dailyPlanningService.markDraft(data.today) })}
+      />
+
+      <HabitGroupsDrawer
+        open={habitGroupsOpen}
+        groups={habitData.groups}
+        onClose={() => setHabitGroupsOpen(false)}
+        onCreate={(name, color) => void habitGroupService.create({ name, color }).then(({ undo }) => registerUndo(undo))}
+        onUpdate={(id, changes) => void habitGroupService.update(id, changes).then(registerUndo)}
+        onRemove={(id) => void habitGroupService.remove(id).then(registerUndo)}
+      />
+
+      <HabitTemplatesDrawer
+        open={habitTemplatesOpen}
+        templates={habitData.templates}
+        onClose={() => setHabitTemplatesOpen(false)}
+        onUse={(id) => {
+          const template = habitData.templates.find((item) => item.id === id)
+          if (!template) return
+          void habitService.create(habitInputFromTemplate(template)).then(async ({ habitId, undo }) => {
+            registerUndo(undo)
+            setHabitTemplatesOpen(false)
+            setSelectedHabitId(habitId)
+            await dailyPlanningService.markDraft(data.today)
+          })
+        }}
+        onRemove={(id) => void habitTemplateService.remove(id).then(registerUndo)}
       />
 
       <ReviewWorkflowModal
