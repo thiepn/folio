@@ -10,7 +10,9 @@ export type HabitKind = 'check' | 'quantity' | 'duration'
 export type HabitScheduleType = 'daily' | 'weekdays' | 'selected-days' | 'times-per-week' | 'times-per-month'
 export type HabitEntryStatus = 'open' | 'completed' | 'skipped'
 export type TimeBlockKind = 'task' | 'event'
-export type FocusMode = 'stopwatch' | 'countdown'
+export type FocusMode = 'stopwatch' | 'countdown' | 'pomodoro'
+export type FocusSessionSource = 'timer' | 'manual'
+export type FocusPhase = 'focus' | 'short-break' | 'long-break'
 export type FocusSessionStatus = 'running' | 'paused' | 'finished' | 'cancelled'
 export type ImportBatchStatus = 'previewed' | 'applied' | 'reverted' | 'failed'
 export type PatchBatchStatus = 'previewed' | 'applied' | 'reverted' | 'failed'
@@ -316,6 +318,13 @@ export interface TimeBlockEntity {
   updatedAt: IsoDateTime
 }
 
+export interface FocusCycleSettings {
+  workSeconds: number
+  shortBreakSeconds: number
+  longBreakSeconds: number
+  cyclesBeforeLongBreak: number
+}
+
 export interface FocusSessionEntity {
   id: EntityId
   taskId?: EntityId
@@ -324,10 +333,19 @@ export interface FocusSessionEntity {
   projectIdSnapshot?: EntityId
   projectNameSnapshot?: string
   mode: FocusMode
+  source: FocusSessionSource
   targetSeconds?: number
   plannedSeconds?: number
   intention?: string
   note?: string
+  context?: string
+  tags: string[]
+  interruptionCount: number
+  cycle?: FocusCycleSettings
+  cycleIndex?: number
+  phase?: FocusPhase
+  phaseElapsedSeconds?: number
+  breakSeconds: number
   startedAt: IsoDateTime
   resumedAt?: IsoDateTime
   endedAt?: IsoDateTime
@@ -335,6 +353,21 @@ export interface FocusSessionEntity {
   status: FocusSessionStatus
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
+}
+
+export interface FocusTemplateDefinition {
+  id: EntityId
+  name: string
+  mode: FocusMode
+  targetMinutes?: number
+  plannedMinutes?: number
+  workMinutes?: number
+  shortBreakMinutes?: number
+  longBreakMinutes?: number
+  cyclesBeforeLongBreak?: number
+  tags: string[]
+  context?: string
+  builtin?: boolean
 }
 
 export interface RecurrenceException {
