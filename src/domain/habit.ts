@@ -223,7 +223,7 @@ export function habitLifetimeStats(habit: HabitEntity, entries: HabitEntryEntity
   const adherence90 = habitAdherence(habit, entries, addLocalDays(today, -89), today, today)
   return {
     completions: completedEntries.length,
-    totalValue: completedEntries.reduce((sum, entry) => sum + entry.value, 0),
+    totalValue: entries.filter((entry) => entry.status !== 'skipped').reduce((sum, entry) => sum + entry.value, 0),
     bestStreak: habitBestStreak(habit, entries, today),
     adherence90: adherence90.percent,
   }
