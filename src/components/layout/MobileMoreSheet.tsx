@@ -9,6 +9,7 @@ const destinations: { view: NavView; label: string; note: string; icon: IconName
   { view: 'lists', label: 'Lists', note: 'Folders, sections, tags and task collections', icon: 'folder' },
   { view: 'notes', label: 'Notes', note: 'Markdown notes, attachments and indexed reference content', icon: 'review' },
   { view: 'habits', label: 'Habits', note: 'Rhythms, flexible schedules and weekly adherence', icon: 'habit' },
+  { view: 'automation', label: 'Automate', note: 'Templates, rules and automation run history', icon: 'automation' },
   { view: 'matrix', label: 'Matrix', note: 'Urgency, importance, deadlines and countdowns', icon: 'matrix' },
   { view: 'analytics', label: 'Analytics', note: 'Trends, workload, focus, habits and reports', icon: 'analytics' },
   { view: 'review', label: 'Review', note: 'Planning feedback and weekly review', icon: 'review' },
