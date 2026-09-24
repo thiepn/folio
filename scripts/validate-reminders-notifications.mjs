@@ -65,6 +65,7 @@ check('engine supports time-block relative reminders', engine.includes('timeBloc
 check('engine supports recurring-series owners', engine.includes("reminder.ownerType === 'series'") && engine.includes("where('seriesId').equals(reminder.ownerId)"))
 check('engine supports fixed-schedule habit reminders', engine.includes('habitScheduledForDate') && engine.includes("triggerType !== 'habit-time'"))
 check('engine supports flexible habit reminder prompts', engine.includes('habitReminderDateEligible') && engine.includes("habit.schedule.type === 'times-per-week'") && engine.includes("habit.schedule.type === 'times-per-month'"))
+check('engine suppresses flexible reminders after target completion', engine.includes('habitPeriodProgress') && engine.includes('Habit frequency target is already complete for this period.'))
 check('engine supports daily system reminders', engine.includes('desiredSystemOccurrences') && engine.includes("ownerId === 'daily-planning'"))
 check('engine supports overdue summary', engine.includes("ownerId === 'overdue-summary'") && engine.includes('No overdue tasks.'))
 check('engine suppresses completed tasks', engine.includes("task.status === 'completed'"))
