@@ -31,6 +31,7 @@ import { AnalyticsView } from '../features/analytics/AnalyticsView'
 import { MatrixCountdownView } from '../features/matrix/MatrixCountdownView'
 import { TemplatesAutomationView } from '../features/automation/TemplatesAutomationView'
 import { CollaborationView } from '../features/collaboration/CollaborationView'
+import { ExternalIntegrationsView } from '../features/integrations/ExternalIntegrationsView'
 import { ReviewWorkflowModal } from '../features/review/ReviewWorkflowModal'
 import { ReviewRecordModal } from '../features/review/ReviewRecordModal'
 import { QuickAddModal } from '../features/capture/QuickAddModal'
@@ -63,6 +64,7 @@ import { recurrenceService } from '../services/recurrenceService'
 import { focusService } from '../services/focusService'
 import { focusSettingsService } from '../services/focusSettingsService'
 import { automationService } from '../services/automationService'
+import { externalIntegrationService, type IntegrationIntent } from '../services/externalIntegrationService'
 import { habitService } from '../services/habitService'
 import { habitGroupService } from '../services/habitGroupService'
 import { habitInputFromTemplate, habitTemplateService } from '../services/habitTemplateService'
@@ -93,7 +95,7 @@ import { currentTaskId, focusRelativeTask } from '../features/power/taskKeyboard
 import { LEGACY_LAST_VIEW_KEY } from '../legacy/compat'
 
 const LAST_VIEW_KEY = 'folio:last-view:v1'
-const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'projects', 'lists', 'notes', 'habits', 'automation', 'share', 'matrix', 'analytics', 'review']
+const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'projects', 'lists', 'notes', 'habits', 'automation', 'share', 'integrations', 'matrix', 'analytics', 'review']
 
 function initialView(): NavView {
   try {
@@ -151,6 +153,7 @@ function AppContent() {
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [searchNoteId, setSearchNoteId] = useState<string | undefined>(undefined)
+  const [integrationIntent, setIntegrationIntent] = useState<IntegrationIntent | null>(null)
   const [undoAction, setUndoAction] = useState<UndoableMutation | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false)
@@ -173,7 +176,7 @@ function AppContent() {
   const dailyWrapUpKey = `daily.wrapup.${data?.today ?? localDateKey()}`
   const dailyWrapUp = useLiveQuery(() => settingsRepository.get<string>(dailyWrapUpKey, ''), [dailyWrapUpKey], '') ?? ''
   const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])
-  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', search: 'Search', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', automation: 'Automate', share: 'Share', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
+  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', search: 'Search', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', automation: 'Automate', share: 'Share', integrations: 'Integrations', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
 
   const selectedTask = useMemo(() => data?.allTasks.find((task) => task.id === selectedTaskId) ?? data?.subtasks.find((task) => task.id === selectedTaskId) ?? null, [data?.allTasks, data?.subtasks, selectedTaskId])
   const selectedSeries = useMemo(() => selectedTask?.seriesId ? data?.recurringSeries.find((series) => series.id === selectedTask.seriesId) ?? null : null, [data?.recurringSeries, selectedTask])
@@ -207,6 +210,13 @@ function AppContent() {
       window.removeEventListener('pageshow', reconcile)
       document.removeEventListener('visibilitychange', reconcile)
     }
+  }, [])
+
+  useEffect(() => {
+    const intent = externalIntegrationService.consumeCurrentUrl()
+    if (!intent) return
+    setIntegrationIntent(intent)
+    navigate('integrations')
   }, [])
 
   useEffect(() => {
@@ -348,7 +358,7 @@ function AppContent() {
         return
       }
       if (now - goChordAt.current < 900) {
-        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', s: 'search', p: 'planner', o: 'projects', l: 'lists', n: 'notes', h: 'habits', u: 'automation', c: 'share', m: 'matrix', a: 'analytics', r: 'review' }
+        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', s: 'search', p: 'planner', o: 'projects', l: 'lists', n: 'notes', h: 'habits', u: 'automation', c: 'share', x: 'integrations', m: 'matrix', a: 'analytics', r: 'review' }
         const next = destination[key]
         goChordAt.current = 0
         setGoChordPending(false)
@@ -704,6 +714,7 @@ function AppContent() {
       { id: 'nav-habits', group: 'Navigate', label: 'Go to Habits', run: () => navigate('habits') },
       { id: 'nav-automation', group: 'Navigate', label: 'Go to Templates & automation', keywords: 'automate automation template reusable workflow rule trigger action', run: () => navigate('automation') },
       { id: 'nav-share', group: 'Navigate', label: 'Go to Share & collaborate', keywords: 'share collaboration handoff package receive copy view only portable', run: () => navigate('share') },
+      { id: 'nav-integrations', group: 'Navigate', label: 'Go to External integrations', keywords: 'google calendar outlook email share target protocol webhook shortcut url api external', run: () => navigate('integrations') },
       { id: 'nav-matrix', group: 'Navigate', label: 'Go to Matrix & countdown', keywords: 'eisenhower urgency importance deadline countdown pressure horizon', run: () => navigate('matrix') },
       { id: 'nav-analytics', group: 'Navigate', label: 'Go to Analytics', keywords: 'statistics trends reports productivity focus habits workload velocity', run: () => navigate('analytics') },
       { id: 'nav-review', group: 'Navigate', label: 'Go to Review', run: () => navigate('review') },
@@ -857,6 +868,7 @@ function AppContent() {
           : view === 'habits' ? `${habitData.dueToday} due today`
             : view === 'automation' ? 'Reusable templates, explicit rules, and run history'
             : view === 'share' ? 'Portable handoff packages with explicit view/copy boundaries'
+            : view === 'integrations' ? 'Calendar, email, Share Target, protocol URLs, and external triggers'
             : view === 'matrix' ? 'Urgency, importance, and approaching deadlines'
             : view === 'analytics' ? 'Trends, patterns, velocity, and reports'
             : view === 'review' ? 'Review, learn, replan'
@@ -1039,6 +1051,19 @@ function AppContent() {
               navigate('automation')
             }}
           /> : null}
+          {view === 'integrations' ? <ExternalIntegrationsView
+            blocks={data.allTimeBlocks}
+            tasks={[...data.allTasks, ...data.subtasks]}
+            projects={[...data.projects, ...data.archivedProjects]}
+            incomingIntent={integrationIntent}
+            onConsumeIntent={() => setIntegrationIntent(null)}
+            onUndo={registerUndo}
+            onOpenTarget={(target) => {
+              if (target.type === 'task') { setSelectedTaskId(target.id); return }
+              navigate('projects'); setSelectedProjectId(target.id)
+            }}
+            onOpenInterop={() => setInteropOpen(true)}
+          /> : null}
           {view === 'matrix' ? <MatrixCountdownView
             tasks={data.allTasks}
             projects={data.projects}
@@ -1084,7 +1109,7 @@ function AppContent() {
         onData={() => setDataOpen(true)}
       />
 
-      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · S Search · P Planner · O Projects · L Lists · N Notes · H Habits · U Automate · C Share · M Matrix · A Analytics · R Review</span></div> : null}
+      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · S Search · P Planner · O Projects · L Lists · N Notes · H Habits · U Automate · C Share · X Integrations · M Matrix · A Analytics · R Review</span></div> : null}
       <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
       <ShortcutHelpModal open={shortcutHelpOpen} shortcuts={shortcuts} onClose={() => setShortcutHelpOpen(false)} onConfigure={() => { setShortcutHelpOpen(false); setKeyboardSettingsOpen(true) }} />
       <KeyboardSettingsDrawer open={keyboardSettingsOpen} value={shortcuts} onClose={() => setKeyboardSettingsOpen(false)} onSave={(next) => void settingsRepository.set('power.shortcuts', next)} />
