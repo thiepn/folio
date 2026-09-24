@@ -63,7 +63,7 @@ export function useReviewData(today: LocalDate = localDateKey(), habitAdherence 
         if (!habit.countsTowardCapacity || habit.kind !== 'duration') return sum
         const entry = habitsByEntry.get(`${habit.id}:${date}`)
         if (entry?.status === 'skipped') return sum
-        const committed = habit.schedule.type === 'times-per-week' ? Boolean(entry) : habitScheduledForDate(habit, date)
+        const committed = habit.schedule.type === 'times-per-week' || habit.schedule.type === 'times-per-month' ? Boolean(entry) : habitScheduledForDate(habit, date)
         return committed ? sum + habit.target : sum
       }, 0)
       const scheduledTaskMinutes = timeBlocks.filter((block) => block.kind === 'task' && localDateKey(new Date(block.start)) === date).reduce((sum, block) => sum + durationMinutes(block.start, block.end), 0)
