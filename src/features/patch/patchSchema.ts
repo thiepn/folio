@@ -39,8 +39,10 @@ const taskChanges = z.object({
 const habitChanges = z.object({
   title: z.string().trim().min(1).max(160).optional(),
   description: z.string().max(10_000).optional(),
-  kind: z.enum(['check', 'duration']).optional(),
-  target: z.number().int().positive().max(1440).optional(),
+  kind: z.enum(['check', 'quantity', 'duration']).optional(),
+  target: z.number().int().positive().max(100_000).optional(),
+  unit: z.string().trim().min(1).max(40).nullable().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
   schedule: importHabitScheduleSchema.optional(),
   countsTowardCapacity: z.boolean().optional(),
 }).strict()
@@ -87,7 +89,7 @@ const seriesChanges = z.object({
 const createProject = z.object({ op: z.literal('create'), entity: z.literal('project'), value: importProjectSchema }).strict()
 const createTask = z.object({ op: z.literal('create'), entity: z.literal('task'), value: importTaskSchema.extend({ parentId: z.string().min(1).optional() }).strict() }).strict()
 const createHabit = z.object({ op: z.literal('create'), entity: z.literal('habit'), value: importProjectSchema.pick({ ref: true }).extend({
-  title: z.string().trim().min(1).max(160), description: z.string().max(10_000).default(''), kind: z.enum(['check','duration']), target: z.number().int().positive().max(1440).default(1), schedule: importHabitScheduleSchema, countsTowardCapacity: z.boolean().default(false),
+  title: z.string().trim().min(1).max(160), description: z.string().max(10_000).default(''), kind: z.enum(['check','quantity','duration']), target: z.number().int().positive().max(100_000).default(1), unit: z.string().trim().min(1).max(40).optional(), color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(), schedule: importHabitScheduleSchema, countsTowardCapacity: z.boolean().default(false),
 }).strict() }).strict()
 const createTimeBlock = z.object({ op: z.literal('create'), entity: z.literal('timeBlock'), value: importTimeBlockSchema.extend({ taskId: z.string().min(1).optional() }).strict() }).strict()
 const createSeries = z.object({ op: z.literal('create'), entity: z.literal('recurringSeries'), value: importSeriesSchema }).strict()
