@@ -99,11 +99,18 @@ export interface FocusSessionPreview {
   taskTitle: string
   projectId?: string
   projectName?: string
-  mode: 'stopwatch' | 'countdown'
+  mode: 'stopwatch' | 'countdown' | 'pomodoro'
+  source: 'timer' | 'manual'
   targetSeconds?: number
   plannedSeconds?: number
   intention?: string
   note?: string
+  context?: string
+  tags?: string[]
+  interruptionCount?: number
+  breakSeconds?: number
+  phase?: 'focus' | 'short-break' | 'long-break'
+  cycleIndex?: number
   durationSeconds: number
   startedAt: string
   endedAt?: string
