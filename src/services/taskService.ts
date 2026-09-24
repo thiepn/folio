@@ -6,6 +6,7 @@ import type { UndoableMutation } from './undo'
 import { recurrenceService } from './recurrenceService'
 import { attachmentService } from './attachmentService'
 import { contentSearchService } from './contentSearchService'
+import { automationService } from './automationService'
 
 export type UndoableTaskMutation = UndoableMutation
 
@@ -72,6 +73,7 @@ async function setCompletedTask(id: string, completed: boolean): Promise<Undoabl
     }
   })
   const recurrenceUndo = completed ? await recurrenceService.onTaskCompleted(id, now) : null
+  if (completed) await automationService.handleTaskEvent('task-completed', id)
   return {
     message: completed ? (recurrenceUndo ? 'Task completed · next occurrence created' : 'Task completed') : 'Task reopened',
     undo: async () => {
@@ -84,12 +86,15 @@ async function setCompletedTask(id: string, completed: boolean): Promise<Undoabl
 export const taskService = {
   async create(input: TaskCreateInput) {
     const normalized = input.status === 'inbox' ? { ...input, plannedDate: undefined } : input
-    return taskRepository.create(normalized)
+    const task = await taskRepository.create(normalized)
+    await automationService.handleTaskEvent('task-created', task.id)
+    return task
   },
 
   async createUndoable(input: TaskCreateInput): Promise<{ task: TaskEntity; undo: UndoableTaskMutation }> {
     const normalized = input.status === 'inbox' ? { ...input, plannedDate: undefined } : input
     const task = await taskRepository.create(normalized)
+    await automationService.handleTaskEvent('task-created', task.id)
     return {
       task,
       undo: {
