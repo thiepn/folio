@@ -64,7 +64,7 @@ check('engine supports one-shot task date reminders', engine.includes('taskDateO
 check('engine supports time-block relative reminders', engine.includes('timeBlockOccurrences') && engine.includes('offsetMinutes'))
 check('engine supports recurring-series owners', engine.includes("reminder.ownerType === 'series'") && engine.includes("where('seriesId').equals(reminder.ownerId)"))
 check('engine supports fixed-schedule habit reminders', engine.includes('habitScheduledForDate') && engine.includes("triggerType !== 'habit-time'"))
-check('engine rejects flexible habit reminder materialization', engine.includes("habit.schedule.type === 'times-per-week'"))
+check('engine supports flexible habit reminder prompts', engine.includes('habitReminderDateEligible') && engine.includes("habit.schedule.type === 'times-per-week'") && engine.includes("habit.schedule.type === 'times-per-month'"))
 check('engine supports daily system reminders', engine.includes('desiredSystemOccurrences') && engine.includes("ownerId === 'daily-planning'"))
 check('engine supports overdue summary', engine.includes("ownerId === 'overdue-summary'") && engine.includes('No overdue tasks.'))
 check('engine suppresses completed tasks', engine.includes("task.status === 'completed'"))
@@ -109,8 +109,8 @@ check('task reminder editor supports multiple reminders', taskEditor.includes('t
 check('task reminder editor supports persistent flag', taskEditor.includes('Keep system notification visible'))
 check('task workspace embeds reminder editor', taskInspector.includes('<TaskReminderSection task={task} />'))
 
-check('habit reminder editor exists', habitEditor.includes("triggerType: 'habit-time'") && habitEditor.includes('Reminder time'))
-check('habit reminder UI rejects flexible weekly schedule', habitEditor.includes("schedule.type === 'times-per-week'") && habitEditor.includes('do not have fixed due days'))
+check('habit reminder editor exists', habitEditor.includes("triggerType:'habit-time'") && habitEditor.includes('Reminder time'))
+check('habit reminder UI supports flexible prompt days', habitEditor.includes("schedule.type==='times-per-week'") && habitEditor.includes("schedule.type==='times-per-month'") && habitEditor.includes('Prompt days'))
 check('habit detail embeds reminder editor', habitDetail.includes('<HabitReminderSection habit={habit} />'))
 
 check('reminder center shows due and upcoming', center.includes('Needs attention') && center.includes('Upcoming'))
