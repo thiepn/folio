@@ -2,6 +2,7 @@ import { db } from '../db/database'
 import { addLocalDays, atTimeInZone, dateKeyInTimeZone, localDateRange } from '../domain/date'
 import { habitPausedForDate, habitScheduledForDate } from '../domain/habit'
 import type {
+  HabitEntity,
   LocalDate,
   ReminderEntity,
   ReminderOccurrenceEntity,
@@ -137,7 +138,7 @@ async function desiredTaskOccurrences(reminder: ReminderEntity, nowMs: number) {
   return rows
 }
 
-function habitReminderDateEligible(habit: Awaited<ReturnType<typeof db.habits.get>> extends infer H ? Exclude<H, undefined> : never, reminder: ReminderEntity, date: LocalDate) {
+function habitReminderDateEligible(habit: HabitEntity, reminder: ReminderEntity, date: LocalDate) {
   if (habitPausedForDate(habit, date)) return false
   const flexible = habit.schedule.type === 'times-per-week' || habit.schedule.type === 'times-per-month'
   if (!flexible) return habitScheduledForDate(habit, date)
