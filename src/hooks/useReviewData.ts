@@ -7,6 +7,7 @@ import { focusSessionRepository } from '../repositories/focusSessionRepository'
 import { habitRepository } from '../repositories/habitRepository'
 import { projectRepository } from '../repositories/projectRepository'
 import { settingsRepository } from '../repositories/settingsRepository'
+import { focusSettingsService } from '../services/focusSettingsService'
 import { taskRepository } from '../repositories/taskRepository'
 import { timeBlockRepository } from '../repositories/timeBlockRepository'
 import {
@@ -30,7 +31,7 @@ export function useReviewData(today: LocalDate = localDateKey(), habitAdherence 
     const { weekStart, weekEnd, nextWeekStart, nextWeekEnd } = reviewWeekBounds(today)
     const pastWeekDates = localDateRange(weekStart, Math.max(1, Math.round((new Date(`${today}T12:00:00`).getTime() - new Date(`${weekStart}T12:00:00`).getTime()) / 86_400_000) + 1))
     const [
-      tasks, projects, timeBlocks, focusSessions, plans, habits, habitEntries, defaultCapacity,
+      tasks, projects, timeBlocks, focusSessions, plans, habits, habitEntries, defaultCapacity, focusGoals,
     ] = await Promise.all([
       taskRepository.listRootTasks(),
       projectRepository.listActive(),
@@ -40,6 +41,7 @@ export function useReviewData(today: LocalDate = localDateKey(), habitAdherence 
       habitRepository.listActive(),
       habitRepository.listAllEntries(),
       settingsRepository.getDailyCapacityMinutes(),
+      focusSettingsService.getGoals(),
     ])
 
     const projectMap = new Map(projects.map((project) => [project.id, project]))
@@ -55,6 +57,9 @@ export function useReviewData(today: LocalDate = localDateKey(), habitAdherence 
       return date >= weekStart && date <= today
     })
     const focusWeekSeconds = weekSessions.reduce((sum, session) => sum + session.durationSeconds, 0)
+    const focusInterruptionCount = weekSessions.reduce((sum, session) => sum + (session.interruptionCount ?? 0), 0)
+    const manualFocusSeconds = weekSessions.filter((session) => session.source === 'manual').reduce((sum, session) => sum + session.durationSeconds, 0)
+    const focusGoalPercent = focusGoals.weeklyMinutes ? Math.round((focusWeekSeconds / 60 / focusGoals.weeklyMinutes) * 100) : null
 
     const dayMetrics: ReviewDayMetric[] = pastWeekDates.map((date) => {
       const dayTasks = tasks.filter((task) => task.plannedDate === date && (task.status === 'todo' || task.status === 'completed'))
@@ -162,6 +167,9 @@ export function useReviewData(today: LocalDate = localDateKey(), habitAdherence 
       completedPlannedCount: completedPlanned.length,
       focusWeekSeconds,
       focusSessionCount: weekSessions.length,
+      focusInterruptionCount,
+      manualFocusSeconds,
+      focusGoalPercent,
       scheduledWeekMinutes,
       scheduleExecutionPercent: scheduledWeekMinutes ? Math.round((actualFocusMinutes / scheduledWeekMinutes) * 100) : null,
       estimateVariancePercent,
