@@ -110,7 +110,7 @@ check('patch execution validates and preserves timeline fields',patchService.inc
 check('public backup v20 schema exists',exists('public/schema/folio-backup-v20.schema.json'))
 check('public import schema advertises timeline fields',read('public/schema/folio-import-v1.schema.json').includes('"timelineStart"')&&read('public/schema/folio-import-v1.schema.json').includes('"timelineMilestone"'))
 check('public patch schema advertises timeline fields',read('public/schema/folio-patch-v1.schema.json').includes('"timelineStart"')&&read('public/schema/folio-patch-v1.schema.json').includes('"timelineMilestone"'))
-check('interop advertises v8 through v22 restore',interop.includes('Schema v22 · complete planner state + rich content + Habits V2')&&interop.includes('schema v8–v22'))
+check('interop advertises v8 through v23 restore',interop.includes('Schema v23 · complete planner state + rich content + Habits V2 + Focus V2')&&interop.includes('schema v8–v23'))
 
 check('D8 stylesheet loaded',styles.includes("@import './boards-timeline-v2.css';"))
 check('D8 documentation exists',exists('docs/KANBAN_TIMELINE_V2_D8.md'))
