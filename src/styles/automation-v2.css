@@ -66,3 +66,5 @@
   .automation-log article { grid-template-columns:4px minmax(0,1fr); }
   .automation-log article > div:last-child { grid-column:2; text-align:left; display:flex; gap:8px; }
 }
+
+.automation-test-result { margin-bottom:8px; padding:9px 10px; border-left:2px solid var(--accent); background:var(--accent-soft); color:var(--text-soft); font-size:10px; }
