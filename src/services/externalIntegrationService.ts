@@ -10,8 +10,8 @@ import type { UndoableMutation } from './undo'
 
 export type IntegrationIntent =
   | { type:'capture'; title:string; text?:string; url?:string; projectId?:string; plannedDate?:string; source:'url'|'share-target'|'protocol' }
-  | { type:'template'; templateId:string; anchorDate?:string; source:'url'|'protocol' }
-  | { type:'automation'; ruleId:string; taskId:string; source:'url'|'protocol' }
+  | { type:'template'; templateId:string; anchorDate?:string; source:'url'|'share-target'|'protocol' }
+  | { type:'automation'; ruleId:string; taskId:string; source:'url'|'share-target'|'protocol' }
 
 export interface ParsedEmailCapture {
   subject:string
@@ -176,7 +176,7 @@ export const externalIntegrationService={
     return {undo,taskId:task.id,preview}
   },
 
-  async executeIntent(intent:IntegrationIntent):Promise<{undo:UndoableMutation;open?:{type:'task'|'project'|'template';id:string}}>{
+  async executeIntent(intent:IntegrationIntent):Promise<{undo:UndoableMutation;open?:{type:'task'|'project';id:string}}>{
     if(intent.type==='capture'){
       if(intent.projectId){const project=await projectRepository.get(intent.projectId);if(!project||project.archived)throw new Error('External capture target project is unavailable.')}
       const description=[intent.text,intent.url].filter(Boolean).join('\n\n')
