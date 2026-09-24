@@ -205,7 +205,7 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
       tags: tagData.tags, tagIds: tagData.tagIds,
     }, taskIds.get(item.ref)!, now, Date.now() + index)
   })
-  const habits = document.habits.map((item, index) => makeHabitEntity({ title: item.title, description: item.description, kind: item.kind, target: item.target, schedule: item.schedule, countsTowardCapacity: item.countsTowardCapacity }, crypto.randomUUID(), now, Date.now() + 10_000 + index))
+  const habits = document.habits.map((item, index) => makeHabitEntity({ title: item.title, description: item.description, kind: item.kind, target: item.target, unit: item.unit, color: item.color, schedule: item.schedule, countsTowardCapacity: item.countsTowardCapacity }, crypto.randomUUID(), now, Date.now() + 10_000 + index))
   const explicitBlocks = document.timeBlocks.map((item) => {
     const taskId = item.taskRef ? taskIds.get(item.taskRef) : undefined
     const linkedTask = taskId ? tasks.find((task) => task.id === taskId) : undefined
@@ -265,7 +265,7 @@ export async function applyImport(raw: string | unknown, source: ImportBatchEnti
   const affectedDates = new Set<string>([...allTasks.map((task) => task.plannedDate).filter((date): date is string => Boolean(date)), ...allBlocks.map((block) => dateKeyInTimeZone(block.start, document.timezone))])
   const existingPlans = await db.dailyPlans.toArray()
   for (const habit of document.habits) {
-    if (habit.kind !== 'duration' || !habit.countsTowardCapacity || habit.schedule.type === 'times-per-week') continue
+    if (habit.kind !== 'duration' || !habit.countsTowardCapacity || habit.schedule.type === 'times-per-week' || habit.schedule.type === 'times-per-month') continue
     for (const plan of existingPlans) if (scheduleMatches(habit.schedule, plan.date)) affectedDates.add(plan.date)
   }
   const priorDailyPlans = [...affectedDates].map((date) => ({ date, before: existingPlans.find((plan) => plan.date === date) ? structuredClone(existingPlans.find((plan) => plan.date === date)!) : undefined }))
