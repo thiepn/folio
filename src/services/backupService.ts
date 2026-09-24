@@ -1,6 +1,6 @@
 import { db, DATABASE_SCHEMA_VERSION } from '../db/database'
 import { backupEnvelopeSchema } from '../domain/schemas'
-import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema, backupReviewRecordSchema, backupReminderSchema, backupReminderOccurrenceSchema, backupFolderSchema, backupListSchema, backupSectionSchema, backupTagSchema, backupNoteSchema, backupAttachmentSchema } from './backupSchemas'
+import { backupTaskSchema, backupProjectSchema, backupHabitSchema, backupHabitEntrySchema, backupTimeBlockSchema, backupDailyPlanSchema, backupDailyPlanItemSchema, backupFocusSchema, backupSeriesSchema, backupSettingSchema, backupImportBatchSchema, backupPatchBatchSchema, backupCalendarBatchSchema, backupReviewRecordSchema, backupReminderSchema, backupReminderOccurrenceSchema, backupFolderSchema, backupListSchema, backupSectionSchema, backupTagSchema, backupNoteSchema, backupAttachmentSchema, backupHabitGroupSchema, backupHabitTemplateSchema } from './backupSchemas'
 import type {
   CalendarImportBatchEntity,
   DailyPlanEntity,
@@ -12,6 +12,8 @@ import type {
   TagEntity,
   HabitEntity,
   HabitEntryEntity,
+  HabitGroupEntity,
+  HabitTemplateEntity,
   ImportBatchEntity,
   PatchBatchEntity,
   ProjectEntity,
@@ -38,6 +40,8 @@ export interface BackupEnvelope {
     projects: ProjectEntity[]
     habits: HabitEntity[]
     habitEntries: HabitEntryEntity[]
+    habitGroups: HabitGroupEntity[]
+    habitTemplates: HabitTemplateEntity[]
     timeBlocks: TimeBlockEntity[]
     dailyPlans: DailyPlanEntity[]
     dailyPlanItems: DailyPlanItemEntity[]
@@ -66,7 +70,7 @@ export interface BackupPreview {
 }
 
 const TABLE_KEYS = [
-  'tasks', 'projects', 'habits', 'habitEntries', 'timeBlocks', 'dailyPlans', 'dailyPlanItems',
+  'tasks', 'projects', 'habits', 'habitEntries', 'habitGroups', 'habitTemplates', 'timeBlocks', 'dailyPlans', 'dailyPlanItems',
   'focusSessions', 'recurringSeries', 'settings', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords', 'reminders', 'reminderOccurrences', 'folders', 'lists', 'sections', 'tags', 'notes', 'attachments',
 ] as const
 
@@ -203,6 +207,8 @@ function normalizeBackup(raw: ReturnType<typeof backupEnvelopeSchema.parse>): Ba
       projects: raw.data.projects.map((row) => backupProjectSchema.parse(row)) as ProjectEntity[],
       habits: raw.data.habits.map((row) => backupHabitSchema.parse(row)) as HabitEntity[],
       habitEntries: raw.data.habitEntries.map((row) => backupHabitEntrySchema.parse(row)) as HabitEntryEntity[],
+      habitGroups: (raw.data.habitGroups ?? []).map((row) => backupHabitGroupSchema.parse(row)) as HabitGroupEntity[],
+      habitTemplates: (raw.data.habitTemplates ?? []).map((row) => backupHabitTemplateSchema.parse(row)) as HabitTemplateEntity[],
       timeBlocks: raw.data.timeBlocks.map((row) => backupTimeBlockSchema.parse(row)) as TimeBlockEntity[],
       dailyPlans: raw.data.dailyPlans.map((row) => backupDailyPlanSchema.parse(row)) as DailyPlanEntity[],
       dailyPlanItems: raw.data.dailyPlanItems.map((row) => backupDailyPlanItemSchema.parse(row)) as DailyPlanItemEntity[],
@@ -233,6 +239,8 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
   const taskIds = uniqueIds(data.tasks, 'tasks')
   const projectIds = uniqueIds(data.projects, 'projects')
   const habitIds = uniqueIds(data.habits, 'habits')
+  const habitGroupIds = uniqueIds(data.habitGroups, 'habitGroups')
+  uniqueIds(data.habitTemplates, 'habitTemplates')
   uniqueIds(data.habitEntries, 'habitEntries')
   uniqueIds(data.timeBlocks, 'timeBlocks')
   uniqueIds(data.dailyPlans, 'dailyPlans', 'date')
@@ -297,6 +305,7 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
     visited.add(taskId)
   }
   for (const taskId of taskIds) visitDependency(taskId)
+  for (const habit of data.habits) if (habit.groupId && !habitGroupIds.has(habit.groupId)) throw new Error(`Habit “${habit.title}” references missing group ${habit.groupId}.`)
   for (const habitEntry of data.habitEntries) if (!habitIds.has(habitEntry.habitId)) throw new Error(`Habit history references missing habit ${habitEntry.habitId}.`)
   for (const block of data.timeBlocks) if (block.taskId && !taskIds.has(block.taskId)) throw new Error(`Time block “${block.title}” references a missing task.`)
   for (const item of data.dailyPlanItems) if (!taskIds.has(item.taskId)) throw new Error(`Daily plan item references missing task ${item.taskId}.`)
@@ -356,8 +365,8 @@ function validateBackupSemantics(backup: BackupEnvelope): string[] {
 }
 
 export async function createBackup(): Promise<BackupEnvelope> {
-  const [tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, rawAttachments] = await Promise.all([
-    db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(),
+  const [tasks, projects, habits, habitEntries, habitGroups, habitTemplates, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, rawAttachments] = await Promise.all([
+    db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(), db.habitGroups.toArray(), db.habitTemplates.toArray(),
     db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(),
     db.settings.toArray(), db.importBatches.toArray(), db.patchBatches.toArray(), db.calendarImportBatches.toArray(), db.reviewRecords.toArray(),
     db.reminders.toArray(), db.reminderOccurrences.toArray(), db.folders.toArray(), db.lists.toArray(), db.sections.toArray(), db.tags.toArray(), db.notes.toArray(), db.attachments.toArray(),
@@ -367,7 +376,7 @@ export async function createBackup(): Promise<BackupEnvelope> {
     format: 'folio-backup',
     version: DATABASE_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { tasks, projects, habits, habitEntries, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, attachments },
+    data: { tasks, projects, habits, habitEntries, habitGroups, habitTemplates, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, attachments },
   }
 }
 
@@ -389,7 +398,7 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
   const verified = previewBackup(preview.backup)
   const d = verified.backup.data
   await db.transaction('rw', [
-    db.tasks, db.projects, db.habits, db.habitEntries, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
+    db.tasks, db.projects, db.habits, db.habitEntries, db.habitGroups, db.habitTemplates, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
     db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords, db.reminders, db.reminderOccurrences, db.folders, db.lists, db.sections, db.tags, db.notes, db.attachments, db.searchDocuments,
   ], async () => {
       await Promise.all(TABLE_KEYS.map((key) => (db[key] as any).clear()))
@@ -399,6 +408,8 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
       await db.tasks.bulkPut(d.tasks)
       await db.habits.bulkPut(d.habits)
       await db.habitEntries.bulkPut(d.habitEntries)
+      await db.habitGroups.bulkPut(d.habitGroups)
+      await db.habitTemplates.bulkPut(d.habitTemplates)
       await db.timeBlocks.bulkPut(d.timeBlocks)
       await db.dailyPlans.bulkPut(d.dailyPlans)
       await db.dailyPlanItems.bulkPut(d.dailyPlanItems)
