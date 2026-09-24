@@ -84,6 +84,7 @@ function WeekReview({ snapshot, recentCompleted, recentFocus, historyEvents, onO
         <Metric value={formatMinutes(snapshot.scheduledWeekMinutes)} label="Task time scheduled" note="Clock time blocks through today" />
         <Metric value={formatDuration(snapshot.focusWeekSeconds)} label="Actual tracked focus" note={snapshot.scheduleExecutionPercent == null ? 'No scheduled task time yet' : `${snapshot.scheduleExecutionPercent}% of scheduled task time`} />
         <Metric value={formatVariance(snapshot.estimateVariancePercent)} label="Estimate calibration" note="Completed tasks with tracked focus" />
+        <Metric value={snapshot.focusGoalPercent == null ? '—' : `${snapshot.focusGoalPercent}%`} label="Weekly focus goal" note={`${snapshot.focusInterruptionCount} interruptions · ${formatDuration(snapshot.manualFocusSeconds)} manual`} />
       </div>
     </section>
 
@@ -98,7 +99,7 @@ function WeekReview({ snapshot, recentCompleted, recentFocus, historyEvents, onO
     </div>
 
     <div className="review-two-col">
-      <Panel title="Recent focus" meta={`${recentFocus.length}`}>{recentFocus.length ? <div className="focus-history-list">{recentFocus.slice(0, 6).map((session) => <button className="focus-history-row" key={session.id} onClick={() => session.taskId && onOpenTask?.(session.taskId)} disabled={!session.taskId}><div><strong>{session.taskTitle}</strong><span>{session.projectName ?? 'No project'} · {formatSessionDate(session.startedAt)}</span></div><div><b>{formatDuration(session.durationSeconds)}</b><span>{session.mode === 'countdown' ? 'Countdown' : 'Stopwatch'}</span></div></button>)}</div> : <div className="empty-state">No finished focus sessions yet.</div>}</Panel>
+      <Panel title="Recent focus" meta={`${recentFocus.length}`}>{recentFocus.length ? <div className="focus-history-list">{recentFocus.slice(0, 6).map((session) => <button className="focus-history-row" key={session.id} onClick={() => session.taskId && onOpenTask?.(session.taskId)} disabled={!session.taskId}><div><strong>{session.taskTitle}</strong><span>{session.projectName ?? 'No project'} · {formatSessionDate(session.startedAt)}</span></div><div><b>{formatDuration(session.durationSeconds)}</b><span>{session.source === 'manual' ? 'Manual' : session.mode === 'pomodoro' ? 'Pomodoro' : session.mode === 'countdown' ? 'Countdown' : 'Stopwatch'}</span></div></button>)}</div> : <div className="empty-state">No finished focus sessions yet.</div>}</Panel>
       <Panel title="Recently completed" meta={`${recentCompleted.length}`}>{recentCompleted.length ? <div className="review-reference-list">{recentCompleted.slice(0, 6).map((task) => <button key={task.id} onClick={() => onOpenTask?.(task.id)}><div><strong>{task.title}</strong><span>{task.project ?? 'No project'}</span></div><em>Completed</em></button>)}</div> : <div className="empty-state">No completed tasks yet.</div>}</Panel>
     </div>
   </>
