@@ -104,13 +104,12 @@ export const attachmentService = {
     for (const file of files) {
       const now = new Date().toISOString()
       const [dimensions, audio] = await Promise.all([imageMetadata(file), audioMetadata(file)])
-      const row: AttachmentEntity = {
+      added.push({
         id: crypto.randomUUID(), ownerType, ownerId, kind: fileKind(file), name: file.name || 'Attachment', mimeType: file.type || 'application/octet-stream', size: file.size,
         blob: file, ...dimensions, ...audio, createdAt: now, updatedAt: now,
-      }
-      await db.attachments.add(row)
-      added.push(row)
+      })
     }
+    await db.transaction('rw', db.attachments, async () => { await db.attachments.bulkAdd(added) })
     await contentSearchService.rebuildOwner(ownerType, ownerId)
     return added
   },
