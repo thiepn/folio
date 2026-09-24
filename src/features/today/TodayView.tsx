@@ -58,7 +58,7 @@ export function TodayView({
   onAdd: () => void
   onToggle: (id: string) => void
   onToggleHabit: (id: string) => void
-  onHabitIncrement: (id: string, minutes: number) => void
+  onHabitIncrement: (id: string, value: number) => void
   onOpenHabit: (id: string) => void
   onSkipHabit: (id: string) => void
   onOpen: (id: string) => void
@@ -179,9 +179,9 @@ export function TodayView({
               {habits.length ? habits.map((habit) => (
                 <div className={`habit-row habit-row--enhanced ${habit.flexible ? 'is-flexible' : ''}`} key={habit.id}>
                   <button className={`task-check ${habit.completed ? 'task-check--done' : ''} ${habit.skipped ? 'is-skipped' : ''}`} onClick={() => onToggleHabit(habit.id)} aria-label={`${habit.completed ? 'Reopen' : 'Complete'} ${habit.title}`} />
-                  <button className="habit-row__body" onClick={() => onOpenHabit(habit.id)}><span>{habit.title}</span><small>{habit.flexible ? 'Flexible this week' : habit.scheduleLabel}{habit.skipped ? ' · Rest day' : ''}</small></button>
+                  <button className="habit-row__body" onClick={() => onOpenHabit(habit.id)}><span>{habit.title}</span><small>{habit.flexible ? `Flexible this ${habit.periodLabel ?? 'week'}` : habit.scheduleLabel}{habit.skipped ? ' · Rest day' : ''}</small></button>
                   <div className="habit-row__quick">
-                    {habit.kind === 'duration' && !habit.completed && !habit.skipped ? <button onClick={() => onHabitIncrement(habit.id, 5)}>+5m</button> : null}
+                    {habit.kind === 'duration' && !habit.completed && !habit.skipped ? <button onClick={() => onHabitIncrement(habit.id, 5)}>+5m</button> : null}{habit.kind === 'quantity' && !habit.completed && !habit.skipped ? <button onClick={() => onHabitIncrement(habit.id, 1)}>+1</button> : null}
                     <span className="habit-row__progress">{habit.skipped ? 'Rest' : habit.progress ?? (habit.completed ? 'Done' : 'Open')}</span>
                     {!habit.flexible && !habit.completed ? <button className="habit-row__skip" onClick={() => onSkipHabit(habit.id)}>{habit.skipped ? 'Undo rest' : 'Rest'}</button> : null}
                   </div>
