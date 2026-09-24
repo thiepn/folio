@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { addLocalDays, formatLocalDate, localDateKey, localDateRange } from '../../domain/date'
 import { habitCurrentPause, habitHistoryStatus, habitPauseLabel, habitPausedForDate, habitScheduleLabel, habitWeeklyTrend } from '../../domain/habit'
 import type { HabitEntity, HabitEntryEntity, LocalDate } from '../../domain/models'
@@ -44,11 +44,12 @@ export function HabitDetailDrawer({ open, habit, preview, entries, today, groupN
   const [historyDate, setHistoryDate] = useState(today)
   const [historyValue, setHistoryValue] = useState('0')
   useEffect(() => { if (open) { setPauseThrough(addLocalDays(today, 7)); setHistoryDate(today) } }, [open, today])
-  if (!habit || !preview) return null
-
-  const habitEntries = entries.filter((entry) => entry.habitId === habit.id)
+  const habitEntries = habit ? entries.filter((entry) => entry.habitId === habit.id) : []
   const entryMap = new Map(habitEntries.map((entry) => [entry.date, entry]))
   const selectedEntry = entryMap.get(historyDate)
+  useEffect(() => { setHistoryValue(String(selectedEntry?.status === 'skipped' ? 0 : selectedEntry?.value ?? 0)) }, [historyDate, selectedEntry?.updatedAt])
+  if (!habit || !preview) return null
+
   const dates = localDateRange(addLocalDays(today, -83), 84)
   const currentPause = habitCurrentPause(habit, today)
   const trend = habitWeeklyTrend(habit, habitEntries, today, 12)
@@ -56,9 +57,7 @@ export function HabitDetailDrawer({ open, habit, preview, entries, today, groupN
   const historyEditable = historyDate >= created && historyDate <= today && !habitPausedForDate(habit, historyDate)
   const historyStatus = habitHistoryStatus(habit, selectedEntry, historyDate, today)
 
-  useEffect(() => { setHistoryValue(String(selectedEntry?.status === 'skipped' ? 0 : selectedEntry?.value ?? 0)) }, [historyDate, selectedEntry?.updatedAt])
-
-  const intro = useMemo(() => habit.kind === 'check' ? 'Check habit' : habit.kind === 'duration' ? `${habit.target} min target` : `${habit.target} ${habit.unit ?? 'units'} target`, [habit])
+  const intro = habit.kind === 'check' ? 'Check habit' : habit.kind === 'duration' ? `${habit.target} min target` : `${habit.target} ${habit.unit ?? 'units'} target`
 
   return <Drawer open={open} title={habit.title} onClose={onClose} className="habit-detail-overlay">
     <div className="habit-detail habit-detail--v2">
