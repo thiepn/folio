@@ -191,9 +191,11 @@ export const collaborationService={
     }else if(input.scope==='review'){
       entity=await reviewRecordRepository.get(input.entityId);if(!entity)throw new Error('Review not found.')
       payload.review=clone(entity)
-    }else{
+    }else if(input.scope==='template'){
       entity=await templateService.get(input.entityId);if(!entity)throw new Error('Template not found.')
       payload.template=clone(entity)
+    }else{
+      throw new Error('Unsupported collaboration scope.')
     }
     const pkg:CollaborationPackage={format:'folio-share',version:1,shareId:crypto.randomUUID(),createdAt:now(),title:packageTitle(input.scope,entity),message:input.message?.trim()||undefined,scope:input.scope,access:input.access,payload}
     await addHistory({direction:'sent',shareId:pkg.shareId,title:pkg.title,scope:pkg.scope,access:pkg.access,status:'shared'})
