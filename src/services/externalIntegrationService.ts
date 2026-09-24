@@ -1,6 +1,7 @@
-import { localDateKey } from '../domain/date'
+import { dateKeyInTimeZone, localDateKey } from '../domain/date'
 import type { FolioTemplateDefinition, TimeBlockEntity } from '../domain/models'
 import { timeBlockRepository } from '../repositories/timeBlockRepository'
+import { projectRepository } from '../repositories/projectRepository'
 import { settingsRepository } from '../repositories/settingsRepository'
 import { taskService } from './taskService'
 import { templateService } from './templateService'
@@ -131,8 +132,8 @@ export const externalIntegrationService={
   async registerProtocolHandler(){
     if(!('registerProtocolHandler' in navigator))throw new Error('Custom protocol registration is not supported in this browser.')
     const base=new URL(import.meta.env.BASE_URL,window.location.href)
-    base.searchParams.set('folioProtocol','%s')
-    navigator.registerProtocolHandler('web+folio',base.toString())
+    base.search='';base.hash=''
+    navigator.registerProtocolHandler('web+folio',base.toString()+'?folioProtocol=%s')
     await record('protocol','web+folio handler requested','Browser approval may still be required.')
   },
 
@@ -177,6 +178,7 @@ export const externalIntegrationService={
 
   async executeIntent(intent:IntegrationIntent):Promise<{undo:UndoableMutation;open?:{type:'task'|'project'|'template';id:string}}>{
     if(intent.type==='capture'){
+      if(intent.projectId){const project=await projectRepository.get(intent.projectId);if(!project||project.archived)throw new Error('External capture target project is unavailable.')}
       const description=[intent.text,intent.url].filter(Boolean).join('\n\n')
       const {task,undo}=await taskService.createUndoable({title:intent.title,description,status:intent.plannedDate?'todo':'inbox',plannedDate:intent.plannedDate,projectId:intent.projectId,sourceUrl:intent.url})
       await record('capture',task.title,intent.source)
@@ -203,13 +205,20 @@ export const externalIntegrationService={
     const details=blockDetails(block)
     const google=new URL('https://calendar.google.com/calendar/render')
     google.searchParams.set('action','TEMPLATE');google.searchParams.set('text',block.title)
-    google.searchParams.set('dates',utcStamp(block.start)+'/'+utcStamp(block.end))
+    if(block.allDay){
+      const zone=block.timeZone??'local'
+      google.searchParams.set('dates',dateKeyInTimeZone(block.start,zone).replaceAll('-','')+'/'+dateKeyInTimeZone(block.end,zone).replaceAll('-',''))
+    }else google.searchParams.set('dates',utcStamp(block.start)+'/'+utcStamp(block.end))
     if(details)google.searchParams.set('details',details)
     if(block.location)google.searchParams.set('location',block.location)
 
     const outlook=new URL('https://outlook.office.com/calendar/0/deeplink/compose')
     outlook.searchParams.set('path','/calendar/action/compose');outlook.searchParams.set('rru','addevent')
-    outlook.searchParams.set('subject',block.title);outlook.searchParams.set('startdt',new Date(block.start).toISOString());outlook.searchParams.set('enddt',new Date(block.end).toISOString())
+    outlook.searchParams.set('subject',block.title)
+    if(block.allDay){
+      const zone=block.timeZone??'local'
+      outlook.searchParams.set('startdt',dateKeyInTimeZone(block.start,zone));outlook.searchParams.set('enddt',dateKeyInTimeZone(block.end,zone));outlook.searchParams.set('allday','true')
+    }else{outlook.searchParams.set('startdt',new Date(block.start).toISOString());outlook.searchParams.set('enddt',new Date(block.end).toISOString())}
     if(details)outlook.searchParams.set('body',details)
     if(block.location)outlook.searchParams.set('location',block.location)
     return {block,google:google.toString(),outlook:outlook.toString()}
@@ -219,7 +228,13 @@ export const externalIntegrationService={
 
   async singleEventIcs(blockId:string){
     const block=await timeBlockRepository.get(blockId);if(!block)throw new Error('Calendar item not found.')
-    const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Folio//External Integration//EN','CALSCALE:GREGORIAN','BEGIN:VEVENT','UID:'+block.id+'@folio.local','DTSTAMP:'+utcStamp(now()),'DTSTART:'+utcStamp(block.start),'DTEND:'+utcStamp(block.end),'SUMMARY:'+escapeIcs(block.title)]
+    const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Folio//External Integration//EN','CALSCALE:GREGORIAN','BEGIN:VEVENT','UID:'+block.id+'@folio.local','DTSTAMP:'+utcStamp(now())]
+    if(block.allDay){
+      const zone=block.timeZone??'local'
+      lines.push('DTSTART;VALUE=DATE:'+dateKeyInTimeZone(block.start,zone).replaceAll('-',''))
+      lines.push('DTEND;VALUE=DATE:'+dateKeyInTimeZone(block.end,zone).replaceAll('-',''))
+    }else{lines.push('DTSTART:'+utcStamp(block.start));lines.push('DTEND:'+utcStamp(block.end))}
+    lines.push('SUMMARY:'+escapeIcs(block.title))
     const details=blockDetails(block);if(details)lines.push('DESCRIPTION:'+escapeIcs(details))
     if(block.location)lines.push('LOCATION:'+escapeIcs(block.location))
     lines.push('END:VEVENT','END:VCALENDAR')
