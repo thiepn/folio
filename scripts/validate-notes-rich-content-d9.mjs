@@ -27,7 +27,7 @@ const styles=read('src/styles/index.css')
 
 check('D9 validator registered',pkg.scripts?.['validate:d9']==='node scripts/validate-notes-rich-content-d9.mjs')
 check('release gate runs D9 validation',pkg.scripts?.['release:verify']?.includes('validate:d9'))
-check('D9 remains schema-compatible',Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1]??0)>=21&&database.includes('this.version(21)'))
+check('D9 remains schema-compatible',Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]??0)>=21&&database.includes('this.version(21)'))
 check('v20 to v21 migration registered',database.includes('migrateV20ToV21')&&migration.includes('searchDocuments'))
 check('standalone Note model exists',models.includes('interface NoteEntity')&&models.includes("ContentOwnerType = 'task' | 'note'"))
 check('attachments store local Blob data',models.includes('interface AttachmentEntity')&&models.includes('blob?: Blob'))
