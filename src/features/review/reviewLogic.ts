@@ -64,6 +64,9 @@ export interface ReviewSnapshot {
   completedPlannedCount: number
   focusWeekSeconds: number
   focusSessionCount: number
+  focusInterruptionCount: number
+  manualFocusSeconds: number
+  focusGoalPercent: number | null
   scheduledWeekMinutes: number
   scheduleExecutionPercent: number | null
   estimateVariancePercent: number | null
