@@ -37,6 +37,7 @@ export type ReminderOccurrenceStatus = 'scheduled' | 'snoozed' | 'due' | 'dismis
 export type ListSortMode = 'manual' | 'planned' | 'deadline' | 'priority' | 'title' | 'created' | 'updated'
 export type ListGroupMode = 'section' | 'none' | 'planned' | 'priority' | 'tag'
 export type ContentOwnerType = 'task' | 'note'
+export type SearchOwnerType = ContentOwnerType | 'project' | 'habit' | 'review' | 'tag'
 export type AttachmentKind = 'image' | 'audio' | 'file' | 'link'
 
 export interface NoteEntity {
@@ -69,9 +70,17 @@ export interface AttachmentEntity {
 
 export interface SearchDocumentEntity {
   id: string
-  ownerType: ContentOwnerType
+  ownerType: SearchOwnerType
   ownerId: EntityId
+  title?: string
+  summary?: string
   text: string
+  keywords?: string
+  projectId?: EntityId
+  status?: string
+  tagIds?: EntityId[]
+  date?: LocalDate
+  archived?: boolean
   updatedAt: IsoDateTime
 }
 
