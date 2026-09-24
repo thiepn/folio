@@ -63,15 +63,15 @@ export function AnalyticsView() {
         <button className={preset === 'custom' ? 'is-active' : ''} onClick={() => setPreset('custom')}>Custom</button>
       </div>
       <div className="analytics-range-inputs">
-        <label>From <input type="date" max={throughDate} value={fromDate} onChange={(event) => { setPreset('custom'); setFromDate(event.target.value) }} /></label>
-        <label>Through <input type="date" min={fromDate} max={today} value={throughDate} onChange={(event) => { setPreset('custom'); setThroughDate(event.target.value) }} /></label>
+        <label>From <input type="date" max={throughDate} value={fromDate} onChange={(event) => { if (!event.target.value) return; setPreset('custom'); setFromDate(event.target.value) }} /></label>
+        <label>Through <input type="date" min={fromDate} max={today} value={throughDate} onChange={(event) => { if (!event.target.value) return; setPreset('custom'); setThroughDate(event.target.value) }} /></label>
       </div>
     </section>
 
     {!data ? <div className="analytics-loading">Calculating analytics…</div> : <>
       <section className="analytics-scoreboard">
         <Metric value={String(data.summary.completedTasks)} label="Tasks completed" note={delta(data.summary.completedTasks, data.previousSummary.completedTasks)} />
-        <Metric value={pct(data.summary.planCompletionRate)} label="Plan execution" note={delta(data.summary.planCompletionRate, data.previousSummary.planCompletionRate, 'pp')} />
+        <Metric value={pct(data.summary.planCompletionRate)} label="Same-day plan execution" note={delta(data.summary.planCompletionRate, data.previousSummary.planCompletionRate, 'pp')} />
         <Metric value={pct(data.summary.overdueRate)} label="Overdue rate" note={data.summary.dueTasks ? data.summary.overdueTasks + ' of ' + data.summary.dueTasks + ' due tasks' : 'No deadlines in range'} tone={data.summary.overdueRate != null && data.summary.overdueRate > 25 ? 'warning' : undefined} />
         <Metric value={formatMinutes(data.summary.focusSeconds)} label="Focused work" note={data.summary.focusSessions + ' sessions · ' + formatMinutes(data.summary.manualFocusSeconds) + ' manual'} />
         <Metric value={pct(data.summary.habitAdherencePercent)} label="Habit adherence" note={delta(data.summary.habitAdherencePercent, data.previousSummary.habitAdherencePercent, 'pp')} />
