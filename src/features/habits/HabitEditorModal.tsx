@@ -69,13 +69,12 @@ export function HabitEditorModal({ open, habit, groups, onClose, onCreate, onUpd
       target: kind === 'check' ? 1 : Math.max(1, Math.round(target)),
       unit: kind === 'quantity' ? unit.trim() : undefined,
       color,
-      groupId: groupId || undefined,
       schedule,
       countsTowardCapacity: kind === 'duration' ? countsCapacity : false,
-    } satisfies HabitCreateInput
+    } satisfies Omit<HabitCreateInput, 'groupId'>
     try {
-      if (habit) await onUpdate(habit.id, input)
-      else await onCreate(input)
+      if (habit) await onUpdate(habit.id, { ...input, groupId: groupId || null })
+      else await onCreate({ ...input, groupId: groupId || undefined })
       onClose()
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'The habit could not be saved.') }
     finally { setSaving(false) }
