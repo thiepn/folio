@@ -195,6 +195,12 @@ export const automationService={
     }
   },
 
+  async testRule(ruleId:string,taskId:string,today=localDateKey()){
+    const rule=(await readRules()).find((item)=>item.id===ruleId);if(!rule)throw new Error('Automation not found.')
+    const task=await taskRepository.get(taskId);if(!task||task.deletedAt)throw new Error('Task not found.')
+    return {matches:conditionMatches(task,rule.conditions,today),actions:rule.actions.map((action)=>action.type)}
+  },
+
   async runManual(ruleId:string,taskId:string,today=localDateKey()){
     const rule=(await readRules()).find((item)=>item.id===ruleId);if(!rule)throw new Error('Automation not found.')
     const task=await taskRepository.get(taskId);if(!task||task.deletedAt)throw new Error('Task not found.')
