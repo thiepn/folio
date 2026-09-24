@@ -140,8 +140,8 @@ export function TemplatesAutomationView({tasks,projects,lists,tags,today,onUndo,
       await automationService.saveRule({
         id:ruleId,name:ruleName,enabled:ruleEnabled,trigger:ruleTrigger,
         conditions:{
-          projectId:conditionProject||undefined,tagId:conditionTag||undefined,priority:conditionPriority as TaskPriority||undefined,
-          status:conditionStatus as 'inbox'|'todo'|'completed'||undefined,titleContains:conditionTitle.trim()||undefined,
+          projectId:conditionProject||undefined,tagId:conditionTag||undefined,priority:conditionPriority ? conditionPriority as TaskPriority : undefined,
+          status:conditionStatus ? conditionStatus as 'inbox'|'todo'|'completed' : undefined,titleContains:conditionTitle.trim()||undefined,
           hasDeadline:conditionDeadline==='yes'?true:conditionDeadline==='no'?false:undefined,
           dueWithinDays:conditionDueWithin===''?undefined:Number(conditionDueWithin),
         },
