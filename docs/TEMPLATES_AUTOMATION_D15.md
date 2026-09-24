@@ -103,7 +103,7 @@ Daily checks run:
 
 Task creation/completion events collect successful automation side effects into the source task's normal undo chain.
 
-Manual automation runs return their own undo mutation.
+Rules can be tested against a selected task without mutation or success-log writes. Manual automation runs apply the rule and return their own undo mutation.
 
 ### Failure isolation
 
