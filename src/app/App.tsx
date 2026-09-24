@@ -30,6 +30,7 @@ import { ReviewView } from '../features/review/ReviewView'
 import { AnalyticsView } from '../features/analytics/AnalyticsView'
 import { MatrixCountdownView } from '../features/matrix/MatrixCountdownView'
 import { TemplatesAutomationView } from '../features/automation/TemplatesAutomationView'
+import { CollaborationView } from '../features/collaboration/CollaborationView'
 import { ReviewWorkflowModal } from '../features/review/ReviewWorkflowModal'
 import { ReviewRecordModal } from '../features/review/ReviewRecordModal'
 import { QuickAddModal } from '../features/capture/QuickAddModal'
@@ -92,7 +93,7 @@ import { currentTaskId, focusRelativeTask } from '../features/power/taskKeyboard
 import { LEGACY_LAST_VIEW_KEY } from '../legacy/compat'
 
 const LAST_VIEW_KEY = 'folio:last-view:v1'
-const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'projects', 'lists', 'notes', 'habits', 'automation', 'matrix', 'analytics', 'review']
+const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'projects', 'lists', 'notes', 'habits', 'automation', 'share', 'matrix', 'analytics', 'review']
 
 function initialView(): NavView {
   try {
@@ -172,7 +173,7 @@ function AppContent() {
   const dailyWrapUpKey = `daily.wrapup.${data?.today ?? localDateKey()}`
   const dailyWrapUp = useLiveQuery(() => settingsRepository.get<string>(dailyWrapUpKey, ''), [dailyWrapUpKey], '') ?? ''
   const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])
-  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', search: 'Search', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', automation: 'Automate', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
+  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', search: 'Search', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', automation: 'Automate', share: 'Share', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
 
   const selectedTask = useMemo(() => data?.allTasks.find((task) => task.id === selectedTaskId) ?? data?.subtasks.find((task) => task.id === selectedTaskId) ?? null, [data?.allTasks, data?.subtasks, selectedTaskId])
   const selectedSeries = useMemo(() => selectedTask?.seriesId ? data?.recurringSeries.find((series) => series.id === selectedTask.seriesId) ?? null : null, [data?.recurringSeries, selectedTask])
@@ -347,7 +348,7 @@ function AppContent() {
         return
       }
       if (now - goChordAt.current < 900) {
-        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', s: 'search', p: 'planner', o: 'projects', l: 'lists', n: 'notes', h: 'habits', u: 'automation', m: 'matrix', a: 'analytics', r: 'review' }
+        const destination: Record<string, NavView | undefined> = { t: 'today', i: 'inbox', s: 'search', p: 'planner', o: 'projects', l: 'lists', n: 'notes', h: 'habits', u: 'automation', c: 'share', m: 'matrix', a: 'analytics', r: 'review' }
         const next = destination[key]
         goChordAt.current = 0
         setGoChordPending(false)
@@ -702,6 +703,7 @@ function AppContent() {
       { id: 'nav-notes', group: 'Navigate', label: 'Go to Notes', keywords: 'markdown content attachments files research', run: () => navigate('notes') },
       { id: 'nav-habits', group: 'Navigate', label: 'Go to Habits', run: () => navigate('habits') },
       { id: 'nav-automation', group: 'Navigate', label: 'Go to Templates & automation', keywords: 'automate automation template reusable workflow rule trigger action', run: () => navigate('automation') },
+      { id: 'nav-share', group: 'Navigate', label: 'Go to Share & collaborate', keywords: 'share collaboration handoff package receive copy view only portable', run: () => navigate('share') },
       { id: 'nav-matrix', group: 'Navigate', label: 'Go to Matrix & countdown', keywords: 'eisenhower urgency importance deadline countdown pressure horizon', run: () => navigate('matrix') },
       { id: 'nav-analytics', group: 'Navigate', label: 'Go to Analytics', keywords: 'statistics trends reports productivity focus habits workload velocity', run: () => navigate('analytics') },
       { id: 'nav-review', group: 'Navigate', label: 'Go to Review', run: () => navigate('review') },
@@ -854,6 +856,7 @@ function AppContent() {
           : view === 'notes' ? 'Markdown · attachments · offline search'
           : view === 'habits' ? `${habitData.dueToday} due today`
             : view === 'automation' ? 'Reusable templates, explicit rules, and run history'
+            : view === 'share' ? 'Portable handoff packages with explicit view/copy boundaries'
             : view === 'matrix' ? 'Urgency, importance, and approaching deadlines'
             : view === 'analytics' ? 'Trends, patterns, velocity, and reports'
             : view === 'review' ? 'Review, learn, replan'
@@ -1022,6 +1025,20 @@ function AppContent() {
             onOpenTask={setSelectedTaskId}
             onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }}
           /> : null}
+          {view === 'share' ? <CollaborationView
+            tasks={[...data.allTasks, ...data.subtasks]}
+            projects={[...data.projects, ...data.archivedProjects]}
+            lists={[...data.lists, ...data.archivedLists]}
+            reviews={historyData?.reviewRecords ?? []}
+            onUndo={registerUndo}
+            onOpenImported={(target) => {
+              if (target.type === 'task') { setSelectedTaskId(target.id); return }
+              if (target.type === 'project') { navigate('projects'); setSelectedProjectId(target.id); return }
+              if (target.type === 'list') { navigate('lists'); setSelectedListId(target.id); return }
+              if (target.type === 'review') { navigate('review'); setEditingReviewId(target.id); setReviewRecordOpen(true); return }
+              navigate('automation')
+            }}
+          /> : null}
           {view === 'matrix' ? <MatrixCountdownView
             tasks={data.allTasks}
             projects={data.projects}
@@ -1067,7 +1084,7 @@ function AppContent() {
         onData={() => setDataOpen(true)}
       />
 
-      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · S Search · P Planner · O Projects · L Lists · N Notes · H Habits · U Automate · M Matrix · A Analytics · R Review</span></div> : null}
+      {goChordPending ? <div className="key-chord-hud" role="status"><kbd>G</kbd><span>T Today · I Inbox · S Search · P Planner · O Projects · L Lists · N Notes · H Habits · U Automate · C Share · M Matrix · A Analytics · R Review</span></div> : null}
       <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
       <ShortcutHelpModal open={shortcutHelpOpen} shortcuts={shortcuts} onClose={() => setShortcutHelpOpen(false)} onConfigure={() => { setShortcutHelpOpen(false); setKeyboardSettingsOpen(true) }} />
       <KeyboardSettingsDrawer open={keyboardSettingsOpen} value={shortcuts} onClose={() => setKeyboardSettingsOpen(false)} onSave={(next) => void settingsRepository.set('power.shortcuts', next)} />
