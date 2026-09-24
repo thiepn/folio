@@ -1,6 +1,6 @@
 import { db } from '../db/database'
 import type {
-  FolioTemplateDefinition, ListEntity, NoteEntity, ProjectEntity, ReviewRecordEntity,
+  AttachmentEntity, FolioTemplateDefinition, ListEntity, NoteEntity, ProjectEntity, ReviewRecordEntity,
   SectionEntity, TaskEntity,
 } from '../domain/models'
 import { deserializeAttachment, serializeAttachment, type PortableAttachment } from './attachmentService'
@@ -153,15 +153,15 @@ async function importNotes(notes:NoteEntity[],taskMap:Map<string,string>,created
 }
 
 async function importAttachments(attachments:PortableAttachment[],taskMap:Map<string,string>,noteMap:Map<string,string>){
-  const rows=[]
+  const rows:AttachmentEntity[]=[]
   for(const source of attachments){
     const ownerId=source.ownerType==='task'?taskMap.get(source.ownerId):noteMap.get(source.ownerId)
     if(!ownerId)continue
     rows.push({...deserializeAttachment(source),id:crypto.randomUUID(),ownerId,createdAt:now(),updatedAt:now()})
   }
   if(rows.length)await db.attachments.bulkAdd(rows)
-  for(const [source,target] of taskMap)void source,await contentSearchService.rebuildOwner('task',target)
-  for(const [source,target] of noteMap)void source,await contentSearchService.rebuildOwner('note',target)
+  for(const target of taskMap.values()) await contentSearchService.rebuildOwner('task',target)
+  for(const target of noteMap.values()) await contentSearchService.rebuildOwner('note',target)
 }
 
 export const collaborationService={
