@@ -25,6 +25,9 @@ import type {
   NoteEntity,
   AttachmentEntity,
   SearchDocumentEntity,
+  SyncShadowEntity,
+  SyncQueueEntity,
+  SyncConflictEntity,
 } from '../domain/models'
 import { migrateV1ToV2 } from '../migrations/v1ToV2'
 import { migrateV2ToV3 } from '../migrations/v2ToV3'
@@ -48,9 +51,10 @@ import { migrateV19ToV20 } from '../migrations/v19ToV20'
 import { migrateV20ToV21 } from '../migrations/v20ToV21'
 import { migrateV21ToV22 } from '../migrations/v21ToV22'
 import { migrateV22ToV23 } from '../migrations/v22ToV23'
+import { migrateV23ToV24 } from '../migrations/v23ToV24'
 
 export const DATABASE_NAME = 'folio'
-export const DATABASE_SCHEMA_VERSION = 23
+export const DATABASE_SCHEMA_VERSION = 24
 
 export class ProductivityDatabase extends Dexie {
   tasks!: Table<TaskEntity, string>
@@ -78,6 +82,9 @@ export class ProductivityDatabase extends Dexie {
   notes!: Table<NoteEntity, string>
   attachments!: Table<AttachmentEntity, string>
   searchDocuments!: Table<SearchDocumentEntity, string>
+  syncShadows!: Table<SyncShadowEntity, string>
+  syncQueue!: Table<SyncQueueEntity, string>
+  syncConflicts!: Table<SyncConflictEntity, string>
 
   constructor(databaseName = DATABASE_NAME) {
     super(databaseName)
@@ -474,6 +481,37 @@ export class ProductivityDatabase extends Dexie {
       attachments: '&id,ownerType,ownerId,kind,createdAt,updatedAt,[ownerType+ownerId]',
       searchDocuments: '&id,ownerType,ownerId,updatedAt,[ownerType+ownerId]',
     }).upgrade(migrateV22ToV23)
+
+    this.version(24).stores({
+      tasks: '&id,status,plannedDate,deadline,timelineStart,timelineEnd,projectId,listId,sectionId,parentTaskId,seriesId,recurrenceDate,*blockedByTaskIds,*tags,*tagIds,pinned,deletedAt,updatedAt,[status+plannedDate],[seriesId+recurrenceDate]',
+      projects: '&id,name,type,status,deadline,archived,favorite,updatedAt,[archived+favorite]',
+      habits: '&id,groupId,sortOrder,updatedAt,[groupId+sortOrder]',
+      habitEntries: '&id,habitId,date,status,updatedAt,[habitId+date],[habitId+status]',
+      habitGroups: '&id,name,sortOrder,updatedAt',
+      habitTemplates: '&id,name,updatedAt',
+      timeBlocks: '&id,taskId,start,end,kind,updatedAt',
+      dailyPlans: '&date,status,updatedAt',
+      dailyPlanItems: '&id,date,taskId,bucket,sortOrder,updatedAt,[date+bucket],[date+taskId]',
+      focusSessions: '&id,taskId,projectIdSnapshot,source,mode,phase,startedAt,endedAt,status,*tags,[status+startedAt],[source+startedAt]',
+      recurringSeries: '&id,status,startDate,timezone,updatedAt,[status+startDate]',
+      settings: '&key,updatedAt',
+      importBatches: '&id,createdAt,status,source',
+      patchBatches: '&id,createdAt,status,source',
+      calendarImportBatches: '&id,createdAt,status,source',
+      reviewRecords: '&id,kind,periodStart,periodEnd,updatedAt,[kind+periodStart]',
+      reminders: '&id,ownerType,ownerId,triggerType,enabled,updatedAt,[ownerType+ownerId]',
+      reminderOccurrences: '&id,reminderId,ownerType,ownerId,status,fireAt,scheduledFor,targetTaskId,updatedAt,[status+fireAt],[reminderId+status],[ownerType+ownerId]',
+      folders: '&id,name,archived,sortOrder,updatedAt',
+      lists: '&id,name,folderId,archived,favorite,sortOrder,updatedAt,[folderId+archived]',
+      sections: '&id,listId,archived,sortOrder,updatedAt,[listId+archived]',
+      tags: '&id,&normalizedName,parentTagId,archived,favorite,sortOrder,updatedAt,[parentTagId+archived]',
+      notes: '&id,title,sourceTaskId,archived,updatedAt',
+      attachments: '&id,ownerType,ownerId,kind,createdAt,updatedAt,[ownerType+ownerId]',
+      searchDocuments: '&id,ownerType,ownerId,updatedAt,[ownerType+ownerId]',
+      syncShadows: '&id,workspaceId,entityType,entityId,revision,updatedAt,[workspaceId+entityType+entityId]',
+      syncQueue: '&id,workspaceId,entityType,entityId,operation,queuedAt,attempts,[workspaceId+entityType+entityId],[workspaceId+operation]',
+      syncConflicts: '&id,workspaceId,entityType,entityId,detectedAt,[workspaceId+entityType+entityId]',
+    }).upgrade(migrateV23ToV24)
   }
 }
 
