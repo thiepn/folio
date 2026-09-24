@@ -39,6 +39,7 @@ check('renderer supports headings lists quotes code and checkboxes',['heading','
 check('Markdown editor exposes edit and reading modes',editor.includes("'edit' | 'read'")&&editor.includes('Reading'))
 check('task inspector uses rich Markdown and attachments',inspector.includes('<MarkdownEditor')&&inspector.includes('<AttachmentPanel')&&inspector.includes('createFromTask'))
 check('standalone Notes workspace exists',notes.includes('export function NotesView')&&notes.includes('Note → inbox task'))
+check('archived Notes are recoverable',notes.includes('Archived notes')&&notes.includes('Restore')&&notes.includes('Delete permanently')&&notes.includes('Search archived notes'))
 check('desktop navigation exposes Notes',sidebar.includes("view: 'notes'"))
 check('App routes Notes workspace',app.includes("view === 'notes'")&&app.includes('<NotesView'))
 check('drag drop and paste attachments supported',attachments.includes('onDrop=')&&attachments.includes('onPaste='))
