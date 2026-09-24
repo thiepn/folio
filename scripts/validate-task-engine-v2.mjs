@@ -46,7 +46,7 @@ check('task inspector exposes comments and activity', inspector.includes('task-v
 check('task inspector exposes unlimited nested work', inspector.includes('unlimited depth') && inspector.includes('onOpenSubtask'))
 check('backup parser preserves Task V2 fields', ['tags: z.array(z.string()).default([])','checklist: z.array(backupTaskChecklistItemSchema).default([])','progressMode: z.enum([\'auto\',\'manual\']).default(\'auto\')','comments: z.array(backupTaskCommentSchema).default([])','activity: z.array(backupTaskActivitySchema).default([])'].every((token) => backupSchemas.includes(token)))
 check('public v16 backup schema exists', exists('public/schema/folio-backup-v16.schema.json'))
-check('interop retains v16 restore compatibility', interop.includes('Schema v21 · complete planner state + rich content') && interop.includes('schema v8–v21'))
+check('interop retains v16 restore compatibility', interop.includes('Schema v22 · complete planner state + rich content + Habits V2') && interop.includes('schema v8–v22'))
 check('Task Engine V2 stylesheet loaded', styles.includes("@import './task-engine-v2.css';"))
 check('Task Engine V2 design document exists', exists('docs/TASK_ENGINE_V2_D1.md'))
 
