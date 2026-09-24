@@ -39,6 +39,51 @@ export type ListGroupMode = 'section' | 'none' | 'planned' | 'priority' | 'tag'
 export type ContentOwnerType = 'task' | 'note'
 export type SearchOwnerType = ContentOwnerType | 'project' | 'habit' | 'review' | 'tag'
 export type AttachmentKind = 'image' | 'audio' | 'file' | 'link'
+export type SyncEntityType =
+  | 'tasks' | 'projects' | 'habits' | 'habitEntries' | 'habitGroups' | 'habitTemplates'
+  | 'timeBlocks' | 'dailyPlans' | 'dailyPlanItems' | 'focusSessions' | 'recurringSeries'
+  | 'settings' | 'reviewRecords' | 'reminders' | 'reminderOccurrences'
+  | 'folders' | 'lists' | 'sections' | 'tags' | 'notes' | 'attachments'
+export type SyncOperation = 'upsert' | 'delete'
+
+export interface SyncShadowEntity {
+  id: string
+  workspaceId: string
+  entityType: SyncEntityType
+  entityId: string
+  revision: number
+  hash: string
+  deleted: boolean
+  remoteUpdatedAt: IsoDateTime
+  updatedAt: IsoDateTime
+}
+
+export interface SyncQueueEntity {
+  id: string
+  workspaceId: string
+  entityType: SyncEntityType
+  entityId: string
+  operation: SyncOperation
+  baseRevision: number
+  localHash?: string
+  queuedAt: IsoDateTime
+  attempts: number
+  lastAttemptAt?: IsoDateTime
+  lastError?: string
+}
+
+export interface SyncConflictEntity {
+  id: string
+  workspaceId: string
+  entityType: SyncEntityType
+  entityId: string
+  localPayload?: unknown
+  remotePayload?: unknown
+  remoteDeleted: boolean
+  remoteRevision: number
+  detectedAt: IsoDateTime
+}
+
 
 export interface NoteEntity {
   id: EntityId
