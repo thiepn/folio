@@ -1,6 +1,6 @@
 import { db } from '../db/database'
 import { addLocalDays, atTimeInZone, dateKeyInTimeZone, localDateRange } from '../domain/date'
-import { habitPausedForDate, habitScheduledForDate } from '../domain/habit'
+import { habitPausedForDate, habitPeriodProgress, habitScheduledForDate } from '../domain/habit'
 import type {
   HabitEntity,
   LocalDate,
@@ -258,6 +258,11 @@ export async function reminderSuppressionReason(occurrence: ReminderOccurrenceEn
     const entry = await db.habitEntries.get(`${habit.id}:${date}`)
     if (entry?.status === 'completed' || entry?.status === 'skipped') return 'Habit is already resolved for this date.'
     if (!habitReminderDateEligible(habit, reminder, date)) return 'Habit is not scheduled for this reminder date.'
+    if (habit.schedule.type === 'times-per-week' || habit.schedule.type === 'times-per-month') {
+      const entries = await db.habitEntries.where('habitId').equals(habit.id).toArray()
+      const progress = habitPeriodProgress(habit, entries, date)
+      if (progress.target > 0 && progress.completed >= progress.target) return 'Habit frequency target is already complete for this period.'
+    }
   }
 
   if (reminder.ownerType === 'system' && reminder.ownerId === 'daily-planning') {
