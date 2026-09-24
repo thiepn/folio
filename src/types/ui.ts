@@ -52,7 +52,10 @@ export interface HabitPreview {
   id: string
   title: string
   description?: string
-  kind: 'check' | 'duration'
+  kind: 'check' | 'quantity' | 'duration'
+  unit?: string
+  color?: string
+  groupId?: string
   completed: boolean
   skipped?: boolean
   flexible?: boolean
@@ -67,7 +70,14 @@ export interface HabitPreview {
   streak?: number
   weeklyProgress?: string
   weeklyPercent?: number
+  periodProgress?: string
+  periodPercent?: number
+  periodLabel?: string
   adherence4w?: number
+  adherence90?: number
+  bestStreak?: number
+  lifetimeCompletions?: number
+  lifetimeValue?: number
   archived?: boolean
 }
 
