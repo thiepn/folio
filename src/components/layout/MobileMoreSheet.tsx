@@ -12,6 +12,7 @@ const destinations: { view: NavView; label: string; note: string; icon: IconName
   { view: 'automation', label: 'Automate', note: 'Templates, rules and automation run history', icon: 'automation' },
   { view: 'share', label: 'Share', note: 'View-only snapshots, copyable packages and handoff history', icon: 'share' },
   { view: 'integrations', label: 'Integrations', note: 'Calendar, email, Share Target, URLs and external triggers', icon: 'integration' },
+  { view: 'sync', label: 'Sync', note: 'Multi-device cloud sync, queue, devices and conflicts', icon: 'sync' },
   { view: 'matrix', label: 'Matrix', note: 'Urgency, importance, deadlines and countdowns', icon: 'matrix' },
   { view: 'analytics', label: 'Analytics', note: 'Trends, workload, focus, habits and reports', icon: 'analytics' },
   { view: 'review', label: 'Review', note: 'Planning feedback and weekly review', icon: 'review' },
