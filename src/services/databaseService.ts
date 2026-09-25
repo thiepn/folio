@@ -107,10 +107,18 @@ async function runRecoverableStartupStep(label: string, run: () => Promise<unkno
 }
 
 export async function initializeDatabase() {
+  console.info('[Folio boot] legacy migration check:start')
   await migrateLegacyDatabaseName()
+  console.info('[Folio boot] legacy migration check:done')
+  console.info('[Folio boot] database open:start')
   await db.open()
+  console.info('[Folio boot] database open:done')
+  console.info('[Folio boot] legacy localStorage:start')
   await migrateLegacyLocalStorage()
+  console.info('[Folio boot] legacy localStorage:done')
+  console.info('[Folio boot] seed settings:start')
   await seedDatabaseIfNeeded()
+  console.info('[Folio boot] seed settings:done')
 }
 
 export async function runStartupMaintenance() {
