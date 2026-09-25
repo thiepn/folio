@@ -13,7 +13,7 @@ A local-first personal productivity application with an editorial, low-noise int
 
 ## Live deployment
 
-**Pages target:** `https://thiepn.github.io/folio/`
+**Pages target:** `https://thiepn.dev/folio/`
 
 The repository includes CI and GitHub Pages workflows. One-time setup: **Settings → Pages → Build and deployment → Source → GitHub Actions**. Every deployment from `main` must pass the full `npm run release:verify` gate before the verified `dist/` artifact is published.
 
