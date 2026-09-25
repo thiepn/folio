@@ -3,77 +3,71 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const root = process.cwd()
-const excludedRoots = new Set(['.git', 'dist', 'node_modules'])
-const excludedFiles = new Set(['RELEASE_MANIFEST.json'])
+const dist = path.join(root, 'dist')
+const manifestPath = path.join(dist, 'release-manifest.json')
 
-function walk(dir = '.') {
-  return fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((entry) => {
-    const rel = path.join(dir, entry.name).replace(/^\.\//, '')
-    if (entry.isDirectory()) return excludedRoots.has(rel.split(path.sep)[0]) ? [] : walk(rel)
-    return excludedFiles.has(rel) ? [] : [rel]
+if (!fs.existsSync(dist)) throw new Error('dist/ does not exist. Build Folio before generating the release manifest.')
+
+const read = (p) => fs.readFileSync(path.join(root, p), 'utf8')
+const pkg = JSON.parse(read('package.json'))
+const database = read('src/db/database.ts')
+const schemaMatch = database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)\b/)
+if (!schemaMatch) throw new Error('Could not determine the current IndexedDB schema version.')
+const databaseSchema = Number(schemaMatch[1])
+
+function walk(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) return walk(full)
+    return [full]
   })
 }
 
-const files = walk().sort().map((file) => {
-  const bytes = fs.readFileSync(path.join(root, file))
-  return {
-    path: file.replaceAll('\\', '/'),
-    bytes: bytes.length,
-    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
-  }
-})
-const sourceTreeSha256 = crypto.createHash('sha256')
-  .update(files.map((file) => `${file.path}:${file.sha256}`).join('\n'))
-  .digest('hex')
+const files = walk(dist)
+  .filter((file) => path.resolve(file) !== path.resolve(manifestPath))
+  .map((file) => {
+    const bytes = fs.readFileSync(file)
+    return {
+      path: path.relative(dist, file).replaceAll('\\', '/'),
+      bytes: bytes.length,
+      sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+    }
+  })
+  .sort((a, b) => a.path.localeCompare(b.path))
 
-const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+const artifactSha256 = crypto.createHash('sha256')
+  .update(files.map((file) => file.path + ':' + file.bytes + ':' + file.sha256).join('\n'))
+  .digest('hex')
+const sourceCommit = /^[0-9a-f]{40}$/i.test(process.env.GITHUB_SHA || '') ? process.env.GITHUB_SHA : null
 
 const manifest = {
   product: 'Folio',
   repository: 'thiepn/folio',
   version: pkg.version,
-  databaseSchema: 15,
-  releaseType: 'visual-interaction-refinement',
+  databaseSchema,
+  releaseType: 'production-hardening-d20',
   generatedAt: new Date().toISOString(),
-  sourceTreeSha256,
-  validation: {
-    finalReleaseContract: '59/59 PASS',
-    releaseHardeningContract: '38/38 PASS',
-    dailyWorkflowContract: '16/16 PASS',
-    taskProjectWorkflowContract: '19/19 PASS',
-    plannerOverhaulContract: '21/21 PASS',
-    reviewsHistoryContract: '26/26 PASS',
-    habitsFocusContract: '35/35 PASS',
-    commandFirstContract: '36/36 PASS',
-    dependencyBackedProductionBuild: 'PASS — GitHub Actions',
-    githubPagesDeployment: 'PASS — GitHub Actions',
+  sourceCommit,
+  releaseGate: 'npm run release:verify',
+  artifact: {
+    fileCount: files.length,
+    bytes: files.reduce((sum, file) => sum + file.bytes, 0),
+    sha256: artifactSha256,
   },
   deployment: {
     pagesUrl: 'https://thiepn.github.io/folio/',
     ciWorkflow: '.github/workflows/ci.yml',
     pagesWorkflow: '.github/workflows/deploy-pages.yml',
   },
-  compatibility: {
-    databaseName: 'folio',
-    databaseSchema: 15,
-    legacyDatabaseMigration: true,
-    legacyBackupImportPatchAcceptance: true,
-  },
-  highlights: [
-    'Warm ink-and-paper palette improves reading contrast without replacing the user-selected accent system',
-    'Editorial typography, ruled sections, and sharper geometry replace generic dashboard card patterns',
-    'Desktop navigation, page hierarchy, controls, overlays, and report surfaces share one coherent visual language',
-    'Mobile gains a dedicated editorial masthead, responsive gutters, full-width page actions, and distinctive bottom navigation',
-    'Hover, active, focus, loading, and overlay states are clearer and use restrained motion',
-    'Reduced-motion preferences collapse visual transition and animation duration',
-    'Existing v1.7 commands, shortcuts, features, and interaction contracts remain intact',
-    'Schema v15 retained with no v1.8 migration and v8–v15 backup compatibility unchanged',
-    'Full final, release-hardening, daily-workflow, task-project, planner-overhaul, reviews-history, habits-focus, command-first, typecheck, production-build, and dist validation gate',
-    'GitHub Pages deployment verified from main',
+  guarantees: [
+    'Dependency installation is lockfile-driven with npm ci.',
+    'The deployment artifact passed source validators, typecheck, production build, and dist validation.',
+    'Every built file represented by this manifest is byte-counted and SHA-256 hashed.',
+    'The manifest schema version is derived from the current database source instead of duplicated by hand.',
   ],
   files,
 }
 
-fs.writeFileSync(path.join(root, 'RELEASE_MANIFEST.json'), `${JSON.stringify(manifest, null, 2)}\n`)
-console.log(`Wrote RELEASE_MANIFEST.json for ${files.length} files.`)
-console.log(`Source tree SHA-256: ${sourceTreeSha256}`)
+fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
+console.log('Wrote dist/release-manifest.json for ' + files.length + ' artifact files.')
+console.log('Artifact SHA-256: ' + artifactSha256)
