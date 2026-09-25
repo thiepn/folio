@@ -120,3 +120,10 @@ export async function rebuildDerivedAfterSync(){
   await attachmentService.cleanupOrphans()
   await contentSearchService.rebuildAll()
 }
+
+export async function getOversizedLocalAttachment(entityId:string){
+  const row=await db.attachments.get(entityId)
+  if(!row||row.kind==='link'||row.size<=MAX_SYNC_ATTACHMENT_BYTES)return undefined
+  const {blob:_blob,...metadata}=row
+  return metadata
+}
