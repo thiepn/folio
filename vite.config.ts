@@ -49,6 +49,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
+    const hadPreviousAppCache = keys.some((key) => key.startsWith('folio-app-') && key !== APP_CACHE);
     await Promise.all(keys.filter((key) =>
       (key.startsWith('folio-app-') && key !== APP_CACHE) ||
       (key.startsWith('folio-runtime-') && key !== RUNTIME_CACHE) ||
@@ -58,6 +59,13 @@ self.addEventListener('activate', (event) => {
     await self.clients.claim();
     const clients = await self.clients.matchAll({ type: 'window' });
     clients.forEach((client) => client.postMessage({ type: 'OFFLINE_READY', revision: REVISION }));
+    if (hadPreviousAppCache) {
+      await Promise.all(clients.map(async (client) => {
+        if ('navigate' in client && client.url.startsWith(self.registration.scope)) {
+          try { await client.navigate(client.url); } catch { /* A later manual refresh still loads the new shell. */ }
+        }
+      }));
+    }
   })());
 });
 
