@@ -1,0 +1,84 @@
+/* D19 — Full-Product UX Audit corrections */
+
+/* Large feature growth made the primary navigation hard to scan. Keep every
+   destination visible, but group by user intent and let the navigation region
+   own overflow on shorter desktop windows. */
+.sidebar { overflow: hidden; }
+.sidebar-nav {
+  min-height: 0;
+  flex: 1 1 auto;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  padding-right: 3px;
+}
+.sidebar-nav-group {
+  display: grid;
+  gap: 2px;
+}
+.sidebar-nav-group + .sidebar-nav-group {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.sidebar-nav-group__label {
+  padding: 0 10px 4px;
+  color: var(--muted-2);
+  font: 8px var(--font-mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.sidebar-nav-group button { min-height: 34px; }
+.sidebar-section {
+  flex: 0 1 auto;
+  max-height: min(28vh, 250px);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.sidebar__footer { flex: 0 0 auto; }
+
+/* Mobile More had become a single 12-item list. Preserve all destinations but
+   make the information architecture visible. */
+.mobile-more-group + .mobile-more-group { margin-top: 18px; }
+.mobile-more-group__label {
+  display: block;
+  padding: 0 5px 7px;
+}
+.mobile-more-group .mobile-more-list {
+  border-top: 1px solid var(--border);
+}
+.mobile-more-group .mobile-more-list > button:last-child {
+  border-bottom-color: var(--border-strong);
+}
+
+/* Generic Tabs switch views but do not own ARIA tabpanels. They now expose
+   pressed-state group semantics; retain a clear selected indicator. */
+.tabs button[aria-pressed='true'] { color: white; }
+
+/* Search keyboard selection remains visible when navigating long result sets. */
+.search-v2-result-list > button[aria-current='true'] {
+  background: var(--surface-hover);
+  box-shadow: inset 2px 0 var(--accent);
+}
+
+/* Header actions are important workflow controls. Never remove them just
+   because the viewport is narrow. */
+@media (max-width: 560px) {
+  .page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 13px;
+  }
+  .page-header__action {
+    display: block;
+    width: 100%;
+  }
+  .page-header__action .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .page-header__action .header-actions .button {
+    flex: 1 1 auto;
+  }
+}
