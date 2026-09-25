@@ -48,12 +48,19 @@ export function SearchView({projects,tags,onOpenResult}:{projects:ProjectSummary
   const recent=useLiveQuery(()=>searchPreferencesService.listRecent(),[],[])??[]
 
   useEffect(()=>{inputRef.current?.focus()},[])
+  useEffect(()=>{
+    if(!results.length){if(activeIndex!==0)setActiveIndex(0);return}
+    if(activeIndex>=results.length)setActiveIndex(results.length-1)
+    const active=results[Math.min(activeIndex,results.length-1)]
+    if(active)document.getElementById('search-hit-'+active.ownerType+'-'+active.ownerId)?.scrollIntoView({block:'nearest'})
+  },[activeIndex,results])
 
   useEffect(()=>{
     let alive=true
     const shouldSearch=Boolean(query.trim()||hasFilters(filters))
     if(!shouldSearch){setResults([]);setSearching(false);return}
     setSearching(true)
+    setError('')
     const timer=window.setTimeout(()=>{
       void contentSearchService.search(query,filters).then((hits)=>{
         if(!alive)return
@@ -111,8 +118,8 @@ export function SearchView({projects,tags,onOpenResult}:{projects:ProjectSummary
         <span aria-hidden="true">⌕</span>
         <input ref={inputRef} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder='Search Folio…  Try "exam proof", type:note, status:open' aria-label="Search Folio"
           onKeyDown={(event)=>{
-            if(event.key==='ArrowDown'){event.preventDefault();setActiveIndex((index)=>Math.min(results.length-1,index+1))}
-            else if(event.key==='ArrowUp'){event.preventDefault();setActiveIndex((index)=>Math.max(0,index-1))}
+            if(event.key==='ArrowDown'&&results.length){event.preventDefault();setActiveIndex((index)=>Math.min(results.length-1,index+1))}
+            else if(event.key==='ArrowUp'&&results.length){event.preventDefault();setActiveIndex((index)=>Math.max(0,index-1))}
             else if(event.key==='Enter'&&active){event.preventDefault();void open(active)}
           }}/>
         {query||hasFilters(filters)?<button onClick={()=>{setQuery('');setFilters(defaultFilters());setResults([]);setActiveIndex(0)}}>Clear</button>:null}
@@ -154,9 +161,9 @@ export function SearchView({projects,tags,onOpenResult}:{projects:ProjectSummary
         <div className="search-v2-chip-list">{recent.map((item)=><div key={item.id}><button onClick={()=>applySearch(item.query,item.filters)}><strong>{item.query||'Filtered search'}</strong><span>{new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(item.usedAt))}</span></button></div>)}{!recent.length?<p>Queries appear here after you open a result.</p>:null}</div>
       </div>
     </section>:<section className="search-v2-results">
-      <div className="search-v2-section-head"><div><span className="eyebrow">Results</span><h2>{searching?'Searching…':results.length+' match'+(results.length===1?'':'es')}</h2></div><span>↑ ↓ + Enter</span></div>
-      <div className="search-v2-result-list" role="listbox" aria-label="Search results">
-        {results.map((hit,index)=><button id={'search-hit-'+hit.ownerType+'-'+hit.ownerId} key={hit.ownerType+':'+hit.ownerId} className={index===activeIndex?'is-active':''} role="option" aria-selected={index===activeIndex} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>void open(hit)}>
+      <div className="search-v2-section-head"><div><span className="eyebrow">Results</span><h2 aria-live="polite">{searching?'Searching…':results.length+' match'+(results.length===1?'':'es')}</h2></div><span>↑ ↓ + Enter</span></div>
+      <div className="search-v2-result-list" aria-label="Search results">
+        {results.map((hit,index)=><button type="button" id={'search-hit-'+hit.ownerType+'-'+hit.ownerId} key={hit.ownerType+':'+hit.ownerId} className={index===activeIndex?'is-active':''} aria-current={index===activeIndex?'true':undefined} onMouseEnter={()=>setActiveIndex(index)} onClick={()=>void open(hit)}>
           <span className={'search-v2-result-type type-'+hit.ownerType}>{typeLabel(hit.ownerType)}</span>
           <div><strong><Highlighted text={hit.title} query={query}/></strong>{hit.snippet?<p><Highlighted text={hit.snippet} query={query}/></p>:null}<small>{hit.meta}{hit.matchedFields.length?' · matched '+hit.matchedFields.join(', '):''}</small></div>
           <time>{new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric'}).format(new Date(hit.updatedAt))}</time>
