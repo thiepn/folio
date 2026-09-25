@@ -39,7 +39,11 @@ const RUNTIME_CACHE = 'folio-runtime-' + REVISION;
 const PRECACHE = ${JSON.stringify(precache, null, 2)};
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(APP_CACHE).then((cache) => cache.addAll(PRECACHE)));
+  event.waitUntil((async () => {
+    const cache = await caches.open(APP_CACHE);
+    await cache.addAll(PRECACHE);
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -62,11 +66,14 @@ self.addEventListener('message', (event) => {
 });
 
 async function navigationResponse(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) return response;
+  } catch {
+    // Offline navigation falls back to the fully precached shell below.
+  }
   const appCache = await caches.open(APP_CACHE);
-  const shell = await appCache.match('./index.html') || await appCache.match('./');
-  if (shell) return shell;
-  try { return await fetch(request); }
-  catch { return (await appCache.match('./offline.html')) || Response.error(); }
+  return (await appCache.match('./index.html')) || (await appCache.match('./')) || (await appCache.match('./offline.html')) || Response.error();
 }
 
 async function cachePutSafely(cache, request, response) {
