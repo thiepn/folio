@@ -55,7 +55,7 @@ const manifest = {
     sha256: artifactSha256,
   },
   deployment: {
-    pagesUrl: 'https://thiepn.github.io/folio/',
+    pagesUrl: 'https://thiepn.dev/folio/',
     ciWorkflow: '.github/workflows/ci.yml',
     pagesWorkflow: '.github/workflows/deploy-pages.yml',
   },
