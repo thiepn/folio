@@ -2,9 +2,10 @@ import { Button } from '../ui/Button'
 import { Icon } from '../ui/Icon'
 import { IconButton } from '../ui/IconButton'
 
-export function Topbar({ title, meta, onSearch, onAppearance, onAdd, onFocus, onReminders, reminderCount = 0, focusActive = false }: {
+export function Topbar({ title, meta, searchShortcut, onSearch, onAppearance, onAdd, onFocus, onReminders, reminderCount = 0, focusActive = false }: {
   title: string
   meta: string
+  searchShortcut: string
   onSearch: () => void
   onAppearance: () => void
   onAdd: () => void
@@ -22,7 +23,7 @@ export function Topbar({ title, meta, onSearch, onAppearance, onAdd, onFocus, on
       <button type="button" className="topbar__search" onClick={onSearch} aria-label="Search Folio or run a command">
         <Icon name="search" />
         <span>Search or command</span>
-        <kbd>Ctrl/⌘ K · /</kbd>
+        <kbd>{searchShortcut} · /</kbd>
       </button>
       <div className="topbar__reminder-wrap"><IconButton icon="bell" label={reminderCount ? `${reminderCount} due reminder${reminderCount === 1 ? '' : 's'}` : 'Reminders'} className={reminderCount ? 'has-reminders' : ''} onClick={onReminders} />{reminderCount ? <span className="topbar__reminder-badge">{reminderCount > 99 ? '99+' : reminderCount}</span> : null}</div>
       <Button icon="focus" variant={focusActive ? 'primary' : 'outline'} onClick={onFocus}>{focusActive ? 'Resume focus' : 'Focus'}</Button>
