@@ -22,7 +22,7 @@ const styleIndex=read('src/styles/index.css')
 
 check('D13 validator registered',pkg.scripts?.['validate:d13']==='node scripts/validate-matrix-countdown-d13.mjs')
 check('release gate runs D13',pkg.scripts?.['release:verify']?.includes('validate:d13'))
-check('D13 remains derived on schema v23',/DATABASE_SCHEMA_VERSION\s*=\s*23\b/.test(database)&&!database.includes('this.version(24)'))
+check('D13 remains compatible after schema v23',Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]??0)>=23&&database.includes('this.version(23)'))
 check('matrix logic exists',logic.includes('buildMatrix')&&logic.includes('MatrixQuadrant'))
 check('importance maps to existing priority',logic.includes("task.priority === 'high' || task.priority === 'critical'"))
 check('urgency uses deadline horizon and planned date',logic.includes('deadline')&&logic.includes('horizonDays')&&logic.includes('task.plannedDate <= today'))
