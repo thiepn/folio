@@ -33,6 +33,7 @@ export function InboxView({ tasks, projects, onAdd, onTrash, onToggle, onOpen, o
 
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return
       if (!tasks.length || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName ?? '')) return
       const key = event.key.toLowerCase()
       if (key === 'j' || event.key === 'ArrowDown') { event.preventDefault(); setActiveId(tasks[Math.min(tasks.length - 1, activeIndex + 1)].id) }
