@@ -111,7 +111,9 @@ export async function initializeDatabase() {
   await db.open()
   await migrateLegacyLocalStorage()
   await seedDatabaseIfNeeded()
+}
 
+export async function runStartupMaintenance() {
   const maintenanceSteps: Array<[string, () => Promise<unknown>]> = [
     ['Recurring task materialization', () => recurrenceService.materializeAll()],
     ['Focus session reconciliation', () => focusService.reconcileActive()],
