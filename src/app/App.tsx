@@ -92,7 +92,7 @@ import { ShortcutHelpModal } from '../features/power/ShortcutHelpModal'
 import { KeyboardSettingsDrawer } from '../features/power/KeyboardSettingsDrawer'
 import { BulkActionBar } from '../features/power/BulkActionBar'
 import { TaskSelectionProvider, useTaskSelection } from '../features/power/TaskSelectionContext'
-import { DEFAULT_SHORTCUTS, isEditableTarget, matchesShortcut, normalizeShortcutMap, type ShortcutMap } from '../features/power/shortcuts'
+import { DEFAULT_SHORTCUTS, formatShortcut, isEditableTarget, matchesShortcut, normalizeShortcutMap, type ShortcutMap } from '../features/power/shortcuts'
 import { currentTaskId, focusRelativeTask } from '../features/power/taskKeyboard'
 import { LEGACY_LAST_VIEW_KEY } from '../legacy/compat'
 
@@ -328,12 +328,12 @@ function AppContent() {
         setShortcutHelpOpen(true)
         return
       }
-      if (matchesShortcut(event, shortcuts.nextTask)) {
+      if (view !== 'inbox' && matchesShortcut(event, shortcuts.nextTask)) {
         event.preventDefault()
         focusRelativeTask(1)
         return
       }
-      if (matchesShortcut(event, shortcuts.previousTask)) {
+      if (view !== 'inbox' && matchesShortcut(event, shortcuts.previousTask)) {
         event.preventDefault()
         focusRelativeTask(-1)
         return
@@ -893,7 +893,7 @@ function AppContent() {
           <span>{`Folio · ${viewAnnouncement}`}</span>
           <div className="mobile-topbar__actions"><button className={reminderData?.dueCount ? 'mobile-reminder-button has-reminders' : 'mobile-reminder-button'} onClick={() => setReminderCenterOpen(true)}>Alerts{reminderData?.dueCount ? ` ${reminderData.dueCount}` : ''}</button><button className="mobile-command-button" onClick={() => setPaletteOpen(true)}>Search</button>{focusData?.activeSession ? <button className="is-focus-active" onClick={() => openFocus()}>Resume focus</button> : <button onClick={() => openFocus()}>Focus</button>}</div>
         </div>
-        <Topbar title={topbarTitle} meta={topbarMeta} onSearch={() => setPaletteOpen(true)} onAppearance={() => setAppearanceOpen(true)} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo', '', view === 'inbox' ? undefined : data.today, view === 'lists' && selectedListId && !selectedListId.startsWith('__') ? selectedListId : '')} onFocus={() => openFocus()} onReminders={() => setReminderCenterOpen(true)} reminderCount={reminderData?.dueCount ?? 0} focusActive={Boolean(focusData?.activeSession)} />
+        <Topbar title={topbarTitle} meta={topbarMeta} searchShortcut={formatShortcut(shortcuts.palette)} onSearch={() => setPaletteOpen(true)} onAppearance={() => setAppearanceOpen(true)} onAdd={() => openAdd(view === 'inbox' ? 'inbox' : 'todo', '', view === 'inbox' ? undefined : data.today, view === 'lists' && selectedListId && !selectedListId.startsWith('__') ? selectedListId : '')} onFocus={() => openFocus()} onReminders={() => setReminderCenterOpen(true)} reminderCount={reminderData?.dueCount ?? 0} focusActive={Boolean(focusData?.activeSession)} />
         <main className="main-content" id="main-content" ref={mainRef} tabIndex={-1}>
           {view === 'today' ? <TodayView
             tasks={data.todayTasks}
