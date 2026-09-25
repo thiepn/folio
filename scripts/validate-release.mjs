@@ -14,7 +14,7 @@ const check = (name, ok, detail = '') => {
 
 const pkg = JSON.parse(read('package.json'))
 check('release version is 1.8.0', pkg.version === '1.8.0', pkg.version)
-check('GitHub Pages homepage configured', pkg.homepage === 'https://thiepn.github.io/folio/', pkg.homepage)
+check('GitHub Pages homepage configured', pkg.homepage === 'https://thiepn.dev/folio/', pkg.homepage)
 check('release verification script registered', pkg.scripts?.['release:verify']?.includes('validate:dist'))
 
 for (const [group, deps] of Object.entries({ dependencies: pkg.dependencies, devDependencies: pkg.devDependencies })) {
