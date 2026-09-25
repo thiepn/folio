@@ -50,4 +50,4 @@ Expected public URL: `https://thiepn.github.io/folio/`
 
 ## Dependency policy
 
-Direct dependencies are pinned to exact versions in `package.json`. A committed npm lockfile remains preferable once generated in a network-enabled development environment; CI intentionally disables setup-node package-manager caching until a lockfile exists.
+Direct dependencies are pinned to exact versions in `package.json`, and `package-lock.json` is committed. CI uses `npm ci` so the resolved dependency graph must match the lockfile exactly. Lifecycle scripts remain disabled during CI installation.

@@ -10,6 +10,7 @@ import { attachmentService } from './attachmentService'
 import { contentSearchService } from './contentSearchService'
 import { automationService } from './automationService'
 import { localDateKey } from '../domain/date'
+import { reportRuntimeIssue } from './runtimeIssueService'
 
 export interface DatabaseHealth {
   schemaVersion: number
@@ -96,17 +97,30 @@ async function migrateLegacyDatabaseName() {
   await Dexie.delete(LEGACY_DATABASE_NAME)
 }
 
+async function runRecoverableStartupStep(label: string, run: () => Promise<unknown>) {
+  try {
+    await run()
+  } catch (error) {
+    console.error('Startup maintenance failed: ' + label, error)
+    reportRuntimeIssue('recovery', error, label + ' failed during startup. Folio continued without resetting the workspace.')
+  }
+}
+
 export async function initializeDatabase() {
   await migrateLegacyDatabaseName()
   await db.open()
   await migrateLegacyLocalStorage()
   await seedDatabaseIfNeeded()
-  await recurrenceService.materializeAll()
-  await focusService.reconcileActive()
-  await initializeStorageSafety()
-  await attachmentService.cleanupOrphans()
-  await contentSearchService.rebuildAll()
-  await automationService.runDaily(localDateKey())
+
+  const maintenanceSteps: Array<[string, () => Promise<unknown>]> = [
+    ['Recurring task materialization', () => recurrenceService.materializeAll()],
+    ['Focus session reconciliation', () => focusService.reconcileActive()],
+    ['Storage safety initialization', () => initializeStorageSafety()],
+    ['Attachment orphan cleanup', () => attachmentService.cleanupOrphans()],
+    ['Search index rebuild', () => contentSearchService.rebuildAll()],
+    ['Daily automation', () => automationService.runDaily(localDateKey())],
+  ]
+  for (const [label, run] of maintenanceSteps) await runRecoverableStartupStep(label, run)
 }
 
 async function migrateLegacyLocalStorage() {

@@ -6,9 +6,9 @@ A local-first personal productivity application with an editorial, low-noise int
 
 **Repository:** `thiepn/folio`
 
-**IndexedDB schema:** `v20`
+**IndexedDB schema:** `v24`
 
-**Status:** release-hardened · GitHub Pages ready
+**Status:** feature-complete · D20 production-hardened · GitHub Pages ready
 
 
 ## Live deployment
@@ -88,7 +88,7 @@ See `docs/COMMAND_FIRST_UX_V1_7.md`.
 
 ## v1.8 — Visual & Interaction Refinement
 
-Folio now uses a warmer, higher-contrast editorial desk system across every existing workflow: a calmer navigation rail, stronger page hierarchy, open ruled sections in place of repetitive dashboard cards, denser readable content, sharper interaction states, restrained motion, and a purpose-built mobile reading surface. The release is visual-only at the product-model boundary: all v1.7 behavior, commands, keyboard workflows, and the IndexedDB v15 schema are retained.
+Folio now uses a warmer, higher-contrast editorial desk system across every existing workflow: a calmer navigation rail, stronger page hierarchy, open ruled sections in place of repetitive dashboard cards, denser readable content, sharper interaction states, restrained motion, and a purpose-built mobile reading surface. The v1.8 visual step itself did not alter the then-current v15 schema. Subsequent D1-D18 deepening phases advanced the current database schema to v24 while retaining the v1.8 visual system.
 
 See `docs/VISUAL_INTERACTION_REFINEMENT_V1_8.md`.
 
@@ -160,9 +160,25 @@ Schema v20 preserves these spans in backup/restore and recurrence exceptions; di
 
 See `docs/KANBAN_TIMELINE_V2_D8.md`.
 
+## D9-D18 — Product Deepening Completion
+
+D9-D18 complete rich notes and attachments, Habits V2, Focus and time tracking V2, analytics, Matrix/countdown, Search V2, templates and automation, collaboration/sharing, external integrations, and local-first sync. The current source reaches IndexedDB schema v24. Detailed contracts for each phase remain under `docs/`.
+
+## D19 — Full-Product UX Audit
+
+D19 audits the complete D1-D18 product and corrects accumulated navigation, mobile-header, search, keyboard, accessibility-semantics, and browser-history friction without adding another feature subsystem.
+
+See `docs/FULL_PRODUCT_UX_AUDIT_D19.md`.
+
+## D20 — Production Hardening
+
+D20 freezes product scope and hardens the release boundary: lockfile-only CI installs, commit-pinned GitHub Actions, least-privilege deployment permissions, revision-scoped service-worker caches, recoverable non-critical startup maintenance, and a generated SHA-256 manifest for the exact deployed artifact.
+
+See `docs/PRODUCTION_HARDENING_D20.md`.
+
 ## Data and privacy
 
-Planner data is local-first in IndexedDB. The current database schema is **v20**. Full backups export schema v20, including Task Engine V2, Recurrence Engine V2, reminder definitions/occurrences, folders/lists/sections/tags, Kanban/Timeline task spans, and durable review records; direct restore supports compatible backups from **v8 through v20**. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
+Planner data is local-first in IndexedDB. The current database schema is **v24**. Full backups export schema v24, including tasks/projects, recurrence, reminders, organization, rich notes and attachments, habits, focus history, calendar/timeline state, and review records; direct restore supports compatible backups from **v8 through v24**. Sync credentials and transport state are excluded from portable backups. Restore is replace-only, validated, transactional, and guarded by an automatic pre-restore safety backup.
 
 Fresh installs begin with an empty personal workspace. Optional sample data can be loaded explicitly from Data & storage.
 
@@ -175,10 +191,8 @@ The v1.1 Folio build adopts the Folio identity throughout the UI, PWA metadata, 
 ## Development
 
 ```bash
-npm install
-npm run validate:final
-npm run typecheck
-npm run build
+npm ci
+npm run release:verify
 npm run dev
 ```
 
@@ -186,7 +200,7 @@ Direct dependency versions and `package-lock.json` are committed for repeatable 
 
 ## Release history
 
-The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v20 data model, and `validate:final` define the current source state.
+The app was developed through 21 implementation phases followed by a full-product audit and release-hardening/certification layers. Historical phase documents remain under `docs/` for traceability; `README.md`, runtime UI, the v24 data model, and the D20 release gate define the current source state.
 
 ## v1.1.1 release hardening
 
