@@ -99,8 +99,19 @@ import { LEGACY_LAST_VIEW_KEY } from '../legacy/compat'
 const LAST_VIEW_KEY = 'folio:last-view:v1'
 const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'projects', 'lists', 'notes', 'habits', 'automation', 'share', 'integrations', 'sync', 'matrix', 'analytics', 'review']
 
+function viewFromUrl(): NavView | null {
+  try {
+    const value = new URL(window.location.href).searchParams.get('view') as NavView | null
+    return value && NAV_VIEWS.includes(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
 function initialView(): NavView {
   try {
+    const linked = viewFromUrl()
+    if (linked) return linked
     const current = window.localStorage.getItem(LAST_VIEW_KEY) as NavView | null
     if (current && NAV_VIEWS.includes(current)) return current
     const legacy = window.localStorage.getItem(LEGACY_LAST_VIEW_KEY) as NavView | null
@@ -196,6 +207,24 @@ function AppContent() {
   useEffect(() => {
     document.title = `${viewAnnouncement} — Folio`
   }, [viewAnnouncement])
+
+  useEffect(() => {
+    function onPopState() {
+      const next = viewFromUrl() ?? 'today'
+      rememberView(next)
+      setView(next)
+      setSelectedTaskId(null)
+      setSelectedHabitId(null)
+      selection.clear()
+      if (next !== 'projects') setSelectedProjectId(null)
+      if (next !== 'lists') setSelectedListId(null)
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
+      window.requestAnimationFrame(() => mainRef.current?.focus({ preventScroll: true }))
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [selection])
 
   useEffect(() => {
     reminderService.start()
@@ -641,6 +670,11 @@ function AppContent() {
 
   function navigate(next: NavView) {
     rememberView(next)
+    if (next !== view) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', next)
+      window.history.pushState({ folioView: next }, '', url)
+    }
     setView(next)
     setSelectedTaskId(null)
     setSelectedHabitId(null)
