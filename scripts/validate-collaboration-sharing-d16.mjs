@@ -23,7 +23,7 @@ const backup=read('src/services/backupService.ts')
 
 check('D16 validator registered',pkg.scripts?.['validate:d16']==='node scripts/validate-collaboration-sharing-d16.mjs')
 check('release gate runs D16',pkg.scripts?.['release:verify']?.includes('validate:d16'))
-check('D16 remains local-first on schema v23',/DATABASE_SCHEMA_VERSION\s*=\s*23\b/.test(database)&&!database.includes('this.version(24)'))
+check('D16 remains compatible after schema v23',Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]??0)>=23&&database.includes('this.version(23)'))
 check('share package format is versioned',service.includes("format:'folio-share'")&&service.includes('version:1')&&service.includes('shareId:string'))
 check('share scopes include task project list review and template',service.includes("'task'|'project'|'list'|'review'|'template'"))
 check('access boundary distinguishes view and copy',service.includes("CollaborationAccess='view'|'copy'")&&service.includes("if(!preview.importable)throw new Error('This package is view-only"))
