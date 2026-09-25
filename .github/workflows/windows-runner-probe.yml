@@ -1,4 +1,4 @@
-name: Windows runner probe
+name: Windows browser boot smoke
 
 on:
   pull_request:
@@ -7,9 +7,53 @@ permissions:
   contents: read
 
 jobs:
-  probe:
+  smoke:
     runs-on: windows-latest
-    timeout-minutes: 3
+    timeout-minutes: 12
     steps:
-      - run: node --version
-      - run: echo "Windows runner available"
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Install and build
+        shell: pwsh
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+
+      - name: Start preview
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm run preview -- --host 127.0.0.1 --port 4173 > preview.log 2>&1" -PassThru
+          $p.Id | Out-File preview.pid
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $r = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4173/ -TimeoutSec 2
+              if ($r.StatusCode -eq 200) { exit 0 }
+            } catch {}
+            Start-Sleep -Seconds 1
+          }
+          Get-Content preview.log
+          exit 1
+
+      - name: Smoke production build in Chrome
+        shell: pwsh
+        run: |
+          $chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+          if (-not (Test-Path $chrome)) { throw "Chrome not found at $chrome" }
+          & $chrome --headless=new --disable-gpu --no-first-run --disable-background-networking --timeout=12000 --dump-dom http://127.0.0.1:4173/ 2> chrome.log | Out-File -Encoding utf8 dom.html
+          Get-Content dom.html
+          Write-Host "--- Chrome log ---"
+          Get-Content chrome.log
+          $dom = Get-Content dom.html -Raw
+          if ($dom -notmatch 'id="main-content"') { throw "Folio did not render main-content." }
+          if ($dom -match 'Opening Folio') { throw "Folio remained stuck in startup." }
+          if ($dom -match 'Folio could not open its workspace') { throw "Folio entered database recovery." }
+          if ($dom -match 'This browser is missing required') { throw "Folio entered compatibility failure." }
