@@ -61,7 +61,7 @@ jobs:
           set +e
           timeout 35s "${{ steps.browser.outputs.path }}" \
             --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage \
-            --enable-logging=stderr --v=0 --virtual-time-budget=12000 \
+            --enable-logging=stderr --v=0 --timeout=12000 \
             --dump-dom http://127.0.0.1:4173/ \
             > /tmp/local-dom.html 2> /tmp/local-chrome.log
           STATUS=$?
@@ -95,7 +95,7 @@ jobs:
           set +e
           timeout 35s "${{ steps.browser.outputs.path }}" \
             --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage \
-            --enable-logging=stderr --v=0 --virtual-time-budget=12000 \
+            --enable-logging=stderr --v=0 --timeout=12000 \
             --dump-dom https://thiepn.dev/folio/ \
             > /tmp/live-dom.html 2> /tmp/live-chrome.log
           STATUS=$?
