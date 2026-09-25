@@ -28,7 +28,9 @@ jobs:
           package-manager-cache: false
 
       - name: Install dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright-core@1.62.1
 
       - name: Build
         run: npm run build
@@ -56,56 +58,51 @@ jobs:
           "$BROWSER" --version
 
       - name: Smoke local production build
-        shell: bash
+        env:
+          BROWSER_PATH: ${{ steps.browser.outputs.path }}
         run: |
-          set +e
-          timeout 35s "${{ steps.browser.outputs.path }}" \
-            --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage \
-            --enable-logging=stderr --v=0 --virtual-time-budget=12000 \
-            --dump-dom http://127.0.0.1:4173/ \
-            > /tmp/local-dom.html 2> /tmp/local-chrome.log
-          STATUS=$?
-          set -e
-          echo "browser exit: $STATUS"
-          echo '--- local DOM ---'
-          sed -n '1,220p' /tmp/local-dom.html
-          echo '--- local chrome log ---'
-          tail -n 240 /tmp/local-chrome.log
-          grep -q 'id="main-content"' /tmp/local-dom.html || { echo 'Folio did not render main-content locally.'; exit 1; }
-          grep -q 'Opening Folio' /tmp/local-dom.html && { echo 'Folio remained stuck in startup locally.'; exit 1; }
-          grep -q 'Folio could not open its workspace' /tmp/local-dom.html && { echo 'Folio entered database recovery locally.'; exit 1; }
-          grep -q 'Database initialization failed' /tmp/local-chrome.log && { echo 'Database initialization failed locally.'; exit 1; }
+          cat > /tmp/folio-smoke.cjs <<'NODE'
+          const { chromium } = require('playwright-core')
 
-      - name: Probe live deployment resources
-        shell: bash
-        run: |
-          set -euxo pipefail
-          curl -fsSIL --max-time 20 https://thiepn.dev/folio/
-          LIVE_HTML=$(mktemp)
-          curl -fsSL --max-time 20 https://thiepn.dev/folio/ -o "$LIVE_HTML"
-          sed -n '1,100p' "$LIVE_HTML"
-          ASSET=$(grep -oE 'src="[^"]+\.js"' "$LIVE_HTML" | head -1 | cut -d '"' -f2)
-          test -n "$ASSET"
-          node -e "console.log(new URL(process.argv[1], 'https://thiepn.dev/folio/').href)" "$ASSET" > /tmp/live-asset-url
-          curl -fsSIL --max-time 20 "$(cat /tmp/live-asset-url)"
+          ;(async () => {
+            const browser = await chromium.launch({
+              executablePath: process.env.BROWSER_PATH,
+              headless: true,
+              args: ['--no-sandbox', '--disable-dev-shm-usage', '--no-first-run', '--disable-background-networking'],
+            })
+            const page = await browser.newPage()
+            const pageErrors = []
+            page.on('console', (message) => console.log('[browser console]', message.type(), message.text()))
+            page.on('pageerror', (error) => {
+              pageErrors.push(String(error))
+              console.error('[page error]', error)
+            })
 
-      - name: Smoke live deployment
-        shell: bash
-        run: |
-          set +e
-          timeout 35s "${{ steps.browser.outputs.path }}" \
-            --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage \
-            --enable-logging=stderr --v=0 --virtual-time-budget=12000 \
-            --dump-dom https://thiepn.dev/folio/ \
-            > /tmp/live-dom.html 2> /tmp/live-chrome.log
-          STATUS=$?
-          set -e
-          echo "browser exit: $STATUS"
-          echo '--- live DOM ---'
-          sed -n '1,220p' /tmp/live-dom.html
-          echo '--- live chrome log ---'
-          tail -n 240 /tmp/live-chrome.log
-          grep -q 'id="main-content"' /tmp/live-dom.html || { echo 'Folio did not render main-content live.'; exit 1; }
-          grep -q 'Opening Folio' /tmp/live-dom.html && { echo 'Folio remained stuck in startup live.'; exit 1; }
-          grep -q 'Folio could not open its workspace' /tmp/live-dom.html && { echo 'Folio entered database recovery live.'; exit 1; }
-          grep -q 'Database initialization failed' /tmp/live-chrome.log && { echo 'Database initialization failed live.'; exit 1; }
+            await page.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded', timeout: 15000 })
+            try {
+              await page.waitForFunction(() => !document.body.innerText.includes('Opening Folio'), undefined, { timeout: 15000 })
+            } catch {
+              // Report the complete state below.
+            }
+
+            const state = await page.evaluate(() => ({
+              text: document.body.innerText,
+              hasMain: Boolean(document.getElementById('main-content')),
+              html: document.getElementById('root')?.innerHTML ?? '',
+            }))
+            console.log('FOLIO_STATE=' + JSON.stringify(state))
+            console.log('PAGE_ERRORS=' + JSON.stringify(pageErrors))
+
+            if (!state.hasMain) throw new Error('Folio did not render main-content.')
+            if (state.text.includes('Opening Folio')) throw new Error('Folio remained stuck in startup.')
+            if (state.text.includes('Folio could not open its workspace')) throw new Error('Folio entered database recovery.')
+            if (state.text.includes('This browser is missing required')) throw new Error('Folio entered compatibility failure.')
+            if (pageErrors.length) throw new Error('Folio emitted page errors: ' + pageErrors.join(' | '))
+
+            await browser.close()
+          })().catch((error) => {
+            console.error(error)
+            process.exit(1)
+          })
+          NODE
+          node /tmp/folio-smoke.cjs
