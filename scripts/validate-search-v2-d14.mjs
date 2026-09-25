@@ -26,7 +26,7 @@ const styleIndex=read('src/styles/index.css')
 
 check('D14 validator registered',pkg.scripts?.['validate:d14']==='node scripts/validate-search-v2-d14.mjs')
 check('release gate runs D14',pkg.scripts?.['release:verify']?.includes('validate:d14'))
-check('D14 remains compatible after schema v23',Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1]??0)>=23&&database.includes('this.version(23)'))
+check('D14 remains compatible after schema v23',Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]??0)>=23&&database.includes('this.version(23)'))
 check('attachment ownership stays task or note',models.includes("ContentOwnerType = 'task' | 'note'"))
 check('search owner types cover planned entities',models.includes("SearchOwnerType = ContentOwnerType | 'project' | 'habit' | 'review' | 'tag'"))
 check('search documents have field-aware facets',models.includes('projectId?: EntityId')&&models.includes('tagIds?: EntityId[]')&&models.includes('status?: string')&&models.includes('date?: LocalDate'))
