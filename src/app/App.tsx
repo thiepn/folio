@@ -205,6 +205,13 @@ function AppContent() {
   useEffect(() => applyAppearance(appearance), [appearance])
 
   useEffect(() => {
+    const url = new URL(window.location.href)
+    if (url.searchParams.has('view')) return
+    url.searchParams.set('view', view)
+    window.history.replaceState({ folioView: view }, '', url)
+  }, [])
+
+  useEffect(() => {
     document.title = `${viewAnnouncement} — Folio`
   }, [viewAnnouncement])
 
