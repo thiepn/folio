@@ -3,19 +3,27 @@ import { Drawer } from '../ui/Drawer'
 import { Icon, type IconName } from '../ui/Icon'
 import type { NavView } from '../../types/ui'
 
-const destinations: { view: NavView; label: string; note: string; icon: IconName }[] = [
-  { view: 'search', label: 'Search', note: 'Global indexed search, filters, saved queries and recents', icon: 'search' },
-  { view: 'projects', label: 'Projects', note: 'Work, courses and areas of responsibility', icon: 'folder' },
-  { view: 'lists', label: 'Lists', note: 'Folders, sections, tags and task collections', icon: 'folder' },
-  { view: 'notes', label: 'Notes', note: 'Markdown notes, attachments and indexed reference content', icon: 'review' },
-  { view: 'habits', label: 'Habits', note: 'Rhythms, flexible schedules and weekly adherence', icon: 'habit' },
-  { view: 'automation', label: 'Automate', note: 'Templates, rules and automation run history', icon: 'automation' },
-  { view: 'share', label: 'Share', note: 'View-only snapshots, copyable packages and handoff history', icon: 'share' },
-  { view: 'integrations', label: 'Integrations', note: 'Calendar, email, Share Target, URLs and external triggers', icon: 'integration' },
-  { view: 'sync', label: 'Sync', note: 'Multi-device cloud sync, queue, devices and conflicts', icon: 'sync' },
-  { view: 'matrix', label: 'Matrix', note: 'Urgency, importance, deadlines and countdowns', icon: 'matrix' },
-  { view: 'analytics', label: 'Analytics', note: 'Trends, workload, focus, habits and reports', icon: 'analytics' },
-  { view: 'review', label: 'Review', note: 'Planning feedback and weekly review', icon: 'review' },
+type Destination = { view: NavView; label: string; note: string; icon: IconName }
+
+const destinationGroups: Array<{ label: string; items: Destination[] }> = [
+  { label: 'Workspace', items: [
+    { view: 'search', label: 'Search', note: 'Global indexed search, filters, saved queries and recents', icon: 'search' },
+    { view: 'projects', label: 'Projects', note: 'Work, courses and areas of responsibility', icon: 'folder' },
+    { view: 'lists', label: 'Lists', note: 'Folders, sections, tags and task collections', icon: 'folder' },
+    { view: 'notes', label: 'Notes', note: 'Markdown notes, attachments and indexed reference content', icon: 'review' },
+    { view: 'habits', label: 'Habits', note: 'Rhythms, flexible schedules and weekly adherence', icon: 'habit' },
+  ]},
+  { label: 'Plan & review', items: [
+    { view: 'matrix', label: 'Matrix', note: 'Urgency, importance, deadlines and countdowns', icon: 'matrix' },
+    { view: 'analytics', label: 'Analytics', note: 'Trends, workload, focus, habits and reports', icon: 'analytics' },
+    { view: 'review', label: 'Review', note: 'Planning feedback and weekly review', icon: 'review' },
+    { view: 'automation', label: 'Automate', note: 'Templates, rules and automation run history', icon: 'automation' },
+  ]},
+  { label: 'Connect', items: [
+    { view: 'share', label: 'Share', note: 'View-only snapshots, copyable packages and handoff history', icon: 'share' },
+    { view: 'integrations', label: 'Integrations', note: 'Calendar, email, Share Target, URLs and external triggers', icon: 'integration' },
+    { view: 'sync', label: 'Sync', note: 'Multi-device cloud sync, queue, devices and conflicts', icon: 'sync' },
+  ]},
 ]
 
 export function MobileMoreSheet({ open, active, focusActive, onClose, onNavigate, onFocus, onAppearance, onData }: {
@@ -43,20 +51,23 @@ export function MobileMoreSheet({ open, active, focusActive, onClose, onNavigate
 
   return (
     <Drawer open={open} title="More" onClose={onClose} className="mobile-more-overlay">
-      <div className="mobile-more-list">
-        {destinations.map((item) => (
-          <button key={item.view} className={active === item.view ? 'is-active' : ''} aria-current={active === item.view ? 'page' : undefined} onClick={() => navigate(item.view)}>
-            <span className="mobile-more-list__icon"><Icon name={item.icon} /></span>
-            <span><strong>{item.label}</strong><small>{item.note}</small></span>
-            <Icon name="chevronRight" />
-          </button>
-        ))}
-      </div>
+      {destinationGroups.map((group) => <section className="mobile-more-group" aria-label={group.label} key={group.label}>
+        <span className="eyebrow mobile-more-group__label">{group.label}</span>
+        <div className="mobile-more-list">
+          {group.items.map((item) => (
+            <button type="button" key={item.view} className={active === item.view ? 'is-active' : ''} aria-current={active === item.view ? 'page' : undefined} onClick={() => navigate(item.view)}>
+              <span className="mobile-more-list__icon"><Icon name={item.icon} /></span>
+              <span><strong>{item.label}</strong><small>{item.note}</small></span>
+              <Icon name="chevronRight" />
+            </button>
+          ))}
+        </div>
+      </section>)}
       <div className="mobile-more-section">
-        <span className="eyebrow">Workspace</span>
-        <button onClick={() => { onClose(); onFocus() }}><Icon name="focus" /><span><strong>{focusActive ? 'Resume focus' : 'Focus'}</strong><small>{focusActive ? 'A session is still active' : 'Start a distraction-free session'}</small></span></button>
-        <button onClick={() => { onClose(); onAppearance() }}><Icon name="settings" /><span><strong>Appearance</strong><small>Accent, intensity and interface settings</small></span></button>
-        <button onClick={() => { onClose(); onData() }}><Icon name="download" /><span><strong>Data & storage</strong><small>Backup, interoperability and local storage</small></span></button>
+        <span className="eyebrow">Workspace controls</span>
+        <button type="button" onClick={() => { onClose(); onFocus() }}><Icon name="focus" /><span><strong>{focusActive ? 'Resume focus' : 'Focus'}</strong><small>{focusActive ? 'A session is still active' : 'Start a distraction-free session'}</small></span></button>
+        <button type="button" onClick={() => { onClose(); onAppearance() }}><Icon name="settings" /><span><strong>Appearance</strong><small>Accent, intensity and interface settings</small></span></button>
+        <button type="button" onClick={() => { onClose(); onData() }}><Icon name="download" /><span><strong>Data & storage</strong><small>Backup, interoperability and local storage</small></span></button>
       </div>
     </Drawer>
   )
