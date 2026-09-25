@@ -87,11 +87,11 @@ const seriesChanges = z.object({
 }).strict()
 
 const createProject = z.object({ op: z.literal('create'), entity: z.literal('project'), value: importProjectSchema }).strict()
-const createTask = z.object({ op: z.literal('create'), entity: z.literal('task'), value: importTaskSchema.extend({ parentId: z.string().min(1).optional() }).strict() }).strict()
+const createTask = z.object({ op: z.literal('create'), entity: z.literal('task'), value: importTaskSchema.safeExtend({ parentId: z.string().min(1).optional() }).strict() }).strict()
 const createHabit = z.object({ op: z.literal('create'), entity: z.literal('habit'), value: importProjectSchema.pick({ ref: true }).extend({
   title: z.string().trim().min(1).max(160), description: z.string().max(10_000).default(''), kind: z.enum(['check','quantity','duration']), target: z.number().int().positive().max(100_000).default(1), unit: z.string().trim().min(1).max(40).optional(), color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(), schedule: importHabitScheduleSchema, countsTowardCapacity: z.boolean().default(false),
 }).strict() }).strict()
-const createTimeBlock = z.object({ op: z.literal('create'), entity: z.literal('timeBlock'), value: importTimeBlockSchema.extend({ taskId: z.string().min(1).optional() }).strict() }).strict()
+const createTimeBlock = z.object({ op: z.literal('create'), entity: z.literal('timeBlock'), value: importTimeBlockSchema.safeExtend({ taskId: z.string().min(1).optional() }).strict() }).strict()
 const createSeries = z.object({ op: z.literal('create'), entity: z.literal('recurringSeries'), value: importSeriesSchema }).strict()
 
 const updateProject = z.object({ op: z.literal('update'), entity: z.literal('project'), ...baseExisting, changes: projectChanges }).strict()
