@@ -368,7 +368,7 @@ export async function createBackup(): Promise<BackupEnvelope> {
   const [tasks, projects, habits, habitEntries, habitGroups, habitTemplates, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, settings, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, rawAttachments] = await Promise.all([
     db.tasks.toArray(), db.projects.toArray(), db.habits.toArray(), db.habitEntries.toArray(), db.habitGroups.toArray(), db.habitTemplates.toArray(),
     db.timeBlocks.toArray(), db.dailyPlans.toArray(), db.dailyPlanItems.toArray(), db.focusSessions.toArray(), db.recurringSeries.toArray(),
-    db.settings.toArray(), db.importBatches.toArray(), db.patchBatches.toArray(), db.calendarImportBatches.toArray(), db.reviewRecords.toArray(),
+    db.settings.toArray().then((rows) => rows.filter((row) => !row.key.startsWith('sync.'))), db.importBatches.toArray(), db.patchBatches.toArray(), db.calendarImportBatches.toArray(), db.reviewRecords.toArray(),
     db.reminders.toArray(), db.reminderOccurrences.toArray(), db.folders.toArray(), db.lists.toArray(), db.sections.toArray(), db.tags.toArray(), db.notes.toArray(), db.attachments.toArray(),
   ])
   const attachments = await Promise.all(rawAttachments.map(serializeAttachment))
@@ -399,10 +399,13 @@ export async function restoreBackup(preview: BackupPreview): Promise<void> {
   const d = verified.backup.data
   await db.transaction('rw', [
     db.tasks, db.projects, db.habits, db.habitEntries, db.habitGroups, db.habitTemplates, db.timeBlocks, db.dailyPlans, db.dailyPlanItems,
-    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords, db.reminders, db.reminderOccurrences, db.folders, db.lists, db.sections, db.tags, db.notes, db.attachments, db.searchDocuments,
+    db.focusSessions, db.recurringSeries, db.settings, db.importBatches, db.patchBatches, db.calendarImportBatches, db.reviewRecords, db.reminders, db.reminderOccurrences, db.folders, db.lists, db.sections, db.tags, db.notes, db.attachments, db.searchDocuments, db.syncShadows, db.syncQueue, db.syncConflicts,
   ], async () => {
       await Promise.all(TABLE_KEYS.map((key) => (db[key] as any).clear()))
       await db.searchDocuments.clear()
+      await db.syncShadows.clear()
+      await db.syncQueue.clear()
+      await db.syncConflicts.clear()
       await db.projects.bulkPut(d.projects)
       await db.recurringSeries.bulkPut(d.recurringSeries)
       await db.tasks.bulkPut(d.tasks)
