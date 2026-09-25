@@ -97,6 +97,10 @@ async function migrateLegacyDatabaseName() {
   await Dexie.delete(LEGACY_DATABASE_NAME)
 }
 
+function setBootStage(stage: string) {
+  document.documentElement.dataset.folioBootStage = stage
+}
+
 async function runRecoverableStartupStep(label: string, run: () => Promise<unknown>) {
   try {
     await run()
@@ -107,18 +111,18 @@ async function runRecoverableStartupStep(label: string, run: () => Promise<unkno
 }
 
 export async function initializeDatabase() {
-  console.info('[Folio boot] legacy migration check:start')
+  setBootStage('legacy-check:start')
   await migrateLegacyDatabaseName()
-  console.info('[Folio boot] legacy migration check:done')
-  console.info('[Folio boot] database open:start')
+  setBootStage('legacy-check:done')
+  setBootStage('database-open:start')
   await db.open()
-  console.info('[Folio boot] database open:done')
-  console.info('[Folio boot] legacy localStorage:start')
+  setBootStage('database-open:done')
+  setBootStage('legacy-local-storage:start')
   await migrateLegacyLocalStorage()
-  console.info('[Folio boot] legacy localStorage:done')
-  console.info('[Folio boot] seed settings:start')
+  setBootStage('legacy-local-storage:done')
+  setBootStage('seed-settings:start')
   await seedDatabaseIfNeeded()
-  console.info('[Folio boot] seed settings:done')
+  setBootStage('ready')
 }
 
 export async function runStartupMaintenance() {
