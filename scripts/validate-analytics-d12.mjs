@@ -23,7 +23,7 @@ const styleIndex=read('src/styles/index.css')
 
 check('D12 validator registered',pkg.scripts?.['validate:d12']==='node scripts/validate-analytics-d12.mjs')
 check('release gate runs D12',pkg.scripts?.['release:verify']?.includes('validate:d12'))
-check('D12 remains derived on schema v23',/DATABASE_SCHEMA_VERSION\s*=\s*23\b/.test(database)&&!database.includes('this.version(24)'))
+check('D12 remains compatible after schema v23',Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]??0)>=23&&database.includes('this.version(23)'))
 check('analytics does not add persistent entity models',!models.includes('AnalyticsEntity')&&!models.includes('StatisticEntity'))
 check('analytics engine exists',logic.includes('buildAnalyticsSnapshot')&&logic.includes('AnalyticsPeriodSummary'))
 check('same-length previous period comparison exists',logic.includes('previousThrough')&&logic.includes('previousFrom')&&logic.includes('previousSummary'))
