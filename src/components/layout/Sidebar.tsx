@@ -16,6 +16,7 @@ const nav: { view: NavView; label: string; icon: IconName }[] = [
   { view: 'automation', label: 'Automate', icon: 'automation' },
   { view: 'share', label: 'Share', icon: 'share' },
   { view: 'integrations', label: 'Integrations', icon: 'integration' },
+  { view: 'sync', label: 'Sync', icon: 'sync' },
   { view: 'matrix', label: 'Matrix', icon: 'matrix' },
   { view: 'analytics', label: 'Analytics', icon: 'analytics' },
   { view: 'review', label: 'Review', icon: 'review' },
