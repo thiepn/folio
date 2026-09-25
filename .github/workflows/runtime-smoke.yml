@@ -61,7 +61,7 @@ jobs:
         env:
           BROWSER_PATH: ${{ steps.browser.outputs.path }}
         run: |
-          cat > /tmp/folio-smoke.cjs <<'NODE'
+          cat > .folio-smoke.cjs <<'NODE'
           const { chromium } = require('playwright-core')
 
           ;(async () => {
@@ -105,4 +105,4 @@ jobs:
             process.exit(1)
           })
           NODE
-          node /tmp/folio-smoke.cjs
+          node .folio-smoke.cjs
