@@ -21,16 +21,14 @@ export function Tabs<T extends string>({ value, tabs, onChange, label = 'View op
   }
 
   return (
-    <div className="tabs" role="tablist" aria-label={label}>
+    <div className="tabs" role="group" aria-label={label}>
       {tabs.map((tab, index) => (
         <button
           type="button"
           key={tab.value}
           ref={(element) => { refs.current[index] = element }}
           className={value === tab.value ? 'is-active' : ''}
-          role="tab"
-          aria-selected={value === tab.value}
-          tabIndex={value === tab.value ? 0 : -1}
+          aria-pressed={value === tab.value}
           onKeyDown={(event) => move(event, index)}
           onClick={() => onChange(tab.value)}
         >{tab.label}</button>
