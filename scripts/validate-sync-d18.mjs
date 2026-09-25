@@ -53,7 +53,7 @@ check('large attachments remain explicitly device-local',serialization.includes(
 check('sync coordinator pulls before queueing/pushing',service.indexOf('const pulledBefore=await pullRemote')<service.indexOf('const snapshot=await queueLocalChanges')&&service.indexOf('const snapshot=await queueLocalChanges')<service.indexOf('const pushed=await pushQueue'))
 check('sync coordinator performs second pull',service.includes('const pulledAfter=await pullRemote'))
 check('local changes queue against shadow revision',service.includes('baseRevision:shadow?.revision??0')&&service.includes("operation:'upsert'")&&service.includes("operation:'delete'"))
-check('remote pull detects concurrent edits',service.includes("if(queued||(!shadow&&local))")&&service.includes('storeConflict'))
+check('remote pull detects queued and unqueued concurrent edits',service.includes('const localChanged=')&&service.includes('shadow.hash!==local.hash')&&service.includes('storeConflict'))
 check('equal concurrent payload auto-resolves',service.includes('local.hash===remoteHash'))
 check('oversized local attachments are not overwritten by pull',service.includes('getOversizedLocalAttachment')&&service.includes('if(oversizedLocal)'))
 check('push skips unresolved conflicts',service.includes('if(conflicts.has(item.id))continue'))
