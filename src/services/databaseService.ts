@@ -23,15 +23,51 @@ const CONTENT_TABLES = [
   'focusSessions', 'recurringSeries', 'importBatches', 'patchBatches', 'calendarImportBatches', 'reviewRecords', 'reminders', 'reminderOccurrences', 'folders', 'lists', 'sections', 'tags', 'notes', 'attachments', 'habitGroups', 'habitTemplates',
 ] as const
 
+type DatabaseInfoFactory = IDBFactory & {
+  databases?: () => Promise<Array<{ name?: string; version?: number }>>
+}
+
+async function withStartupTimeout<T>(value: PromiseLike<T>, label: string, milliseconds = 3000): Promise<T> {
+  let timeoutId: number | undefined
+  try {
+    return await Promise.race([
+      Promise.resolve(value),
+      new Promise<T>((_, reject) => {
+        timeoutId = window.setTimeout(() => reject(new Error(label + ' timed out.')), milliseconds)
+      }),
+    ])
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+  }
+}
+
+async function listKnownDatabaseNames(): Promise<Set<string> | null> {
+  const factory = indexedDB as DatabaseInfoFactory
+  if (typeof factory.databases !== 'function') return null
+  try {
+    const rows = await withStartupTimeout(factory.databases(), 'IndexedDB database listing')
+    return new Set(rows.map((row) => row.name).filter((name): name is string => Boolean(name)))
+  } catch (error) {
+    console.warn('Could not list IndexedDB databases; using the bounded legacy probe.', error)
+    return null
+  }
+}
+
+async function databaseExists(name: string, knownNames: Set<string> | null) {
+  if (knownNames) return knownNames.has(name)
+  return withStartupTimeout(Dexie.exists(name), 'IndexedDB existence check for ' + name)
+}
+
 /**
  * One-time product rename migration. Existing users keep all local data while
  * the active IndexedDB database adopts the Folio name. The legacy database is
  * deleted only after every table has been copied and count-verified.
  */
 async function migrateLegacyDatabaseName() {
-  if (!(await Dexie.exists(LEGACY_DATABASE_NAME))) return
+  const knownDatabaseNames = await listKnownDatabaseNames()
+  if (!(await databaseExists(LEGACY_DATABASE_NAME, knownDatabaseNames))) return
 
-  if (await Dexie.exists(DATABASE_NAME)) {
+  if (await databaseExists(DATABASE_NAME, knownDatabaseNames)) {
     await db.open()
     const currentCounts = await Promise.all(CONTENT_TABLES.map((key) => db[key].count()))
     if (currentCounts.some((count) => count > 0)) return

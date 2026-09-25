@@ -52,6 +52,7 @@ check('cache writes are best effort', vite.includes('async function cachePutSafe
 check('partial responses are not runtime cached', vite.includes('response.ok && response.status === 200'))
 
 const database = read('src/services/databaseService.ts')
+check('legacy database probing is bounded', database.includes('listKnownDatabaseNames') && database.includes("factory.databases") && database.includes("withStartupTimeout(Dexie.exists(name)") && !database.includes("Dexie.exists(LEGACY_DATABASE_NAME)"))
 check('startup maintenance is recoverable', database.includes('runRecoverableStartupStep') && database.includes("reportRuntimeIssue('recovery'"))
 check('database opens before maintenance', database.indexOf('await db.open()') >= 0 && database.indexOf('await db.open()') < database.indexOf('const maintenanceSteps'))
 for (const label of ['Recurring task materialization','Focus session reconciliation','Storage safety initialization','Attachment orphan cleanup','Search index rebuild','Daily automation']) {
@@ -70,6 +71,9 @@ check('dist verifies manifest', distValidator.includes('release-manifest.json') 
 
 const patchSchema = read('src/features/patch/patchSchema.ts')
 check('refined import schemas use safeExtend', patchSchema.includes('importTaskSchema.safeExtend(') && patchSchema.includes('importTimeBlockSchema.safeExtend(') && !patchSchema.includes('importTaskSchema.extend(') && !patchSchema.includes('importTimeBlockSchema.extend('))
+
+const runtimeSmoke = read('.github/workflows/runtime-smoke.yml')
+check('runtime smoke uses Playwright real browser control', runtimeSmoke.includes('playwright-core@1.62.1') && runtimeSmoke.includes("require('playwright-core')") && runtimeSmoke.includes('page.waitForFunction') && !runtimeSmoke.includes('--dump-dom'))
 
 const readme = read('README.md')
 check('README identifies schema v24', readme.includes('IndexedDB schema:') && readme.includes('current database schema is **v24**'))
