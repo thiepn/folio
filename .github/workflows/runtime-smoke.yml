@@ -72,6 +72,8 @@ jobs:
           echo '--- local chrome log ---'
           tail -n 240 /tmp/local-chrome.log
           grep -q 'id="main-content"' /tmp/local-dom.html || { echo 'Folio did not render main-content locally.'; exit 1; }
+          grep -q 'Opening Folio' /tmp/local-dom.html && { echo 'Folio remained stuck in startup locally.'; exit 1; }
+          grep -q 'Folio could not open its workspace' /tmp/local-dom.html && { echo 'Folio entered database recovery locally.'; exit 1; }
           grep -q 'Database initialization failed' /tmp/local-chrome.log && { echo 'Database initialization failed locally.'; exit 1; }
 
       - name: Probe live deployment resources
@@ -104,4 +106,6 @@ jobs:
           echo '--- live chrome log ---'
           tail -n 240 /tmp/live-chrome.log
           grep -q 'id="main-content"' /tmp/live-dom.html || { echo 'Folio did not render main-content live.'; exit 1; }
+          grep -q 'Opening Folio' /tmp/live-dom.html && { echo 'Folio remained stuck in startup live.'; exit 1; }
+          grep -q 'Folio could not open its workspace' /tmp/live-dom.html && { echo 'Folio entered database recovery live.'; exit 1; }
           grep -q 'Database initialization failed' /tmp/live-chrome.log && { echo 'Database initialization failed live.'; exit 1; }
