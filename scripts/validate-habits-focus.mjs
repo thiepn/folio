@@ -59,7 +59,7 @@ check('history indexes focus intention and note', history.includes('session.inte
 check('backup schemas preserve v15 habit/focus fields', backupSchemas.includes('pauses:') && backupSchemas.includes('plannedSeconds:') && backupSchemas.includes('intention:') && backupSchemas.includes('note:'))
 check('app wires pause/resume and richer focus callbacks', app.includes('habitService.pause') && app.includes('habitService.resume') && app.includes('plannedSeconds') && app.includes('weekSessionCount'))
 check('public v15 backup schema exists', exists('public/schema/folio-backup-v15.schema.json'))
-check('interop retains v15 restore compatibility', interop.includes('Schema v23 · complete planner state + rich content + Habits V2 + Focus V2') && interop.includes('schema v8–v23'))
+check('interop retains v15 restore compatibility', interop.includes('Schema v24 · complete planner state + rich content · sync credentials excluded') && interop.includes('schema v8–v24'))
 check('habits-focus stylesheet loaded', styles.includes("@import './habits-focus.css';"))
 check('v1.6 release doc exists', exists('docs/HABITS_FOCUS_V1_6.md'))
 
