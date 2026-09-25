@@ -26,6 +26,7 @@ jobs:
         shell: pwsh
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright-core@1.62.1
           npm run build
 
       - name: Start preview
@@ -43,17 +44,54 @@ jobs:
           Get-Content preview.log
           exit 1
 
-      - name: Smoke production build in Chrome
+      - name: Real browser boot smoke
         shell: pwsh
         run: |
-          $chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-          if (-not (Test-Path $chrome)) { throw "Chrome not found at $chrome" }
-          & $chrome --headless=new --disable-gpu --no-first-run --disable-background-networking --timeout=12000 --dump-dom http://127.0.0.1:4173/ 2> chrome.log | Out-File -Encoding utf8 dom.html
-          Get-Content dom.html
-          Write-Host "--- Chrome log ---"
-          Get-Content chrome.log
-          $dom = Get-Content dom.html -Raw
-          if ($dom -notmatch 'id="main-content"') { throw "Folio did not render main-content." }
-          if ($dom -match 'Opening Folio') { throw "Folio remained stuck in startup." }
-          if ($dom -match 'Folio could not open its workspace') { throw "Folio entered database recovery." }
-          if ($dom -match 'This browser is missing required') { throw "Folio entered compatibility failure." }
+          @'
+          const { chromium } = require('playwright-core');
+
+          (async () => {
+            const executablePath = String.raw`C:\Program Files\Google\Chrome\Application\chrome.exe`;
+            const browser = await chromium.launch({
+              executablePath,
+              headless: true,
+              args: ['--no-first-run', '--disable-background-networking'],
+            });
+            const page = await browser.newPage();
+            const consoleRows = [];
+            const pageErrors = [];
+            page.on('console', (msg) => {
+              const row = msg.type() + ': ' + msg.text();
+              consoleRows.push(row);
+              console.log('[browser console]', row);
+            });
+            page.on('pageerror', (error) => {
+              pageErrors.push(String(error));
+              console.log('[page error]', String(error));
+            });
+
+            await page.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded', timeout: 15000 });
+            await page.waitForTimeout(10000);
+
+            const state = await page.evaluate(() => ({
+              bootStage: document.documentElement.dataset.folioBootStage ?? null,
+              bodyText: document.body.innerText,
+              main: Boolean(document.getElementById('main-content')),
+              rootHtml: document.getElementById('root')?.innerHTML ?? '',
+            }));
+            console.log('FOLIO_STATE=' + JSON.stringify(state));
+            console.log('PAGE_ERRORS=' + JSON.stringify(pageErrors));
+
+            if (!state.main) throw new Error('Folio did not render main-content.');
+            if (state.bodyText.includes('Opening Folio')) throw new Error('Folio remained stuck in startup at ' + state.bootStage);
+            if (state.bodyText.includes('Folio could not open its workspace')) throw new Error('Folio entered database recovery at ' + state.bootStage);
+            if (state.bodyText.includes('This browser is missing required')) throw new Error('Folio entered compatibility failure.');
+            if (pageErrors.length) throw new Error('Folio emitted page errors: ' + pageErrors.join(' | '));
+
+            await browser.close();
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          '@ | Set-Content -Encoding utf8 smoke.cjs
+          node smoke.cjs
