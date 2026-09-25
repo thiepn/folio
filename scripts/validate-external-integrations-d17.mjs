@@ -24,7 +24,7 @@ const backup=read('src/services/backupService.ts')
 
 check('D17 validator registered',pkg.scripts?.['validate:d17']==='node scripts/validate-external-integrations-d17.mjs')
 check('release gate runs D17',pkg.scripts?.['release:verify']?.includes('validate:d17'))
-check('D17 stays local-first on schema v23',/DATABASE_SCHEMA_VERSION\s*=\s*23\b/.test(database)&&!database.includes('this.version(24)'))
+check('D17 remains compatible after schema v23',Number(database.match(/DATABASE_SCHEMA_VERSION\s*=\s*(\d+)/)?.[1]??0)>=23&&database.includes('this.version(23)'))
 check('manifest registers PWA Share Target',manifest.share_target?.action?.includes('folioAction=share-target')&&manifest.share_target?.method==='GET'&&manifest.share_target?.params?.title==='title'&&manifest.share_target?.params?.text==='text'&&manifest.share_target?.params?.url==='url')
 check('manifest registers web+folio protocol handler',Array.isArray(manifest.protocol_handlers)&&manifest.protocol_handlers.some((item)=>item.protocol==='web+folio'&&String(item.url).includes('folioProtocol=%s')))
 check('integration intent supports capture template and automation',service.includes("type:'capture'")&&service.includes("type:'template'")&&service.includes("type:'automation'"))
