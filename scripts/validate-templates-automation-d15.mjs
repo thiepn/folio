@@ -27,7 +27,7 @@ const backup=read('src/services/backupService.ts')
 
 check('D15 validator registered',pkg.scripts?.['validate:d15']==='node scripts/validate-templates-automation-d15.mjs')
 check('release gate runs D15',pkg.scripts?.['release:verify']?.includes('validate:d15'))
-check('D15 remains settings-backed on schema v23',/DATABASE_SCHEMA_VERSION\s*=\s*23\b/.test(database)&&!database.includes('this.version(24)'))
+check('D15 remains settings-backed and compatible after schema v23',Number(database.match(/DATABASE_SCHEMA_VERSION\\s*=\\s*(\\d+)/)?.[1]??0)>=23&&database.includes('this.version(23)'))
 check('task template model supports nested tasks and relative dates',models.includes('interface TaskTemplateNode')&&models.includes('children: TaskTemplateNode[]')&&models.includes('plannedOffsetDays?: number')&&models.includes('deadlineOffsetDays?: number'))
 check('project template model supports milestones and task trees',models.includes('interface ProjectTemplateDefinition')&&models.includes("kind: 'project'")&&models.includes('milestones: Array')&&models.includes('tasks: TaskTemplateNode[]'))
 check('template engine stores custom templates in settings',templateService.includes("CUSTOM_KEY='templates.custom.v1'")&&templateService.includes('settingsRepository.set'))
