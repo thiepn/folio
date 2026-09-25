@@ -1,0 +1,111 @@
+name: Runtime browser smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Start local preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/folio-preview.log 2>&1 &
+          echo $! > /tmp/folio-preview.pid
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/folio-preview.log
+          exit 1
+
+      - name: Resolve browser
+        id: browser
+        shell: bash
+        run: |
+          if command -v google-chrome >/dev/null; then BROWSER=$(command -v google-chrome)
+          elif command -v google-chrome-stable >/dev/null; then BROWSER=$(command -v google-chrome-stable)
+          elif command -v chromium >/dev/null; then BROWSER=$(command -v chromium)
+          else echo 'No Chromium-family browser found'; exit 1; fi
+          echo "path=$BROWSER" >> "$GITHUB_OUTPUT"
+          "$BROWSER" --version
+
+      - name: Smoke local production build
+        shell: bash
+        run: |
+          set +e
+          timeout 35s "${{ steps.browser.outputs.path }}" \
+            --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --enable-logging=stderr --v=0 --virtual-time-budget=12000 \
+            --dump-dom http://127.0.0.1:4173/ \
+            > /tmp/local-dom.html 2> /tmp/local-chrome.log
+          STATUS=$?
+          set -e
+          echo "browser exit: $STATUS"
+          echo '--- local DOM ---'
+          sed -n '1,220p' /tmp/local-dom.html
+          echo '--- local chrome log ---'
+          tail -n 240 /tmp/local-chrome.log
+          grep -q 'id="main-content"' /tmp/local-dom.html || { echo 'Folio did not render main-content locally.'; exit 1; }
+          grep -q 'Opening Folio' /tmp/local-dom.html && { echo 'Folio remained stuck in startup locally.'; exit 1; }
+          grep -q 'Folio could not open its workspace' /tmp/local-dom.html && { echo 'Folio entered database recovery locally.'; exit 1; }
+          grep -q 'Database initialization failed' /tmp/local-chrome.log && { echo 'Database initialization failed locally.'; exit 1; }
+
+      - name: Probe live deployment resources
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -fsSIL --max-time 20 https://thiepn.dev/folio/
+          LIVE_HTML=$(mktemp)
+          curl -fsSL --max-time 20 https://thiepn.dev/folio/ -o "$LIVE_HTML"
+          sed -n '1,100p' "$LIVE_HTML"
+          ASSET=$(grep -oE 'src="[^"]+\.js"' "$LIVE_HTML" | head -1 | cut -d '"' -f2)
+          test -n "$ASSET"
+          node -e "console.log(new URL(process.argv[1], 'https://thiepn.dev/folio/').href)" "$ASSET" > /tmp/live-asset-url
+          curl -fsSIL --max-time 20 "$(cat /tmp/live-asset-url)"
+
+      - name: Smoke live deployment
+        shell: bash
+        run: |
+          set +e
+          timeout 35s "${{ steps.browser.outputs.path }}" \
+            --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --enable-logging=stderr --v=0 --virtual-time-budget=12000 \
+            --dump-dom https://thiepn.dev/folio/ \
+            > /tmp/live-dom.html 2> /tmp/live-chrome.log
+          STATUS=$?
+          set -e
+          echo "browser exit: $STATUS"
+          echo '--- live DOM ---'
+          sed -n '1,220p' /tmp/live-dom.html
+          echo '--- live chrome log ---'
+          tail -n 240 /tmp/live-chrome.log
+          grep -q 'id="main-content"' /tmp/live-dom.html || { echo 'Folio did not render main-content live.'; exit 1; }
+          grep -q 'Opening Folio' /tmp/live-dom.html && { echo 'Folio remained stuck in startup live.'; exit 1; }
+          grep -q 'Folio could not open its workspace' /tmp/live-dom.html && { echo 'Folio entered database recovery live.'; exit 1; }
+          grep -q 'Database initialization failed' /tmp/live-chrome.log && { echo 'Database initialization failed live.'; exit 1; }
