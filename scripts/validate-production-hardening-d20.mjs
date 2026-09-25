@@ -68,6 +68,9 @@ check('manifest schema derived from database source', generator.includes("read('
 check('manifest hashes artifact', generator.includes("crypto.createHash('sha256')") && generator.includes('artifactSha256'))
 check('dist verifies manifest', distValidator.includes('release-manifest.json') && distValidator.includes('artifact SHA-256 matches manifest') && distValidator.includes('manifest file set matches dist'))
 
+const patchSchema = read('src/features/patch/patchSchema.ts')
+check('refined import schemas use safeExtend', patchSchema.includes('importTaskSchema.safeExtend(') && patchSchema.includes('importTimeBlockSchema.safeExtend(') && !patchSchema.includes('importTaskSchema.extend(') && !patchSchema.includes('importTimeBlockSchema.extend('))
+
 const readme = read('README.md')
 check('README identifies schema v24', readme.includes('IndexedDB schema:') && readme.includes('current database schema is **v24**'))
 check('README documents D20', readme.includes('D20') && readme.includes('Production Hardening'))
