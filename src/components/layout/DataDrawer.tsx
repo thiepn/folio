@@ -112,6 +112,9 @@ export function DataDrawer({ open, onClose, onOpenImport, onOpenPatch, onOpenInt
           <div><dt>Attachments</dt><dd>{health?.counts.attachments ?? '…'}</dd></div>
           <div><dt>Habit groups</dt><dd>{health?.counts.habitGroups ?? '…'}</dd></div>
           <div><dt>Habit templates</dt><dd>{health?.counts.habitTemplates ?? '…'}</dd></div>
+          <div><dt>Sync baselines</dt><dd>{health?.counts.syncShadows ?? '…'}</dd></div>
+          <div><dt>Sync pending</dt><dd>{health?.counts.syncQueue ?? '…'}</dd></div>
+          <div><dt>Sync conflicts</dt><dd>{health?.counts.syncConflicts ?? '…'}</dd></div>
         </dl>
         <div className="storage-inline-action">
           <Button onClick={() => void verify()} disabled={busy}>Verify database</Button>
