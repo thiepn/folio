@@ -57,7 +57,7 @@ check('structured patch supports quantity monthly habits',patcher.includes("'qua
 check('public import advertises quantity monthly habits',publicImport.includes('"quantity"')&&publicImport.includes('"times-per-month"')&&publicImport.includes('"timesPerMonth"'))
 check('public patch advertises quantity monthly habits',publicPatch.includes('"quantity"')&&publicPatch.includes('"times-per-month"')&&publicPatch.includes('"timesPerMonth"'))
 check('public v22 backup schema exists',exists('public/schema/folio-backup-v22.schema.json'))
-check('interop preserves D10 backup compatibility',interop.includes('Schema v23 · complete planner state + rich content + Habits V2 + Focus V2')&&interop.includes('schema v8–v23'))
+check('interop preserves D10 backup compatibility',interop.includes('Schema v24 · complete planner state + rich content · sync credentials excluded')&&interop.includes('schema v8–v24'))
 check('Habit V2 styles exist',styles.includes('D10 — Habits V2')&&styles.includes('habit-history-grid--v2')&&styles.includes('habit-template-list'))
 check('D10 documentation exists',exists('docs/HABITS_V2_D10.md'))
 
