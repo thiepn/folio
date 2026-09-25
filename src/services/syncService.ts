@@ -336,6 +336,11 @@ export const syncService={
     return running
   },
 
+  async getQueue(){
+    const cfg=await config();if(!cfg.workspaceId)return[]
+    return db.syncQueue.where('workspaceId').equals(cfg.workspaceId).toArray()
+  },
+
   async getConflicts(){
     const cfg=await config();if(!cfg.workspaceId)return[]
     return db.syncConflicts.where('workspaceId').equals(cfg.workspaceId).toArray()
