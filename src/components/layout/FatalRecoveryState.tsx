@@ -27,7 +27,7 @@ export function FatalRecoveryState({ error }: { error: unknown }) {
   }
 
   async function reset() {
-    if (!window.confirm('Delete this origin’s local planner database and recreate the prototype workspace? Export an emergency snapshot first if possible.')) return
+    if (!window.confirm('Delete this origin’s local planner database and recreate an empty Folio workspace? Export an emergency snapshot first if possible.')) return
     if (!window.confirm('This is destructive and cannot be undone from inside the app. Continue with reset?')) return
     setBusy(true)
     try { await resetDatabase(); window.location.reload() }
