@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { db } from '../../db/database'
 import type { SyncConflictEntity } from '../../domain/models'
 import { useSyncState } from '../../hooks/useSyncState'
 import { syncAuthService } from '../../services/syncAuthService'
@@ -45,7 +44,7 @@ export function SyncView(){
   const [message,setMessage]=useState('')
   const [error,setError]=useState('')
   const conflicts=useLiveQuery(()=>syncService.getConflicts(),[sync.workspaceId],[])??[]
-  const queue=useLiveQuery(async()=>sync.workspaceId?db.syncQueue.where('workspaceId').equals(sync.workspaceId).toArray():[],[sync.workspaceId],[])??[]
+  const queue=useLiveQuery(()=>syncService.getQueue(),[sync.workspaceId],[])??[]
   const session=syncAuthService.getStoredSession()
 
   useEffect(()=>{setDeviceName(sync.deviceName??'')},[sync.deviceName])
