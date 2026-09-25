@@ -4,7 +4,7 @@ import { settingsRepository } from '../repositories/settingsRepository'
 import { syncAuthService } from './syncAuthService'
 import { syncCloudTransport, type SyncCloudRecord, type SyncCloudWorkspace } from './syncCloudTransport'
 import {
-  SYNC_ENTITY_TYPES, applyRemoteSyncRecord, buildLocalSyncSnapshot, getLocalSyncRecord,
+  SYNC_ENTITY_TYPES, applyRemoteSyncRecord, buildLocalSyncSnapshot, getLocalSyncRecord, getOversizedLocalAttachment,
   rebuildDerivedAfterSync, syncHash, syncMetadataId, syncRecordKey,
 } from './syncSerialization'
 
@@ -192,6 +192,12 @@ async function pullRemote(workspaceId:string){
       ])
       if(shadow&&remote.revision<=shadow.revision)continue
       const remoteHash=remote.deleted?'':syncHash(remote.payload)
+      const oversizedLocal=remote.entity_type==='attachments'&&!local?await getOversizedLocalAttachment(remote.entity_id):undefined
+      if(oversizedLocal){
+        await db.syncShadows.put(shadowFrom(workspaceId,remote,remoteHash))
+        await db.syncQueue.delete(id);await db.syncConflicts.delete(id)
+        continue
+      }
 
       if(queued||(!shadow&&local)){
         if(remote.deleted&&!local){
