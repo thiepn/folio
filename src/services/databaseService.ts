@@ -125,15 +125,15 @@ async function migrateLegacyLocalStorage() {
 }
 
 export async function getDatabaseHealth(): Promise<DatabaseHealth> {
-  const [tasks, projects, habits, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, attachments, habitGroups, habitTemplates] = await Promise.all([
+  const [tasks, projects, habits, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, attachments, habitGroups, habitTemplates, syncShadows, syncQueue, syncConflicts] = await Promise.all([
     db.tasks.count(), db.projects.count(), db.habits.count(), db.timeBlocks.count(), db.dailyPlans.count(), db.dailyPlanItems.count(),
     db.focusSessions.count(), db.recurringSeries.count(), db.importBatches.count(), db.patchBatches.count(), db.calendarImportBatches.count(), db.reviewRecords.count(),
-    db.reminders.count(), db.reminderOccurrences.count(), db.folders.count(), db.lists.count(), db.sections.count(), db.tags.count(), db.notes.count(), db.attachments.count(), db.habitGroups.count(), db.habitTemplates.count(),
+    db.reminders.count(), db.reminderOccurrences.count(), db.folders.count(), db.lists.count(), db.sections.count(), db.tags.count(), db.notes.count(), db.attachments.count(), db.habitGroups.count(), db.habitTemplates.count(), db.syncShadows.count(), db.syncQueue.count(), db.syncConflicts.count(),
   ])
   const persistentStorage = navigator.storage?.persisted ? await navigator.storage.persisted() : null
   return {
     schemaVersion: DATABASE_SCHEMA_VERSION,
-    counts: { tasks, projects, habits, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, attachments, habitGroups, habitTemplates },
+    counts: { tasks, projects, habits, timeBlocks, dailyPlans, dailyPlanItems, focusSessions, recurringSeries, importBatches, patchBatches, calendarImportBatches, reviewRecords, reminders, reminderOccurrences, folders, lists, sections, tags, notes, attachments, habitGroups, habitTemplates, syncShadows, syncQueue, syncConflicts },
     persistentStorage,
   }
 }
