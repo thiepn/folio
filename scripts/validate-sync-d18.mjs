@@ -39,7 +39,7 @@ check('cloud config uses Supabase publishable key',config.includes('sb_publishab
 check('cloud config contains no secret/service key',!config.includes('sb_secret_')&&!config.includes('service_role'))
 check('sync auth supports signup password login refresh and signout',auth.includes("'/auth/v1/signup'")&&auth.includes("grant_type=password")&&auth.includes("grant_type=refresh_token")&&auth.includes("'/auth/v1/logout'"))
 check('sync auth session is browser-local',auth.includes("STORAGE_KEY='folio:sync-auth:v1'")&&auth.includes('localStorage.setItem'))
-check('transport uses authenticated publishable-key requests',transport.includes('Authorization:'Bearer '+session.accessToken')&&transport.includes('apikey:FOLIO_SYNC_CLOUD.publishableKey'))
+check('transport uses authenticated publishable-key requests',transport.includes("Authorization:'Bearer '+session.accessToken")&&transport.includes('apikey:FOLIO_SYNC_CLOUD.publishableKey'))
 check('cloud transport manages workspaces',transport.includes('listWorkspaces')&&transport.includes('createWorkspace')&&transport.includes('folio_sync_workspaces'))
 check('cloud transport manages device presence',transport.includes('listDevices')&&transport.includes('touchDevice')&&transport.includes('folio_sync_devices'))
 check('cloud transport pulls by monotonic revision',transport.includes("revision:'gt.'+afterRevision")&&transport.includes("order:'revision.asc'"))
