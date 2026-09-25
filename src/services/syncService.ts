@@ -199,7 +199,12 @@ async function pullRemote(workspaceId:string){
         continue
       }
 
-      if(queued||(!shadow&&local)){
+      const localChanged=Boolean(queued)
+        || Boolean(!shadow&&local)
+        || Boolean(shadow&&local&&(shadow.deleted||shadow.hash!==local.hash))
+        || Boolean(shadow&&!local&&!shadow.deleted)
+
+      if(localChanged){
         if(remote.deleted&&!local){
           await db.syncShadows.put(shadowFrom(workspaceId,remote,''))
           await db.syncQueue.delete(id);await db.syncConflicts.delete(id)
