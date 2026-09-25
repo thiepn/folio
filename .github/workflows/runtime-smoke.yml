@@ -80,7 +80,12 @@ jobs:
 
             await page.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded', timeout: 15000 })
             try {
-              await page.waitForFunction(() => !document.body.innerText.includes('Opening Folio'), undefined, { timeout: 15000 })
+              await page.waitForFunction(() => {
+                const text = document.body.innerText
+                return Boolean(document.getElementById('main-content'))
+                  && !text.includes('Opening Folio')
+                  && !text.includes('Opening local workspace')
+              }, undefined, { timeout: 15000 })
             } catch {
               // Report the complete state below.
             }
@@ -94,7 +99,7 @@ jobs:
             console.log('PAGE_ERRORS=' + JSON.stringify(pageErrors))
 
             if (!state.hasMain) throw new Error('Folio did not render main-content.')
-            if (state.text.includes('Opening Folio')) throw new Error('Folio remained stuck in startup.')
+            if (state.text.includes('Opening Folio') || state.text.includes('Opening local workspace')) throw new Error('Folio remained stuck in startup.')
             if (state.text.includes('Folio could not open its workspace')) throw new Error('Folio entered database recovery.')
             if (state.text.includes('This browser is missing required')) throw new Error('Folio entered compatibility failure.')
             if (pageErrors.length) throw new Error('Folio emitted page errors: ' + pageErrors.join(' | '))
