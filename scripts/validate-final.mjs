@@ -43,7 +43,8 @@ check('runtime UI has no stale backup schema copy', !/Schema v1[1-4] · complete
 
 check('public v21 backup schema retained', exists('public/schema/folio-backup-v21.schema.json'))
 check('public v22 backup schema retained', exists('public/schema/folio-backup-v22.schema.json'))
-check('public v23 backup schema retained', exists('public/schema/folio-backup-v23.schema.json'))\ncheck('public v24 backup schema exists', exists('public/schema/folio-backup-v24.schema.json'))
+check('public v23 backup schema retained', exists('public/schema/folio-backup-v23.schema.json'))
+check('public v24 backup schema exists', exists('public/schema/folio-backup-v24.schema.json'))
 for (const p of [
   'public/schema/folio-import-v1.schema.json',
   'public/schema/folio-patch-v1.schema.json',
