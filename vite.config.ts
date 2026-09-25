@@ -35,7 +35,7 @@ function offlineServiceWorker(): Plugin {
       const source = `/* Folio generated service worker. */
 const REVISION = ${JSON.stringify(revision)};
 const APP_CACHE = 'folio-app-' + REVISION;
-const RUNTIME_CACHE = 'folio-runtime-v1';
+const RUNTIME_CACHE = 'folio-runtime-' + REVISION;
 const PRECACHE = ${JSON.stringify(precache, null, 2)};
 
 self.addEventListener('install', (event) => {
@@ -47,6 +47,7 @@ self.addEventListener('activate', (event) => {
     const keys = await caches.keys();
     await Promise.all(keys.filter((key) =>
       (key.startsWith('folio-app-') && key !== APP_CACHE) ||
+      (key.startsWith('folio-runtime-') && key !== RUNTIME_CACHE) ||
       key.startsWith('obsidian-editorial-app-') ||
       key === 'obsidian-editorial-runtime-v1'
     ).map((key) => caches.delete(key)));
@@ -68,14 +69,19 @@ async function navigationResponse(request) {
   catch { return (await appCache.match('./offline.html')) || Response.error(); }
 }
 
+async function cachePutSafely(cache, request, response) {
+  try { await cache.put(request, response); }
+  catch { /* Cache quota or browser policy must not break a successful network response. */ }
+}
+
 async function cachedAssetResponse(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (response.ok) {
+    if (response.ok && response.status === 200) {
       const runtime = await caches.open(RUNTIME_CACHE);
-      runtime.put(request, response.clone());
+      await cachePutSafely(runtime, request, response.clone());
     }
     return response;
   } catch {
@@ -89,7 +95,7 @@ async function optionalFontResponse(request) {
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (response.ok || response.type === 'opaque') runtime.put(request, response.clone());
+    if (response.ok || response.type === 'opaque') await cachePutSafely(runtime, request, response.clone());
     return response;
   } catch {
     return Response.error();
