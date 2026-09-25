@@ -24,10 +24,10 @@ check('repository points to thiepn/folio', pkg.repository?.url === 'https://gith
 check('final validator registered', pkg.scripts?.['validate:final'] === 'node scripts/validate-final.mjs')
 
 const database = read('src/db/database.ts')
-check('database schema v23', /DATABASE_SCHEMA_VERSION\s*=\s*23\b/.test(database))
+check('database schema v24', /DATABASE_SCHEMA_VERSION\s*=\s*24\b/.test(database))
 check('v20→v21 migration retained', database.includes('migrateV20ToV21'))
 check('v21→v22 migration retained', database.includes('migrateV21ToV22'))
-check('v22→v23 migration registered', database.includes('migrateV22ToV23'))
+check('v22→v23 migration retained', database.includes('migrateV22ToV23'))\ncheck('v23→v24 migration registered', database.includes('migrateV23ToV24'))
 
 const backup = read('src/services/backupService.ts')
 check('restore floor remains v8', /MIN_RESTORABLE_BACKUP_VERSION\s*=\s*8\b/.test(backup))
@@ -36,17 +36,17 @@ check('backup export follows current schema', backup.includes('version: DATABASE
 check('backup validates dependency cycles', backup.includes('Backup contains a task dependency cycle.'))
 
 const interop = read('src/features/interop/InteroperabilityModal.tsx')
-check('visible backup copy says v23', interop.includes('Schema v23 · complete planner state + rich content + Habits V2 + Focus V2'))
-check('visible restore range says v8–v23', interop.includes('schema v8–v23'))
+check('visible backup copy says v24', interop.includes('Schema v24 · complete planner state + rich content · sync credentials excluded'))
+check('visible restore range says v8–v24', interop.includes('schema v8–v24'))
 check('runtime UI has no stale backup schema copy', !/Schema v1[1-4] · complete planner state|schema v8–v1[1-4]/.test(interop))
 
 check('public v21 backup schema retained', exists('public/schema/folio-backup-v21.schema.json'))
 check('public v22 backup schema retained', exists('public/schema/folio-backup-v22.schema.json'))
-check('public v23 backup schema exists', exists('public/schema/folio-backup-v23.schema.json'))
+check('public v23 backup schema retained', exists('public/schema/folio-backup-v23.schema.json'))\ncheck('public v24 backup schema exists', exists('public/schema/folio-backup-v24.schema.json'))
 for (const p of [
   'public/schema/folio-import-v1.schema.json',
   'public/schema/folio-patch-v1.schema.json',
-  'public/schema/folio-backup-v23.schema.json',
+  'public/schema/folio-backup-v24.schema.json',
   'public/schema/folio-selection-v1.schema.json',
   'public/manifest.webmanifest',
 ]) {
