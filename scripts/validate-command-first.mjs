@@ -31,7 +31,7 @@ check('palette supports Home and End navigation', palette.includes("event.key ==
 check('palette exposes active descendant accessibility', palette.includes('aria-activedescendant'))
 check('reserved command-first aliases exist', shortcuts.includes("'n', 'p', 't', '/'") || (shortcuts.includes("'n'") && shortcuts.includes("'p'") && shortcuts.includes("'t'") && shortcuts.includes("'/'")))
 check('shortcut help documents command aliases', help.includes("['/', 'Open command palette / search']") && help.includes("['N', 'New task in the current context']") && help.includes("['P', 'New project']") && help.includes("['T', 'Go straight to Today']"))
-check('topbar describes search as command surface', topbar.includes('Search or command') && topbar.includes('Ctrl/⌘ K · /'))
+check('topbar describes search as command surface', topbar.includes('Search or command') && topbar.includes('{searchShortcut} · /') && app.includes('formatShortcut(shortcuts.palette)'))
 check('task command builder exists', builders.includes('buildTaskCommandChildren') && builders.includes('TaskPreview'))
 check('project command builder exists', builders.includes('buildProjectCommandChildren'))
 check('habit command builder exists', builders.includes('buildHabitCommandChildren'))
