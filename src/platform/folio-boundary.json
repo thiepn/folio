@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "phase": "P9",
+  "contractId": "folio-consolidation-boundary-v1",
+  "product": "folio",
+  "productRegistryContract": "thiepn-product-registry-v2",
+  "productRegistryState": "staged",
+  "migrationMode": "federated-gradual",
+  "shell": {
+    "repo": "thiepn/folio",
+    "launchUrl": "https://thiepn.dev/folio/",
+    "role": "transition-shell",
+    "mayProxyExternalWrites": false
+  },
+  "resourceIdentity": {
+    "contract": "core-resource-uri-v1",
+    "format": "thiepn://<product>/<module>/<kind>/<percent-encoded-id>?v=1",
+    "authority": "identifier-only"
+  },
+  "nativeDomains": [
+    "tasks",
+    "projects",
+    "lists",
+    "planner",
+    "calendar",
+    "habits",
+    "focus",
+    "reviews",
+    "automation"
+  ],
+  "compatibility": {
+    "preserveLegacyUrls": true,
+    "preserveLegacyStores": true,
+    "preserveLegacyIds": true,
+    "legacyAliases": {
+      "folio": "folio/home",
+      "knowledge": "folio/knowledge",
+      "library": "folio/library",
+      "manuscript": "folio/write",
+      "notes": "folio/notes",
+      "canvas": "folio/canvas"
+    }
+  },
+  "modules": [
+    {
+      "id": "home",
+      "canonicalRef": "folio/home",
+      "registryState": "staged",
+      "provider": {
+        "repo": "thiepn/folio",
+        "launchUrl": "https://thiepn.dev/folio/",
+        "runtime": "github-pages",
+        "storage": "indexeddb:folio"
+      },
+      "owns": [
+        "tasks",
+        "projects",
+        "lists",
+        "planner",
+        "calendar",
+        "habits",
+        "focus",
+        "reviews",
+        "automation"
+      ],
+      "transitional": [
+        "existing Folio-local notes remain supported as home/context content until an explicit notes migration"
+      ],
+      "writePolicy": "native-only",
+      "migration": "retain-store"
+    },
+    {
+      "id": "knowledge",
+      "canonicalRef": "folio/knowledge",
+      "registryState": "staged",
+      "provider": null,
+      "owns": [],
+      "transitional": [],
+      "writePolicy": "disabled-until-provider-exists",
+      "migration": "no-store-created"
+    },
+    {
+      "id": "library",
+      "canonicalRef": "folio/library",
+      "registryState": "active",
+      "provider": {
+        "repo": "thiepn/library",
+        "launchUrl": "https://thiepn.dev/library/",
+        "runtime": "github-pages",
+        "storage": "provider-owned"
+      },
+      "owns": [
+        "books",
+        "reader-state",
+        "bookmarks",
+        "highlights",
+        "reading-notes",
+        "library-metadata"
+      ],
+      "transitional": [
+        "EPUB/PDF bytes remain device-local and are not copied into Folio or Core"
+      ],
+      "writePolicy": "provider-only",
+      "migration": "federate-first"
+    },
+    {
+      "id": "write",
+      "canonicalRef": "folio/write",
+      "registryState": "active",
+      "provider": {
+        "repo": "thiepn/manuscript",
+        "launchUrl": "https://thiepn.dev/manuscript/",
+        "runtime": "github-pages",
+        "storage": "provider-owned"
+      },
+      "owns": [
+        "manuscripts",
+        "document-authoring-state",
+        "document-exports"
+      ],
+      "transitional": [],
+      "writePolicy": "provider-only",
+      "migration": "federate-first"
+    },
+    {
+      "id": "notes",
+      "canonicalRef": "folio/notes",
+      "registryState": "active",
+      "provider": {
+        "repo": "thiepn/notes",
+        "launchUrl": "https://thiepn.dev/notes/",
+        "runtime": "github-pages",
+        "storage": "provider-owned"
+      },
+      "owns": [
+        "personal-notes",
+        "note-attachments",
+        "notes-search-state",
+        "notes-sync-state"
+      ],
+      "transitional": [
+        "Folio home must not silently rewrite existing Folio-local NoteEntity records into the Notes provider"
+      ],
+      "writePolicy": "provider-only",
+      "migration": "federate-first"
+    },
+    {
+      "id": "canvas",
+      "canonicalRef": "folio/canvas",
+      "registryState": "active",
+      "provider": {
+        "repo": "thiepn/canvas",
+        "launchUrl": "https://thiepn.dev/canvas/",
+        "runtime": "public-realtime",
+        "storage": "provider-owned"
+      },
+      "owns": [
+        "canvas-documents",
+        "canvas-presence",
+        "canvas-realtime-state"
+      ],
+      "transitional": [
+        "Canvas remains isolated from private Folio storage and Core private namespaces"
+      ],
+      "writePolicy": "provider-only",
+      "migration": "linked-module-only"
+    }
+  ],
+  "nonGoals": [
+    "merge repositories",
+    "merge databases",
+    "copy provider records into Folio",
+    "replace THIEPN Account",
+    "centralize product data in Core",
+    "change existing URLs",
+    "retire legacy app IDs",
+    "activate Knowledge storage",
+    "move Canvas into private Core"
+  ]
+}
