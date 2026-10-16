@@ -39,10 +39,20 @@ export function HabitsView({ habits, groups, weeklyAdherence, dueToday, longestS
   const completeThisPeriod = active.filter((habit) => (habit.periodPercent ?? 0) >= 100).length
   const grouped = groups.map((group)=>({group,habits:habits.filter((habit)=>habit.groupId===group.id)})).filter((row)=>row.habits.length)
   const ungrouped = habits.filter((habit)=>!habit.groupId || !groups.some((group)=>group.id===habit.groupId))
+  // Only the user-created group marks a practice as faith-related; never guess from titles.
+  const faithGroup = groups.find(group => group.name.trim().toLowerCase() === 'faith & discipline')
+  const faithHabits = faithGroup ? habits.filter(habit => habit.groupId === faithGroup.id) : []
 
   return <>
     <PageHeader kicker="Rhythm over streaks" title="Habits" subtitle="Build measurable rhythms with flexible frequency goals, editable history, neutral pauses, and evidence you can review over time."
       action={<div className="page-action-row"><Button onClick={onGroups}>Groups</Button><Button onClick={onTemplates}>Templates</Button><Button onClick={onArchived}>Archived</Button><Button variant="primary" onClick={onCreate}>New habit</Button></div>} />
+
+    {faithGroup ? <Panel title="Faith & discipline" meta={`${faithHabits.length} selected practice${faithHabits.length === 1 ? '' : 's'}`}>
+      <p>Practices belong to your original Folio habits. Paused and rest-day entries remain neutral; consistency is not a measure of holiness.</p>
+      {faithHabits.length ? faithHabits.map(habit => <div className="habit-master-row" key={habit.id}>
+        <button className="habit-master-row__body" type="button" onClick={() => onOpen(habit.id)}><strong>{habit.title}</strong><span>{habit.paused ? 'Paused' : habit.skipped ? 'Rest day' : habit.completed ? 'Marked complete in Folio' : 'Open practice'} · {habit.periodProgress ?? habit.weeklyProgress}</span></button>
+      </div>) : <p>Add practices to this group through the existing habit editor, or choose an opt-in template.</p>}
+    </Panel> : null}
 
     <div className="habit-summary-grid habit-summary-grid--v16">
       <div><strong>{dueToday}</strong><span>Due today</span></div><div><strong>{weeklyAdherence}%</strong><span>Week adherence</span></div><div><strong>{longestStreak}</strong><span>Longest current streak</span></div><div><strong>{pausedCount}</strong><span>Paused now</span></div>
