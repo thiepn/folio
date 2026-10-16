@@ -1,15 +1,26 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
 
-const original=fs.readFileSync(new URL('../src/services/faithDisciplineReview.ts',import.meta.url),'utf8')
-const output=ts.transpileModule(original,{
-  compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022},
-  reportDiagnostics:true,
-})
-assert.equal(output.diagnostics?.filter(d=>d.category===ts.DiagnosticCategory.Error).length??0,0)
-const { faithDisciplineWeek } = await import('data:text/javascript;base64,'+
-  Buffer.from(output.outputText).toString('base64'))
+const transpile = (relative) => {
+  const original=fs.readFileSync(new URL('../'+relative,import.meta.url),'utf8')
+  const result=ts.transpileModule(original,{
+    compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022},
+    reportDiagnostics:true,
+  })
+  assert.equal(result.diagnostics?.filter(d=>d.category===ts.DiagnosticCategory.Error).length??0,0)
+  return result.outputText
+}
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'folio-fd1-'))
+const domain=path.join(temp,'domain'),services=path.join(temp,'services')
+fs.mkdirSync(domain,{recursive:true}); fs.mkdirSync(services,{recursive:true})
+fs.writeFileSync(path.join(domain,'date.mjs'),transpile('src/domain/date.ts'))
+fs.writeFileSync(path.join(services,'faithDisciplineReview.mjs'),
+  transpile('src/services/faithDisciplineReview.ts').replace("from '../domain/date'", "from '../domain/date.mjs'"))
+const { faithDisciplineWeek } = await import(pathToFileURL(path.join(services,'faithDisciplineReview.mjs')).href)
 const date='2026-10-12'
 const habit={id:'owned-habit',title:'Prayer',archived:false}
 const entries=[
@@ -34,3 +45,5 @@ assert.equal(actual.scheduledBlocks,1)
 assert.throws(()=>faithDisciplineWeek(date,'2026-11-18',[],[],[],[],[],[]),/valid week/)
 assert.throws(()=>faithDisciplineWeek(date,'2026-10-18',['x','x'],[],[],[],[],[]),/Duplicate/)
 console.log('PASS FD1: owner IDs, explicit entries, neutral rest, tagged focus, read-only external blocks')
+
+fs.rmSync(temp,{recursive:true,force:true})
