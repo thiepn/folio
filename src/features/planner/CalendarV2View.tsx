@@ -18,6 +18,8 @@ import {
 import { TimeBlockModal, type TimeBlockEditorPayload, type TimeBlockEditorState } from './TimeBlockModal'
 import { CalendarSourcesC2 } from './CalendarSourcesC2'
 
+function isRemoteCalendarBlock(block: TimeBlockEntity) { return block.source === 'klips' || block.source === 'google' }
+
 export type CalendarV2Mode = 'agenda' | 'day' | '3day' | 'week' | 'multiweek' | 'month' | 'year'
 
 interface CalendarEventDetails {
@@ -491,6 +493,7 @@ function CalendarTimeGridV2({ dates, today, selectedDate, blocks, taskMap, confl
     const blockId = event.dataTransfer.getData('calendar/block-id')
     const block = blocks.find((item) => item.id === blockId)
     if (!block) return
+    if (isRemoteCalendarBlock(block) && !(event.altKey || event.dataTransfer.getData('calendar/duplicate') === '1')) return
     if (event.altKey || event.dataTransfer.getData('calendar/duplicate') === '1') void onDuplicateBlock(block.id, date, minute)
     else void onMoveBlock(block, date, minute)
   }
@@ -502,6 +505,7 @@ function CalendarTimeGridV2({ dates, today, selectedDate, blocks, taskMap, confl
     const blockId = event.dataTransfer.getData('calendar/block-id')
     const block = blocks.find((item) => item.id === blockId)
     if (!block) return
+    if (isRemoteCalendarBlock(block) && !(event.altKey || event.dataTransfer.getData('calendar/duplicate') === '1')) return
     if (event.altKey || event.dataTransfer.getData('calendar/duplicate') === '1') void onDuplicateBlock(block.id, date)
     else void onMoveBlock(block, date)
   }
@@ -526,7 +530,7 @@ function CalendarTimeGridV2({ dates, today, selectedDate, blocks, taskMap, confl
         {allDayBlocksForDate(blocks, date, timeZone).map((block) => <button
           key={block.id}
           className={'calendar-all-day-chip calendar-all-day-chip--' + block.kind}
-          draggable={dragEnabled}
+          draggable={dragEnabled && !isRemoteCalendarBlock(block)}
           onDragStart={(event) => {
             event.dataTransfer.setData('calendar/block-id', block.id)
             if (event.altKey) event.dataTransfer.setData('calendar/duplicate', '1')
@@ -569,7 +573,7 @@ function CalendarTimeGridV2({ dates, today, selectedDate, blocks, taskMap, confl
               columns={layout.columns}
               onOpen={() => onOpenBlock(layout.block)}
               onResize={(minutes) => void onResizeBlock(layout.block.id, minutes)}
-              dragEnabled={dragEnabled}
+               dragEnabled={dragEnabled && !isRemoteCalendarBlock(layout.block)}
             />)}
           </div>
         })}
@@ -610,7 +614,7 @@ function TimedCalendarBlock({ block, date, task, conflict, timeZone, column, col
   function beginResize(event: ReactPointerEvent<HTMLButtonElement>) {
     event.preventDefault()
     event.stopPropagation()
-    if (!isStartDay) return
+    if (!isStartDay || isRemoteCalendarBlock(block)) return
     const startY = event.clientY
     const startingDuration = previewDuration
     let nextDuration = startingDuration
@@ -631,7 +635,7 @@ function TimedCalendarBlock({ block, date, task, conflict, timeZone, column, col
   return <article
     className={'calendar-block-v2 calendar-block-v2--' + block.kind + (conflict ? ' is-conflict' : '')}
     style={style}
-    draggable={dragEnabled && isStartDay}
+    draggable={dragEnabled && isStartDay && !isRemoteCalendarBlock(block)}
     onDragStart={(event) => {
       event.dataTransfer.setData('calendar/block-id', block.id)
       if (event.altKey) event.dataTransfer.setData('calendar/duplicate', '1')
@@ -644,7 +648,7 @@ function TimedCalendarBlock({ block, date, task, conflict, timeZone, column, col
       <em>{task?.project ?? block.sourceCalendar ?? block.location ?? (block.kind === 'event' ? 'Event' : 'Work block')}</em>
     </button>
     {conflict ? <span className="calendar-block-v2__conflict">!</span> : null}
-    {isStartDay ? <button className="calendar-block-v2__resize" aria-label="Resize calendar block" onPointerDown={beginResize} /> : null}
+    {isStartDay && !isRemoteCalendarBlock(block) ? <button className="calendar-block-v2__resize" aria-label="Resize calendar block" onPointerDown={beginResize} /> : null}
   </article>
 }
 
@@ -692,7 +696,8 @@ function CalendarDateMatrix({ dates, anchorMonth, today, selectedDate, blocks, t
             const blockId = event.dataTransfer.getData('calendar/block-id')
             const block = blocks.find((item) => item.id === blockId)
             if (!block) return
-            if (event.altKey || event.dataTransfer.getData('calendar/duplicate') === '1') void onDuplicateBlock(block.id, date)
+             if (isRemoteCalendarBlock(block) && !(event.altKey || event.dataTransfer.getData('calendar/duplicate') === '1')) return
+             if (event.altKey || event.dataTransfer.getData('calendar/duplicate') === '1') void onDuplicateBlock(block.id, date)
             else void onMoveBlock(block, date)
           }}
         >
@@ -701,8 +706,8 @@ function CalendarDateMatrix({ dates, anchorMonth, today, selectedDate, blocks, t
             {items.slice(0, 4).map((block) => <button
               key={block.id}
               className={block.allDay ? 'is-all-day' : ''}
-              draggable
-              onDragStart={(event) => {
+              draggable={!isRemoteCalendarBlock(block)}
+               onDragStart={(event) => {
                 event.dataTransfer.setData('calendar/block-id', block.id)
                 if (event.altKey) event.dataTransfer.setData('calendar/duplicate', '1')
                 event.dataTransfer.effectAllowed = 'copyMove'
