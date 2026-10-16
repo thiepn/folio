@@ -104,6 +104,35 @@ jobs:
             if (state.text.includes('This browser is missing required')) throw new Error('Folio entered compatibility failure.')
             if (pageErrors.length) throw new Error('Folio emitted page errors: ' + pageErrors.join(' | '))
 
+            // True same-origin Folio → opener approval, against the built native owner.
+            const opener = await browser.newPage()
+            await opener.goto('http://127.0.0.1:4173/', {waitUntil:'domcontentloaded'})
+            await opener.evaluate(() => {
+              window.__folioTestReply = null
+              window.addEventListener('message', event => { if(event.origin===location.origin) window.__folioTestReply = event.data })
+            })
+            const nonce = 'a'.repeat(32)
+            const popupWait = opener.waitForEvent('popup')
+            await opener.evaluate(value => window.open('/?hubBridge='+value, '_blank'), nonce)
+            const popup = await popupWait
+            await popup.getByRole('dialog', {name:'Share today’s Folio summary?'}).waitFor()
+            const beforeApprove = await opener.evaluate(() => window.__folioTestReply)
+            if(beforeApprove!==null)throw new Error('Folio released data without a Share click')
+            await popup.getByRole('button', {name:'Share summary once'}).click()
+            await opener.waitForFunction(() => Boolean(window.__folioTestReply))
+            const reply = await opener.evaluate(() => window.__folioTestReply)
+            if(reply.type!=='thiepn:folio-hub-daily:v1'||reply.nonce!==nonce||
+               reply.snapshot?.schema!=='thiepn:folio-hub-daily'||reply.snapshot?.source!=='folio-local-device'||
+               !Array.isArray(reply.snapshot?.tasks)||!Array.isArray(reply.snapshot?.events)||
+               !Array.isArray(reply.snapshot?.notes)||!Array.isArray(reply.snapshot?.habits)) {
+              throw new Error('Native Folio Hub summary contract failed')
+            }
+            if(JSON.stringify(reply).includes('access_token')||JSON.stringify(reply).includes('body')) {
+              throw new Error('Folio private content leaked into the shared summary')
+            }
+            console.log('FOLIO_HUB_CONSENT_PASS=' + JSON.stringify({taskCount:reply.snapshot.tasks.length,notesCount:reply.snapshot.notes.length}))
+            await popup.close()
+            await opener.close()
             await browser.close()
           })().catch((error) => {
             console.error(error)

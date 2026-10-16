@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createFolioHubDailySummary, FOLIO_HUB_DEVICE_MESSAGE } from '../services/folioHubDailySummary';
 import './folioHubBridge.css';
 
@@ -11,7 +11,7 @@ function bridgeRequest(): string | null {
     url.searchParams.delete('hubBridge');
     // No private request token in browser history, Referer or service worker caches.
     history.replaceState(history.state, '', url.pathname + url.search + url.hash);
-    if (location.origin !== 'https://thiepn.dev' && location.hostname !== 'localhost') return null;
+    if (location.origin !== 'https://thiepn.dev' && !['localhost', '127.0.0.1'].includes(location.hostname)) return null;
     if (!window.opener || window.opener === window) return null;
     if (window.opener.location.origin !== location.origin || window.opener.location.pathname !== '/') return null;
     return request;
@@ -22,12 +22,6 @@ export function FolioHubBridge() {
   const [request] = useState(bridgeRequest);
   const [status, setStatus] = useState<'ready' | 'busy' | 'sent'>('ready');
   const [error, setError] = useState('');
-  useEffect(() => {
-    if (!request) return;
-    const cancel = () => { /* This bridge never schedules unattended sharing. */ };
-    window.addEventListener('pagehide', cancel);
-    return () => window.removeEventListener('pagehide', cancel);
-  }, [request]);
   if (!request) return null;
   async function share() {
     if (status !== 'ready') return;
