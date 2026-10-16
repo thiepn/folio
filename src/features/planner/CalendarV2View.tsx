@@ -21,6 +21,9 @@ import { TimeBlockModal, type TimeBlockEditorPayload, type TimeBlockEditorState 
 import { CalendarSourcesC2 } from './CalendarSourcesC2'
 import { suggestFreeCalendarSlots, type CalendarSlotC2 } from './calendarSlotSuggestionsC2'
 import { calendarSourceGroups, visibleCalendarBlocks } from './calendarSourceGroupsC2'
+import { planMultiDayTaskC3,type AllocationOptionsC3 } from './calendarMultiSessionC3'
+import { calendarBatchAllocationC3 } from '../../services/calendarBatchAllocationC3'
+import type { UndoableMutation } from '../../services/undo'
 
 function isRemoteCalendarBlock(block: TimeBlockEntity) { return block.source === 'klips' || block.source === 'google' }
 
@@ -69,11 +72,19 @@ export function CalendarV2View({
   const [slotMinutes, setSlotMinutes] = useState(60)
   const [slotStart, setSlotStart] = useState(9)
   const [slotEnd, setSlotEnd] = useState(19)
+  const [spreadTask,setSpreadTask] = useState<TaskPreview|null>(null)
+  const [spreadDays,setSpreadDays] = useState<7|14>(7)
+  const [spreadMax,setSpreadMax] = useState<30|45|60|90|120>(60)
+  const [spreadPerDay,setSpreadPerDay] = useState<1|2>(1)
+  const [spreadBusy,setSpreadBusy] = useState(false)
+  const [spreadError,setSpreadError] = useState('')
+  const [allocationReceipt,setAllocationReceipt] = useState<{message:string;undo:UndoableMutation}|null>(null)
+  const [undoingAllocation,setUndoingAllocation] = useState(false)
 
   const range = useMemo(() => calendarRangeForMode(mode, selectedDate), [mode, selectedDate])
   const data = useCalendarData(range.from, range.through, timeZone)
   const habitData = useHabitData(selectedDate)
-  const weekBlocks = useLiveQuery(()=>timeBlockRepository.listBetween(selectedDate,addLocalDays(selectedDate,6),timeZone),[selectedDate,timeZone])
+  const weekBlocks = useLiveQuery(()=>timeBlockRepository.listBetween(selectedDate,addLocalDays(selectedDate,13),timeZone),[selectedDate,timeZone])
 
   useEffect(() => {
     if (!anchorDate) return
@@ -184,6 +195,29 @@ export function CalendarV2View({
       dailyEnd:slotEnd*60,through:addLocalDays(selectedDate,6),limit:5,
       afterIso:selectedDate===today?new Date().toISOString():undefined})
   },[data,weekBlocks,selectedDate,slotTask,slotMinutes,slotStart,slotEnd,timeZone,today])
+
+  const spreadOptions=useMemo<AllocationOptionsC3>(()=>({
+    from:selectedDate,days:spreadDays,sessionMinutes:spreadMax,sessionsPerDay:spreadPerDay,
+    dailyStart:slotStart*60,dailyEnd:slotEnd*60,timeZone,
+    afterIso:selectedDate===today?new Date().toISOString():undefined,
+  }),[selectedDate,spreadDays,spreadMax,spreadPerDay,slotStart,slotEnd,timeZone,today])
+  const spreadPlan=useMemo(()=>{
+    if(!spreadTask||!data||!weekBlocks)return null
+    const task=data.taskEntities.find(t=>t.id===spreadTask.id)
+    return task?planMultiDayTaskC3(task,weekBlocks,spreadOptions):null
+  },[spreadTask,data,weekBlocks,spreadOptions])
+
+  async function applySpread(){
+    if(!spreadPlan||spreadBusy)return
+    setSpreadBusy(true);setSpreadError('')
+    try{
+      const applied=await calendarBatchAllocationC3.apply(spreadPlan,spreadOptions)
+      setAllocationReceipt({message:applied.blocks.length+' work sessions created across '+
+        new Set(applied.blocks.map(b=>dateKeyInTimeZone(b.start,timeZone))).size+' days.',undo:applied.undo})
+      setSpreadTask(null)
+    }catch(error){setSpreadError(error instanceof Error?error.message:'The calendar changed. Review and try again.')}
+    finally{setSpreadBusy(false)}
+  }
 
   function scheduleTask(task: TaskPreview, date = selectedDate, startMinute = 9 * 60, durationOverride?:number) {
     setEditor({ type: 'new-task', task, date, startMinute, durationMinutes: Math.min(durationOverride??Number.POSITIVE_INFINITY,taskRemaining(task, data?.allTaskBlocks ?? [])), timeZone })
@@ -315,6 +349,15 @@ export function CalendarV2View({
           {!sourceGroups.length?<span className="calendar-empty">No events in the displayed calendar range.</span>:null}
         </div>
       </section>
+      {allocationReceipt?<section className="calendar-c3-receipt" role="status">
+        <span>{allocationReceipt.message} Task dates and deadlines unchanged.</span>
+        <button type="button" disabled={undoingAllocation} onClick={async()=>{
+          setUndoingAllocation(true)
+          try{await allocationReceipt.undo.undo();setAllocationReceipt(null)}
+          catch(error){setAllocationReceipt({message:error instanceof Error?error.message:'Undo unavailable.',undo:allocationReceipt.undo})}
+          finally{setUndoingAllocation(false)}
+        }}>Undo allocation</button>
+      </section>:null}
       <section className="calendar-v2-summary">
         <span><b>{formatDuration(scheduledTaskMinutes)}</b> task time</span>
         <span><b>{formatDuration(unscheduledMinutes)}</b> selected-day work left</span>
@@ -389,6 +432,7 @@ export function CalendarV2View({
           onOpenTask={onOpenTask}
           onSchedule={scheduleTask}
           onFindTime={(task)=>{setSlotTask(task);setSlotMinutes(Math.min(60,taskRemaining(task,data.allTaskBlocks)))}}
+          onSpreadWork={(task)=>{setSpreadTask(task);setSpreadError('');setSpreadMax(60)}}
           compact={compact}
           habits={habitData?.todayHabits ?? []}
           habitLoaded={Boolean(habitData)}
@@ -461,6 +505,43 @@ export function CalendarV2View({
         </main>
       </div>
 
+      {spreadTask?<section className="calendar-slot-overlay" role="dialog" aria-modal="true" aria-label="Spread task over multiple days">
+        <div className="calendar-slot-modal calendar-c3-spread">
+          <header><strong>Spread work across days</strong><button type="button" onClick={()=>setSpreadTask(null)} disabled={spreadBusy} aria-label="Close multi-day planner">Close</button></header>
+          <p><b>{spreadTask.title}</b> · Review every proposed Folio session before committing.
+            {spreadTask.deadline?' Deadline '+spreadTask.deadline+'.':''} Existing task dates are not changed.</p>
+          <div className="calendar-slot-options">
+            <label>Horizon <select aria-label="Allocation horizon" value={spreadDays} onChange={e=>setSpreadDays(Number(e.target.value) as 7|14)}>
+              <option value={7}>7 days</option><option value={14}>14 days</option></select></label>
+            <label>Maximum session <select aria-label="Allocation session minutes" value={spreadMax} onChange={e=>setSpreadMax(Number(e.target.value) as 30|45|60|90|120)}>
+              {[30,45,60,90,120].map(n=><option key={n} value={n}>{n} min</option>)}</select></label>
+            <label>Per day <select aria-label="Allocation sessions per day" value={spreadPerDay} onChange={e=>setSpreadPerDay(Number(e.target.value) as 1|2)}>
+              <option value={1}>One session</option><option value={2}>Up to two</option></select></label>
+            <label>Start hour <select aria-label="Allocation start hour" value={slotStart} onChange={e=>setSlotStart(Number(e.target.value))}>
+              {Array.from({length:18},(_,i)=>i+5).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}:00</option>)}</select></label>
+            <label>End hour <select aria-label="Allocation end hour" value={slotEnd} onChange={e=>setSlotEnd(Number(e.target.value))}>
+              {Array.from({length:16},(_,i)=>i+9).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}:00</option>)}</select></label>
+          </div>
+          <p>Uses all visible and hidden Folio/ICS/KLIPS/Google occupancy. A preview does not reserve any time; all sessions will be created together or none.</p>
+          <div className="calendar-c3-spread__summary">
+            <strong>{spreadPlan?.slots.length??0} sessions</strong>
+            <span>{formatDuration(spreadPlan?.allocatedMinutes??0)} covered</span>
+            <span>{formatDuration(spreadPlan?.uncoveredMinutes??0)} remaining unscheduled</span>
+          </div>
+          <div className="calendar-slot-results" aria-label="Proposed multi-day sessions">
+            {spreadPlan?.slots.map(slot=><div className="calendar-c3-spread__item" key={slot.start}>
+              <strong>{formatLocalDate(slot.date,{weekday:'short',month:'short',day:'numeric'})}</strong>
+              <span>{formatClockMinute(slot.startMinute)}–{formatClockMinute(slot.startMinute+slot.durationMinutes)}</span>
+              <small>{formatDuration(slot.durationMinutes)}</small>
+            </div>)}
+            {!spreadPlan?.slots.length?<p>No fitting sessions before the deadline. Adjust the horizon, session duration or hours.</p>:null}
+          </div>
+          {spreadError?<p role="alert">{spreadError}</p>:null}
+          <button type="button" disabled={spreadBusy||!spreadPlan?.slots.length} onClick={()=>void applySpread()}>
+            {spreadBusy?'Checking calendar…':'Confirm all sessions'}
+          </button>
+        </div>
+      </section>:null}
       {slotTask?<section className="calendar-slot-overlay" role="dialog" aria-modal="true" aria-label="Find time for task">
         <div className="calendar-slot-modal">
           <header><strong>Find free time</strong><button type="button" onClick={()=>setSlotTask(null)} aria-label="Close free time suggestions">Close</button></header>
@@ -502,7 +583,7 @@ export function CalendarV2View({
   )
 }
 
-function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, taskSource, onTaskSource, smartViews, search, onSearch, onOpenTask, onSchedule, onFindTime, compact, habits, habitLoaded, onHabitToggle, onHabitIncrement, onHabitSkip, onViewHabits }: {
+function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, taskSource, onTaskSource, smartViews, search, onSearch, onOpenTask, onSchedule, onFindTime, onSpreadWork, compact, habits, habitLoaded, onHabitToggle, onHabitIncrement, onHabitSkip, onViewHabits }: {
   today: LocalDate
   selectedDate: LocalDate
   onSelectDate: (date: LocalDate) => void
@@ -516,6 +597,7 @@ function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, 
   onOpenTask?: (id: string) => void
   onSchedule: (task: TaskPreview, date?: LocalDate, startMinute?: number) => void
   onFindTime: (task: TaskPreview) => void
+  onSpreadWork: (task: TaskPreview) => void
   compact: boolean
   habits: HabitPreview[]
   habitLoaded: boolean
@@ -554,6 +636,7 @@ function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, 
           </button>
           <div><span>{formatDuration(taskRemaining(task, allBlocks))}</span>
             <button type="button" onClick={() => onFindTime(task)}>Find time</button>
+            <button type="button" onClick={() => onSpreadWork(task)}>Spread work</button>
             <button type="button" onClick={() => onSchedule(task)}>Schedule</button></div>
         </article>)}
         {!tasks.length ? <div className="calendar-empty">No tasks in this source need more clock time.</div> : null}

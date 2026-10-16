@@ -956,3 +956,12 @@
 .calendar-c2-manage-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .calendar-c2-connection-editor{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:10px;min-width:0}
 @media(max-width:760px){.calendar-c2-manage-button{min-height:44px}}
+
+/* C3 multi-session review, native Folio allocation and undo */
+.calendar-c3-spread{max-width:640px}
+.calendar-c3-spread__summary{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;border:1px solid var(--line);padding:9px;font-size:12px}
+.calendar-c3-spread__item{display:flex;justify-content:space-between;align-items:center;gap:9px;padding:9px;border-bottom:1px solid var(--line);flex-wrap:wrap;font-size:12px}
+.calendar-c3-spread__item small{color:var(--muted)}
+.calendar-c3-receipt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border:1px solid var(--line);font-size:12px}
+.calendar-c3-receipt button{border:1px solid var(--line);padding:8px;cursor:pointer;background:var(--surface-input);color:var(--text)}
+@media(max-width:760px){.calendar-c3-receipt{flex-direction:column;align-items:stretch}.calendar-c3-receipt button{min-height:44px}}
