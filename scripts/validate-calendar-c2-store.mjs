@@ -9,7 +9,7 @@ const temp=fs.mkdtempSync(path.join(os.tmpdir(),'folio-calendar-c2-store-'))
 const root=process.cwd()
 function emit(file,name,replacements=[]){
   let source=fs.readFileSync(path.join(root,file),'utf8')
-  for(const [from,to] of replacements)source=source.replace(from,to)
+  for(const [from,to] of replacements)source=source.replaceAll(from,to)
   const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText
   fs.writeFileSync(path.join(temp,name),js)
 }
