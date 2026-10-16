@@ -8,6 +8,8 @@ import {
 import type { LocalDate, TimeBlockEntity } from '../../domain/models'
 import { useCalendarData } from '../../hooks/useCalendarData'
 import { useHabitData } from '../../hooks/useHabitData'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { timeBlockRepository } from '../../repositories/timeBlockRepository'
 import type { HabitPreview, TaskPreview } from '../../types/ui'
 import {
   allDayBlocksForDate, blockConflicts, blockEndMinuteForDate, blockStartMinuteForDate,
@@ -69,6 +71,7 @@ export function CalendarV2View({
   const range = useMemo(() => calendarRangeForMode(mode, selectedDate), [mode, selectedDate])
   const data = useCalendarData(range.from, range.through, timeZone)
   const habitData = useHabitData(selectedDate)
+  const weekBlocks = useLiveQuery(()=>timeBlockRepository.listBetween(selectedDate,addLocalDays(selectedDate,6),timeZone),[selectedDate,timeZone])
 
   useEffect(() => {
     if (!anchorDate) return
@@ -150,17 +153,17 @@ export function CalendarV2View({
   }
 
   const suggestedSlots = useMemo(()=>{
-    if(!slotTask||!data)return [] as CalendarSlotC2[]
+    if(!slotTask||!data||!weekBlocks)return [] as CalendarSlotC2[]
     const remaining=taskRemaining(slotTask,data.allTaskBlocks)
     const minutes=Math.min(slotMinutes,remaining,240)
-    return suggestFreeCalendarSlots(data.blocks,{from:selectedDate,
+    return suggestFreeCalendarSlots(weekBlocks,{from:selectedDate,
       deadline:slotTask.deadline,timeZone,minutes,dailyStart:slotStart*60,
       dailyEnd:slotEnd*60,through:addLocalDays(selectedDate,6),limit:5,
       afterIso:selectedDate===today?new Date().toISOString():undefined})
-  },[data,selectedDate,slotTask,slotMinutes,slotStart,slotEnd,timeZone,today])
+  },[data,weekBlocks,selectedDate,slotTask,slotMinutes,slotStart,slotEnd,timeZone,today])
 
-  function scheduleTask(task: TaskPreview, date = selectedDate, startMinute = 9 * 60) {
-    setEditor({ type: 'new-task', task, date, startMinute, durationMinutes: taskRemaining(task, data?.allTaskBlocks ?? []), timeZone })
+  function scheduleTask(task: TaskPreview, date = selectedDate, startMinute = 9 * 60, durationOverride?:number) {
+    setEditor({ type: 'new-task', task, date, startMinute, durationMinutes: Math.min(durationOverride??Number.POSITIVE_INFINITY,taskRemaining(task, data?.allTaskBlocks ?? [])), timeZone })
   }
 
   async function saveEditor(payload: TimeBlockEditorPayload) {
@@ -385,7 +388,7 @@ export function CalendarV2View({
           <p>Available slots from the selected date through the next seven days, bounded by the task deadline. Existing Folio and imported events count as busy; all-day events block their dates. Nothing is scheduled without confirmation.</p>
           <div className="calendar-slot-results">
             {suggestedSlots.map(slot=><button type="button" key={slot.start} onClick={()=>{
-              setSlotTask(null);setSelectedDate(slot.date);scheduleTask(slotTask,slot.date,slot.startMinute)
+              setSlotTask(null);setSelectedDate(slot.date);scheduleTask(slotTask,slot.date,slot.startMinute,slot.durationMinutes)
             }}>
               <strong>{formatLocalDate(slot.date,{weekday:'short',month:'short',day:'numeric'})}</strong>
               <span>{formatClockMinute(slot.startMinute)}–{formatClockMinute(slot.startMinute+slot.durationMinutes)} · {slot.durationMinutes} min</span>
