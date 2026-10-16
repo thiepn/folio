@@ -42,7 +42,7 @@ export function planGoogleMerge(
     touched.add(key)
     const local=currentByKey.get(key)
     const baseline=baselines[key]
-    const locallyChanged=Boolean(local)&&(!baseline||baseline.blockId!==local.id||baseline.valueHash!==googleBlockHash(local))
+    const locallyChanged=local!==undefined&&(!baseline||baseline.blockId!==local.id||baseline.valueHash!==googleBlockHash(local))
     if(pendingLocalWrites.has(key)||locallyChanged){
       actions.push({kind:'conflict',key,reason:pendingLocalWrites.has(key)?'Local Google write is pending':'Local copy changed since last accepted source revision'})
       continue
