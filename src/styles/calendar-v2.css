@@ -904,3 +904,33 @@
 .calendar-slot-results span{font-size:12px}
 .calendar-slot-results small{color:var(--muted)}
 @media(max-width:760px){.calendar-slot-options{grid-template-columns:1fr}.calendar-slot-modal button{min-height:44px}}
+
+/* Source-filtered multi-calendar visibility; full owner blocks remain authoritative for availability. */
+.calendar-c2-sources-filter{border:1px solid var(--line);background:var(--surface);padding:12px;display:grid;gap:10px}
+.calendar-c2-sources-filter__heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.calendar-c2-sources-filter__heading strong{font-size:13px}
+.calendar-c2-sources-filter__heading span{font-size:11px;color:var(--muted);flex:1}
+.calendar-c2-sources-filter button,.calendar-c2-day-brief button{background:var(--surface-input);border:1px solid var(--line);color:var(--text);cursor:pointer;padding:6px 9px}
+.calendar-c2-sources-filter__list{display:flex;gap:8px;flex-wrap:wrap}
+.calendar-c2-source-choice{border:1px solid var(--line);padding:6px 8px;display:flex;align-items:center;gap:8px;max-width:100%;min-width:120px;cursor:pointer}
+.calendar-c2-source-choice input{flex:none;accent-color:var(--accent)}
+.calendar-c2-source-choice span{min-width:0;display:grid;gap:3px}
+.calendar-c2-source-choice b{font-size:11px;overflow-wrap:anywhere}
+.calendar-c2-source-choice small{font-size:10px;color:var(--muted);overflow-wrap:anywhere}
+.calendar-c2-source-choice em{font-style:normal;margin-left:auto;font-size:11px;font-variant-numeric:tabular-nums}
+.calendar-c2-source-choice:has(input:not(:checked)){opacity:.65}
+.calendar-c2-day-brief{border:1px solid var(--line);padding:12px;display:grid;gap:12px}
+.calendar-c2-day-brief__heading{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.calendar-c2-day-brief__heading>div{display:grid;gap:3px}
+.calendar-c2-day-brief__heading strong{font-size:14px}
+.calendar-c2-day-brief__columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.calendar-c2-day-brief__column{min-width:0;display:grid;align-content:start;gap:6px}
+.calendar-c2-day-brief__column>strong{font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.calendar-c2-day-brief__column>strong small{font-size:10px;color:var(--muted);font-weight:400}
+.calendar-c2-day-brief__column button{display:grid;gap:3px;text-align:left;min-width:0}
+.calendar-c2-day-brief__column button span,.calendar-c2-day-brief__column button small{font-size:10px;color:var(--muted)}
+.calendar-c2-day-brief__column button b{font-size:12px;overflow-wrap:anywhere}
+.calendar-c2-day-brief__column p{font-size:11px;color:var(--muted);margin:0}
+.calendar-c2-day-brief button:focus-visible,.calendar-c2-sources-filter button:focus-visible,.calendar-c2-source-choice:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:900px){.calendar-c2-day-brief__columns{grid-template-columns:repeat(2,minmax(0,1fr))}.calendar-c2-day-brief__habits{grid-column:1/-1}}
+@media(max-width:600px){.calendar-c2-day-brief__columns{grid-template-columns:1fr}.calendar-c2-day-brief__habits{grid-column:auto}.calendar-c2-day-brief button,.calendar-c2-sources-filter button{min-height:44px}.calendar-c2-source-choice{min-height:44px;flex:1 1 135px}}

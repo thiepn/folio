@@ -20,6 +20,7 @@ import {
 import { TimeBlockModal, type TimeBlockEditorPayload, type TimeBlockEditorState } from './TimeBlockModal'
 import { CalendarSourcesC2 } from './CalendarSourcesC2'
 import { suggestFreeCalendarSlots, type CalendarSlotC2 } from './calendarSlotSuggestionsC2'
+import { calendarSourceGroups, visibleCalendarBlocks } from './calendarSourceGroupsC2'
 
 function isRemoteCalendarBlock(block: TimeBlockEntity) { return block.source === 'klips' || block.source === 'google' }
 
@@ -62,6 +63,7 @@ export function CalendarV2View({
   const [timeZone, setTimeZone] = useState(localZone)
   const [taskSource, setTaskSource] = useState('day')
   const [taskSearch, setTaskSearch] = useState('')
+  const [hiddenSources, setHiddenSources] = useState<Set<string>>(()=>new Set())
   const [editor, setEditor] = useState<TimeBlockEditorState | null>(null)
   const [slotTask, setSlotTask] = useState<TaskPreview | null>(null)
   const [slotMinutes, setSlotMinutes] = useState(60)
@@ -99,6 +101,18 @@ export function CalendarV2View({
   }, [data?.timeZones, localZone])
 
   const conflicts = useMemo(() => blockConflicts(data?.blocks ?? []), [data?.blocks])
+  const sourceGroups=useMemo(()=>calendarSourceGroups(data?.blocks??[]),[data?.blocks])
+  const visibleBlocks=useMemo(()=>visibleCalendarBlocks(data?.blocks??[],hiddenSources),[data?.blocks,hiddenSources])
+  const selectedVisibleBlocks=useMemo(()=>visibleBlocks.filter(block=>blockTouchesDate(block,selectedDate,timeZone)),
+    [visibleBlocks,selectedDate,timeZone])
+  const deadlineTasks=useMemo(()=>{
+    if(!data)return []
+    return data.tasks.filter(task=>task.status==='todo'&&!task.completed&&
+      Boolean(task.deadline&&task.deadline<=selectedDate)).sort((a,b)=>
+       (a.deadline??'').localeCompare(b.deadline??'')||
+       ({critical:0,high:1,normal:2}[a.priority]-{critical:0,high:1,normal:2}[b.priority]))
+  },[data,selectedDate])
+  const habitDue=(habitData?.todayHabits??[]).filter(h=>h.scheduledToday&&!h.completed&&!h.skipped&&!h.paused).length
 
   const sourceIds = useMemo(() => {
     if (!data || !taskSource.startsWith('smart:')) return undefined
@@ -273,6 +287,25 @@ export function CalendarV2View({
         onChange={(next) => setMode(compact && (next === 'week' || next === '3day') ? 'day' : next)}
       />
 
+      <section className="calendar-c2-sources-filter" aria-label="Displayed calendar sources">
+        <div className="calendar-c2-sources-filter__heading">
+          <strong>Calendars</strong>
+          <span>{sourceGroups.filter(group=>!hiddenSources.has(group.key)).length}/{sourceGroups.length} sources visible · visibility only, not availability</span>
+          {hiddenSources.size>0?<button type="button" onClick={()=>setHiddenSources(new Set())}>Show all</button>:null}
+        </div>
+        <div className="calendar-c2-sources-filter__list">
+          {sourceGroups.map(group=><label key={group.key} title={group.description} className="calendar-c2-source-choice">
+            <input type="checkbox" checked={!hiddenSources.has(group.key)} onChange={event=>setHiddenSources(prev=>{
+              const next=new Set(prev)
+              if(event.target.checked)next.delete(group.key);else next.add(group.key)
+              return next
+            })}/>
+            <span><b>{group.label}</b><small>{group.description}</small></span>
+            <em>{group.count}</em>
+          </label>)}
+          {!sourceGroups.length?<span className="calendar-empty">No events in the displayed calendar range.</span>:null}
+        </div>
+      </section>
       <section className="calendar-v2-summary">
         <span><b>{formatDuration(scheduledTaskMinutes)}</b> task time</span>
         <span><b>{formatDuration(unscheduledMinutes)}</b> selected-day work left</span>
@@ -282,6 +315,43 @@ export function CalendarV2View({
         <span className={conflictCount ? 'is-warning' : ''}><b>{conflictCount}</b> conflict{conflictCount === 1 ? '' : 's'}</span>
       </section>
 
+      <section className="calendar-c2-day-brief" aria-label="Selected day overview">
+        <div className="calendar-c2-day-brief__heading">
+          <div><span className="eyebrow">Selected day</span>
+            <strong>{formatLocalDate(selectedDate,{weekday:'long',month:'long',day:'numeric'})}</strong></div>
+          <button type="button" onClick={()=>setMode('day')}>Open day</button>
+        </div>
+        <div className="calendar-c2-day-brief__columns">
+          <div className="calendar-c2-day-brief__column">
+            <strong>Events and sessions <small>{selectedVisibleBlocks.length}{selectedBlocks.length!==selectedVisibleBlocks.length?' displayed of '+selectedBlocks.length:''}</small></strong>
+            {selectedVisibleBlocks.slice().sort((a,b)=>a.start.localeCompare(b.start)).slice(0,4).map(block=>
+              <button type="button" key={block.id} onClick={()=>editBlock(block)}>
+                <span>{block.allDay?'All day':formatTimeInZone(block.start,timeZone)}</span>
+                <b>{data?.taskMap.get(block.taskId??'')?.title??block.title}</b>
+                <small>{block.source==='klips'?'KLIPS':block.source==='google'?'Google mirror':block.source==='ics'?'ICS import':block.kind==='task'?'Folio task':'Folio event'}</small>
+              </button>)}
+            {!selectedVisibleBlocks.length?<p>{selectedBlocks.length?'No events shown from selected sources.':'No scheduled events.'}</p>:null}
+          </div>
+          <div className="calendar-c2-day-brief__column">
+            <strong>Due or overdue <small>{deadlineTasks.length}</small></strong>
+            {deadlineTasks.slice(0,4).map(task=><button type="button" key={task.id} onClick={()=>onOpenTask?.(task.id)}>
+              <span>{task.deadline===selectedDate?'Due today':'Overdue · '+task.deadline}</span><b>{task.title}</b>
+              <small>{task.project??'Folio task'}</small>
+            </button>)}
+            {!deadlineTasks.length?<p>No tasks due or overdue by this date.</p>:null}
+          </div>
+          <div className="calendar-c2-day-brief__column calendar-c2-day-brief__habits">
+            <strong>Habits <small>{habitDue} due</small></strong>
+            {(habitData?.todayHabits??[]).filter(h=>h.scheduledToday).slice(0,4).map(h=>
+              <button key={h.id} type="button" disabled={h.paused||!onHabitToggle}
+                onClick={()=>onHabitToggle?.(h.id,selectedDate)}>
+                <span>{h.completed?'Completed':h.skipped?'Rest day':h.paused?'Paused':'Not completed'}</span>
+                <b>{h.title}</b><small>{h.kind==='check'?'Toggle completion':'See progress in Habits'}</small>
+              </button>)}
+            {!habitData?.todayHabits?.some(h=>h.scheduledToday)?<p>No scheduled habits for this date.</p>:null}
+          </div>
+        </div>
+      </section>
       <div className="calendar-v2-layout">
         <CalendarSidebar
           today={today}
@@ -310,7 +380,7 @@ export function CalendarV2View({
           {mode === 'agenda' ? <AgendaCalendar
             from={range.from}
             through={range.through}
-            blocks={data.blocks}
+            blocks={visibleBlocks}
             taskMap={data.taskMap}
             timeZone={timeZone}
             onSelectDate={setSelectedDate}
@@ -321,7 +391,7 @@ export function CalendarV2View({
             dates={timeGridDates}
             today={today}
             selectedDate={selectedDate}
-            blocks={data.blocks}
+            blocks={visibleBlocks}
             taskMap={data.taskMap}
             conflicts={conflicts}
             timeZone={timeZone}
@@ -344,7 +414,7 @@ export function CalendarV2View({
             anchorMonth={startOfLocalMonth(selectedDate)}
             today={today}
             selectedDate={selectedDate}
-            blocks={data.blocks}
+            blocks={visibleBlocks}
             taskMap={data.taskMap}
             timeZone={timeZone}
             onSelectDate={setSelectedDate}
@@ -362,7 +432,7 @@ export function CalendarV2View({
           {mode === 'year' ? <CalendarYearView
             year={Number(selectedDate.slice(0, 4))}
             today={today}
-            blocks={data.blocks}
+            blocks={visibleBlocks}
             timeZone={timeZone}
             onSelectDate={(date) => { setSelectedDate(date); setMode('day') }}
           /> : null}
