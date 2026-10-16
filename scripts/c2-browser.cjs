@@ -149,8 +149,8 @@ async function blocks(page){
         tx.objectStore('timeBlocks').put({
           id:'browser-c3-occupied',kind:'event',title:'C3 imported class',
           source:'klips',sourceCalendar:'klips:browser-synthetic',
-          sourceUid:'external:class',start:'2026-10-17T07:00:00.000Z',
-          end:'2026-10-17T08:00:00.000Z',createdAt:stamp,updatedAt:stamp
+          sourceUid:'external:class',start:'2026-10-17T09:00:00.000Z',
+          end:'2026-10-17T10:00:00.000Z',createdAt:stamp,updatedAt:stamp
         })
         tx.oncomplete=res;tx.onerror=()=>rej(tx.error)
       })
