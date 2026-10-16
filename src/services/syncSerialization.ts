@@ -31,6 +31,12 @@ function entityId(type:SyncEntityType,row:any){
   if(type==='settings')return String(row.key)
   return String(row.id)
 }
+/** External calendar mirrors are not authorized for Folio's generic D18 cloud sync.
+ * Each provider owns the events; future Core connector sync must use separate grants.
+ */
+function sourceOwnedCalendar(row:{source?:string}){
+  return row.source==='klips'||row.source==='google'
+}
 function syncableSetting(key:string){
   return !key.startsWith('sync.')&&!key.startsWith('storage.')&&!key.startsWith('pwa.')
 }
@@ -58,6 +64,7 @@ async function rowsFor(type:SyncEntityType):Promise<any[]>{
     return result
   }
   const rows=await (db[type] as any).toArray()
+  if(type==='timeBlocks')return rows.filter((row:any)=>!sourceOwnedCalendar(row))
   return type==='settings'?rows.filter((row:any)=>syncableSetting(String(row.key))):rows
 }
 
@@ -90,12 +97,17 @@ export async function getLocalSyncRecord(entityType:SyncEntityType,entityIdValue
   const row=await (db[entityType] as any).get(key)
   if(!row)return undefined
   if(entityType==='settings'&&!syncableSetting(String(row.key)))return undefined
+  if(entityType==='timeBlocks'&&sourceOwnedCalendar(row))return undefined
   const payload=structuredClone(row)
   return {entityType,entityId:entityIdValue,payload,hash:syncHash(payload)}
 }
 
 export async function applyRemoteSyncRecord(entityType:SyncEntityType,entityIdValue:string,payload:unknown,deleted:boolean){
   const table=db[entityType] as any
+  if(entityType==='timeBlocks'){
+    const existing=await db.timeBlocks.get(entityIdValue)
+    if(existing&&sourceOwnedCalendar(existing))return
+  }
   if(deleted){
     await table.delete(entityIdValue)
     return
@@ -111,6 +123,7 @@ export async function applyRemoteSyncRecord(entityType:SyncEntityType,entityIdVa
   const id=entityId(entityType,row)
   if(id!==entityIdValue)throw new Error('Remote sync entity ID mismatch.')
   if(entityType==='settings'&&!syncableSetting(entityIdValue))return
+  if(entityType==='timeBlocks'&&sourceOwnedCalendar(row))return
   await table.put(row)
 }
 
