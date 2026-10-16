@@ -1,7 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../../db/database'
 import { addLocalDays, localDateKey, startOfLocalWeek } from '../../domain/date'
-import { faithDisciplineWeek } from '../../services/faithDisciplineReview'
+import { readFaithDisciplineWeek } from '../../services/faithDisciplineOwnerRead'
 
 /** Derived from original Folio records. This component never writes progress. */
 export function FaithDisciplineReviewPanel({ habitIds }: { habitIds: readonly string[] }) {
@@ -9,12 +8,8 @@ export function FaithDisciplineReviewPanel({ habitIds }: { habitIds: readonly st
   const from = startOfLocalWeek(today)
   const through = addLocalDays(from, 6)
   const selection = habitIds.join('|')
-  const review = useLiveQuery(async () => {
-    const [habits, entries, sessions] = await Promise.all([
-      db.habits.toArray(), db.habitEntries.toArray(), db.focusSessions.toArray(),
-    ])
-    return faithDisciplineWeek(from, through, habitIds, [], habits, entries, sessions, [])
-  }, [from, through, selection])
+  const review = useLiveQuery(() =>
+    readFaithDisciplineWeek(from, through, habitIds), [from, through, selection])
   return <section aria-label="Weekly faith practice review" style={{display:'grid',gap:'.65rem',marginBlock:'1rem'}}>
     <h3 style={{margin:0}}>This week's recorded practices</h3>
     <p>Only habits you placed in the Faith &amp; Discipline group and explicitly tagged focus sessions are included. Rest days are neutral.</p>
