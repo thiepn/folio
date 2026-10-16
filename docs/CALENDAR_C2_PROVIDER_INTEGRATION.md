@@ -108,3 +108,41 @@ and unchanged availability, and mobile Chromium checks seven-day navigation.
 Live Google Account/Core calendar grant and trusted provider gateway remain
 blocked, along with remote KLIPS unattended refresh. This is a draft-only,
 implementation-first batch; no release/merge/deploy/migration executed.
+
+## C3 implementation: coherent task allocation and real commitments
+
+**Multi-day task scheduling (Folio owner):** the Calendar sidebar's *Spread
+work* control is a review-before-commit allocator for the original Folio task.
+It shows 7/14-day options, one/two sessions per day, 30–120-minute maximum
+session sizes, work-hour limits, a full proposal, the total time covered and
+any time still unscheduled. It respects every locally mirrored event, even
+when its source is hidden from the presentation. Original task deadlines
+are hard cutoffs; the distinct planned date and recurrence template are
+not silently edited. Free time is not treated as a task-completion grade.
+
+**Atomic acceptance and undo:** `calendarBatchAllocationC3` recomputes
+`planMultiDayTaskC3` over the latest original `tasks` and `timeBlocks`
+inside a single IndexedDB transaction. Stale task revisions or conflicting
+time blocks cancel the whole allocation; all created sessions use
+`timeBlockRepository.create`, the existing Folio schema and IDs. The
+in-session undo deletes only unchanged blocks that this batch itself created,
+and fails closed after user edits. It is not a cross-device reservation, nor
+an automated scheduler; stale cross-device changes require ordinary Folio
+sync review.
+
+**Recurring work and habit continuity:** the Calendar seven-day view adds
+counts for scheduled fixed habits, completed entries and *materialized*
+recurring task occurrences from Folio's authoritative models. The expandable
+section shows flexible weekly/monthly quotas without manufacturing specific
+due dates, a record of generated recurring occurrences, and navigation into
+the original Habits/Tasks editors. Pauses, recurrence exceptions, content
+rights and original grading are unchanged. A series with no materialized
+occurrences is not presented as already scheduled.
+
+**Qualification:** C3's scheduling calculations run in the existing
+`validate:calendar-c2-slots` release-source gate. Automatic Chromium
+desktop acceptance verifies preview-only, one-transaction creation,
+collision avoidance and guarded undo; mobile Chromium checks the
+seven-day habit/recurrence panel and responsive multi-day review. Provider
+Authorization remains blocked exactly as in C2. No hosted migrations,
+provider scopes, managed tasks, publication or deployment were performed.
