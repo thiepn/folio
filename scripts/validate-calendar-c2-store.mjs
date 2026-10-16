@@ -92,6 +92,26 @@ const run=async()=>{
   const again=await store.prepare({calendarId:source,mode:'full',events:[example('b')],nextSyncToken:'c5'})
   await store.apply(again)
   assert((await store.status(source)).hasCursor,'full cursor not restored')
+  const mirrored=[...inspect().blocks.values()].find(b=>b.source==='google')
+  assert(Boolean(mirrored),'full replacement event missing')
+  const outgoing=await store.queueChange(source,mirrored.id,'update',{summary:'Changed by owner'})
+  assert(outgoing.baseEtag==='"1"'&&(await store.pending(source)).length===1,'Google update was not durably staged')
+  let doubleQueued=false
+  try{await store.queueChange(source,mirrored.id,'delete')}catch{doubleQueued=true}
+  assert(doubleQueued,'duplicate pending Google mutation accepted')
+  await store.acknowledge(source,outgoing.id,example('b','"2"','Changed by owner'))
+  assert(!(await store.pending(source)).length,'acknowledged update remained pending')
+  const afterUpdate=[...inspect().blocks.values()].find(b=>b.source==='google')
+  assert(afterUpdate?.id===mirrored.id&&afterUpdate.title==='Changed by owner','acknowledged event did not reconcile')
+  const deletion=await store.queueChange(source,afterUpdate.id,'delete')
+  let wrongAck=false
+  try{await store.acknowledge(source,deletion.id,example('b','"3"','Still existing'))}catch{wrongAck=true}
+  assert(wrongAck&&(await store.pending(source)).length===1,'non-cancelled delete acknowledgement incorrectly cleared intent')
+  await store.acknowledge(source,deletion.id,null)
+  assert(![...inspect().blocks.values()].some(b=>b.source==='google'),'acknowledged deletion failed')
+  assert(!(await store.pending(source)).length,'deletion queue retained')
+  assert([...inspect().blocks.values()].some(b=>b.source==='folio'),'Google delete removed native Folio copy')
+
   console.log('C2_STORE_PASS atomic mirror apply/cursor, stable IDs, stale CAS, conflict copy, deletion, queued create, 410 recovery')
 }
 try{await run()}catch(error){console.error('C2_STORE_FAIL',error);process.exitCode=1}

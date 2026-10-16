@@ -113,6 +113,7 @@ check('C1 mobile selected-date habits expose keyboard operable controls',view.in
 
 check('C2 local KLIPS feed UI supports preview/apply/remove',sourcePanel.includes('Preview timetable refresh')&&sourcePanel.includes('Apply verified refresh')&&sourcePanel.includes('Remove selected source'))
 check('C2 Google backend authorization is explicitly absent',read('src/services/calendarGoogleC2.ts').includes('NO OAuth, fetch() or token access'))
+check('C2 source-owned blocks are excluded from generic Folio D18 cloud sync',read('src/services/syncSerialization.ts').includes("sourceOwnedCalendar")&&read('src/services/syncSerialization.ts').includes("if(type==='timeBlocks')return rows.filter")&&read('src/services/syncSerialization.ts').includes("if(entityType==='timeBlocks'&&sourceOwnedCalendar(row))return"))
 check('C2 source metadata stays out of D18 cloud replication',subscriptions.includes("'storage.calendarC2.feedIds'")&&read('src/services/syncSerialization.ts').includes("!key.startsWith('storage.')"))
 check('C2 cannot edit externally owned blocks',read('src/services/timeBlockService.ts').includes("assertWritable(before)")&&read('src/features/planner/TimeBlockModal.tsx').includes('External calendar event · read-only'))
 check('calendar data reloads by timezone',hook.includes('useCalendarData(fromDate: LocalDate, throughDate: LocalDate, timeZone')&&hook.includes('[fromDate, throughDate, timeZone]'))

@@ -24,3 +24,27 @@ The proposed Core gateway should expose authenticated endpoints for calendar sou
 ## Verification policy
 
 Do not mark live Google two-way or automatic KLIPS polling as PASS until a reviewed Account/Core route, granted calendar scope, disposable provider account, real timetable feed and browser/device acceptance have been demonstrated. Source TypeScript, unit/regression cases and local Chromium acceptance can PASS independently. Main, production, hosted migrations and other apps remain unchanged.
+
+## C2 extension — durable mirror ledger and open-tab KLIPS refresh
+
+`calendarGoogleStoreC2` holds Google cursors, baseline ETags, outstanding outbound
+create/update/delete intents, and remote conflict candidates in local-only `storage.*`
+settings. A completed remote page sequence is reconciled with Folio's existing
+TimeBlock entries in one IndexedDB transaction together with the new cursor.
+Concurrent/stale previews fail closed. Conflicts retain the remote candidate so
+the cursor may advance without silently losing provider changes; choosing
+**Keep local copy** creates a new Folio-owned event and then accepts the provider
+event. Google create/update/delete are locally staged only; they cannot dispatch
+until a reviewed Account/Core OAuth Calendar gateway is present. An ETag and
+provider identity must be checked by the gateway, not merely by browser code.
+
+`calendarKlipsSessionC2` permits optional read-only refresh during an active tab,
+with an in-memory source URL, bounded intervals, offline recovery and backoff.
+It stops upon local-source conflicts. Reloading closes the session. No private
+feed URL is saved or automatically synchronized to another app.
+
+Provider-owned `google` and `klips` TimeBlocks are excluded from Folio's
+unrelated D18 cloud sync, including outbound snapshot/individual operations
+and incoming mirror creation/deletion, until a specific provider sharing
+boundary is reviewed. Explicit user-created Folio copies remain Folio-owned
+and retain ordinary sync behavior. No production grants were altered.
