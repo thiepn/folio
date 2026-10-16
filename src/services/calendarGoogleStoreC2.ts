@@ -263,7 +263,7 @@ export const calendarGoogleStoreC2={
         if(!event||event.status==='cancelled'||!event.etag)
           throw new Error('Google write must return a confirmed event with ETag.')
         const mapped=normalizeGoogleEvent(calendarId,event)
-        if(!mapped||mapped.sourceCalendar!==source)throw new Error('Acknowledged event has invalid source.')
+        if(!mapped||!mapped.sourceUid||mapped.sourceCalendar!==source)throw new Error('Acknowledged event has invalid source.')
         if(pending.operation==='update'&&(!current||pending.providerKey!==mapped.sourceUid))
           throw new Error('Updated Google event changed identity.')
         if(pending.operation==='create'&&(!pending.folioBlockId||!(await db.timeBlocks.get(pending.folioBlockId))))
