@@ -60,7 +60,7 @@ import { addLocalDays, localDateKey } from '../domain/date'
 import { taskService } from '../services/taskService'
 import { dailyPlanningService } from '../services/dailyPlanningService'
 import { projectService } from '../services/projectService'
-import { timeBlockService } from '../services/timeBlockService'
+import { folioCalendarPort } from '../services/folioCalendarPort'
 import { recurrenceService } from '../services/recurrenceService'
 import { focusService } from '../services/focusService'
 import { focusSettingsService } from '../services/focusSettingsService'
@@ -97,7 +97,7 @@ import { currentTaskId, focusRelativeTask } from '../features/power/taskKeyboard
 import { LEGACY_LAST_VIEW_KEY } from '../legacy/compat'
 
 const LAST_VIEW_KEY = 'folio:last-view:v1'
-const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'projects', 'lists', 'notes', 'habits', 'automation', 'share', 'integrations', 'sync', 'matrix', 'analytics', 'review']
+const NAV_VIEWS: NavView[] = ['today', 'inbox', 'search', 'planner', 'calendar', 'projects', 'lists', 'notes', 'habits', 'automation', 'share', 'integrations', 'sync', 'matrix', 'analytics', 'review']
 
 function viewFromUrl(): NavView | null {
   try {
@@ -189,7 +189,7 @@ function AppContent() {
   const dailyWrapUpKey = `daily.wrapup.${data?.today ?? localDateKey()}`
   const dailyWrapUp = useLiveQuery(() => settingsRepository.get<string>(dailyWrapUpKey, ''), [dailyWrapUpKey], '') ?? ''
   const shortcuts = useMemo<ShortcutMap>(() => normalizeShortcutMap(storedShortcuts), [storedShortcuts])
-  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', search: 'Search', planner: 'Planner', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', automation: 'Automate', share: 'Share', integrations: 'Integrations', sync: 'Sync', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
+  const viewAnnouncement = useMemo(() => ({ today: 'Today', inbox: 'Inbox', search: 'Search', planner: 'Planner', calendar: 'Calendar', projects: 'Projects', lists: 'Lists', notes: 'Notes', habits: 'Habits', automation: 'Automate', share: 'Share', integrations: 'Integrations', sync: 'Sync', matrix: 'Matrix', analytics: 'Analytics', review: 'Review' }[view]), [view])
 
   const selectedTask = useMemo(() => data?.allTasks.find((task) => task.id === selectedTaskId) ?? data?.subtasks.find((task) => task.id === selectedTaskId) ?? null, [data?.allTasks, data?.subtasks, selectedTaskId])
   const selectedSeries = useMemo(() => selectedTask?.seriesId ? data?.recurringSeries.find((series) => series.id === selectedTask.seriesId) ?? null : null, [data?.recurringSeries, selectedTask])
@@ -601,17 +601,17 @@ function AppContent() {
     })
   }
 
-  async function toggleHabit(id: string) {
-    registerUndo(await habitService.toggleComplete(id, data?.today ?? localDateKey()))
+  async function toggleHabit(id: string, date: string = data?.today ?? localDateKey()) {
+    registerUndo(await folioCalendarPort.toggleHabit(id, date))
   }
 
-  async function incrementHabit(id: string, minutes: number) {
-    registerUndo(await habitService.increment(id, data?.today ?? localDateKey(), minutes))
+  async function incrementHabit(id: string, minutes: number, date: string = data?.today ?? localDateKey()) {
+    registerUndo(await folioCalendarPort.incrementHabit(id, date, minutes))
   }
 
-  async function toggleHabitSkip(id: string) {
+  async function toggleHabitSkip(id: string, date: string = data?.today ?? localDateKey()) {
     const preview = habitData?.habits.find((habit) => habit.id === id)
-    registerUndo(preview?.skipped ? await habitService.unskip(id, data?.today ?? localDateKey()) : await habitService.skip(id, data?.today ?? localDateKey()))
+    registerUndo(preview?.skipped && date === (data?.today ?? localDateKey()) ? await habitService.unskip(id, date) : await habitService.skip(id, date))
   }
 
   async function createHabit(input: HabitCreateInput) {
@@ -915,6 +915,7 @@ function AppContent() {
             : view === 'lists' ? `${data.lists.length} active lists · ${data.tags.length} tags · ${data.customSmartViews.length} smart views`
           : view === 'notes' ? 'Markdown · attachments · offline search'
           : view === 'habits' ? `${habitData.dueToday} due today`
+            : view === 'calendar' ? 'Local Folio planning · connected calendars come later'
             : view === 'automation' ? 'Reusable templates, explicit rules, and run history'
             : view === 'share' ? 'Portable handoff packages with explicit view/copy boundaries'
             : view === 'integrations' ? 'Calendar, email, Share Target, protocol URLs, and external triggers'
@@ -982,20 +983,25 @@ function AppContent() {
             }}
           /> : null}
           {view === 'inbox' ? <InboxView tasks={data.inboxTasks} projects={data.projects} onAdd={() => openAdd('inbox')} onTrash={() => setTrashOpen(true)} onToggle={(id) => void toggleTask(id)} onOpen={setSelectedTaskId} onProcess={(id, options) => void taskService.processInbox(id, options).then(async (undo) => { if (options?.plannedDate) await dailyPlanningService.markDraft(options.plannedDate); registerUndo(undo) })} /> : null}
-          {view === 'planner' ? <PlannerView
+          {(view === 'planner' || view === 'calendar') ? <PlannerView
+            initialTab={view === 'calendar' ? 'calendar' : 'agenda'}
+            onHabitToggle={(id, date) => void toggleHabit(id, date)}
+            onHabitIncrement={(id, amount, date) => void incrementHabit(id, amount, date)}
+            onHabitSkip={(id, date) => void folioCalendarPort.toggleHabitRest(id, date).then(registerUndo)}
+            onViewHabits={() => navigate('habits')}
             today={data.today}
             onToggle={(id) => void toggleTask(id)}
             onOpen={setSelectedTaskId}
             onMoveDate={(id, date) => void moveTaskToExactDate(id, date)}
             onSetCapacity={(date, minutes) => void setPlannerCapacity(date, minutes)}
             onAddForDate={(date) => openAdd('todo', '', date)}
-            onCreateTaskBlock={(taskId, date, startMinute, durationMinutes, timeZone) => void timeBlockService.createTaskBlock(taskId, date, startMinute, durationMinutes, timeZone).then(({ undo }) => registerUndo(undo))}
-            onCreateEvent={(title, date, startMinute, durationMinutes, details) => void timeBlockService.createEvent(title, date, startMinute, durationMinutes, details).then(({ undo }) => registerUndo(undo))}
-            onUpdateBlock={(id, date, startMinute, durationMinutes, timeZone) => void timeBlockService.updateTiming(id, date, startMinute, durationMinutes, timeZone).then(registerUndo)}
-            onUpdateEvent={(id, title, date, startMinute, durationMinutes, details) => void timeBlockService.updateEvent(id, title, date, startMinute, durationMinutes, details).then(registerUndo)}
-            onResizeBlock={(id, durationMinutes) => void timeBlockService.resize(id, durationMinutes).then(registerUndo)}
-            onDeleteBlock={(id) => void timeBlockService.remove(id).then(registerUndo)}
-            onDuplicateBlock={(id, date, startMinute, timeZone) => void timeBlockService.duplicate(id, date, startMinute, timeZone).then(({ undo }) => registerUndo(undo))}
+            onCreateTaskBlock={(taskId, date, startMinute, durationMinutes, timeZone) => void folioCalendarPort.createTaskBlock(taskId, date, startMinute, durationMinutes, timeZone).then(({ undo }) => registerUndo(undo))}
+            onCreateEvent={(title, date, startMinute, durationMinutes, details) => void folioCalendarPort.createEvent(title, date, startMinute, durationMinutes, details).then(({ undo }) => registerUndo(undo))}
+            onUpdateBlock={(id, date, startMinute, durationMinutes, timeZone) => void folioCalendarPort.updateTiming(id, date, startMinute, durationMinutes, timeZone).then(registerUndo)}
+            onUpdateEvent={(id, title, date, startMinute, durationMinutes, details) => void folioCalendarPort.updateEvent(id, title, date, startMinute, durationMinutes, details).then(registerUndo)}
+            onResizeBlock={(id, durationMinutes) => void folioCalendarPort.resize(id, durationMinutes).then(registerUndo)}
+            onDeleteBlock={(id) => void folioCalendarPort.remove(id).then(registerUndo)}
+            onDuplicateBlock={(id, date, startMinute, timeZone) => void folioCalendarPort.duplicate(id, date, startMinute, timeZone).then(({ undo }) => registerUndo(undo))}
           /> : null}
           {view === 'projects' ? (selectedProjectId ? <ProjectDetailView
             project={selectedProject}

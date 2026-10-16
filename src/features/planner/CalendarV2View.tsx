@@ -7,7 +7,8 @@ import {
 } from '../../domain/date'
 import type { LocalDate, TimeBlockEntity } from '../../domain/models'
 import { useCalendarData } from '../../hooks/useCalendarData'
-import type { TaskPreview } from '../../types/ui'
+import { useHabitData } from '../../hooks/useHabitData'
+import type { HabitPreview, TaskPreview } from '../../types/ui'
 import {
   allDayBlocksForDate, blockConflicts, blockEndMinuteForDate, blockStartMinuteForDate,
   blockTouchesDate, CALENDAR_END_MINUTE, CALENDAR_PX_PER_MINUTE, CALENDAR_START_MINUTE,
@@ -28,12 +29,17 @@ interface CalendarEventDetails {
 
 export function CalendarV2View({
   today, anchorDate, onSelectedDateChange, onOpenTask,
+  onHabitToggle, onHabitIncrement, onHabitSkip, onViewHabits,
   onCreateTaskBlock, onCreateEvent, onUpdateBlock, onUpdateEvent, onResizeBlock, onDeleteBlock, onDuplicateBlock,
 }: {
   today: LocalDate
   anchorDate?: LocalDate
   onSelectedDateChange?: (date: LocalDate) => void
   onOpenTask?: (id: string) => void
+  onHabitToggle?: (id: string, date: LocalDate) => void | Promise<void>
+  onHabitIncrement?: (id: string, amount: number, date: LocalDate) => void | Promise<void>
+  onHabitSkip?: (id: string, date: LocalDate) => void | Promise<void>
+  onViewHabits?: () => void
   onCreateTaskBlock: (taskId: string, date: LocalDate, startMinute: number, durationMinutes: number, timeZone?: string) => void | Promise<void>
   onCreateEvent: (title: string, date: LocalDate, startMinute: number, durationMinutes: number, details?: CalendarEventDetails) => void | Promise<void>
   onUpdateBlock: (id: string, date: LocalDate, startMinute: number, durationMinutes: number, timeZone?: string) => void | Promise<void>
@@ -54,6 +60,7 @@ export function CalendarV2View({
 
   const range = useMemo(() => calendarRangeForMode(mode, selectedDate), [mode, selectedDate])
   const data = useCalendarData(range.from, range.through, timeZone)
+  const habitData = useHabitData(selectedDate)
 
   useEffect(() => {
     if (!anchorDate) return
@@ -95,6 +102,8 @@ export function CalendarV2View({
       .filter((task) => {
         if (taskSource === 'day') return task.plannedDate === selectedDate
         if (taskSource === 'all') return true
+        if (taskSource === 'due') return Boolean(task.deadline && task.deadline <= selectedDate)
+        if (taskSource === 'unplanned') return !task.plannedDate
         return sourceIds?.has(task.id)
       })
       .filter((task) => taskRemaining(task, data.allTaskBlocks) > 0)
@@ -267,6 +276,12 @@ export function CalendarV2View({
           onOpenTask={onOpenTask}
           onSchedule={scheduleTask}
           compact={compact}
+          habits={habitData?.todayHabits ?? []}
+          habitLoaded={Boolean(habitData)}
+          onHabitToggle={onHabitToggle}
+          onHabitIncrement={onHabitIncrement}
+          onHabitSkip={onHabitSkip}
+          onViewHabits={onViewHabits}
         />
 
         <main className="calendar-v2-main">
@@ -344,7 +359,7 @@ export function CalendarV2View({
   )
 }
 
-function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, taskSource, onTaskSource, smartViews, search, onSearch, onOpenTask, onSchedule, compact }: {
+function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, taskSource, onTaskSource, smartViews, search, onSearch, onOpenTask, onSchedule, compact, habits, habitLoaded, onHabitToggle, onHabitIncrement, onHabitSkip, onViewHabits }: {
   today: LocalDate
   selectedDate: LocalDate
   onSelectDate: (date: LocalDate) => void
@@ -358,6 +373,12 @@ function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, 
   onOpenTask?: (id: string) => void
   onSchedule: (task: TaskPreview, date?: LocalDate, startMinute?: number) => void
   compact: boolean
+  habits: HabitPreview[]
+  habitLoaded: boolean
+  onHabitToggle?: (id: string, date: LocalDate) => void | Promise<void>
+  onHabitIncrement?: (id: string, amount: number, date: LocalDate) => void | Promise<void>
+  onHabitSkip?: (id: string, date: LocalDate) => void | Promise<void>
+  onViewHabits?: () => void
 }) {
   return <aside className="calendar-v2-sidebar">
     <MiniCalendar selectedDate={selectedDate} today={today} onSelect={onSelectDate} />
@@ -366,6 +387,8 @@ function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, 
       <select value={taskSource} onChange={(event) => onTaskSource(event.target.value)}>
         <option value="day">Planned for selected day</option>
         <option value="all">All work needing time</option>
+        <option value="due">Due or overdue by selected date</option>
+        <option value="unplanned">No planned work date</option>
         <optgroup label="Smart Views">
           {smartViews.map((view) => <option value={'smart:' + view.id} key={view.id}>{view.name}</option>)}
         </optgroup>
@@ -383,12 +406,35 @@ function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, 
         >
           <button onClick={() => onOpenTask?.(task.id)}>
             <strong>{task.title}</strong>
-            <span>{[task.project, task.list, task.plannedDate ? 'Plan ' + task.plannedDate : 'No planned date'].filter(Boolean).join(' · ')}</span>
+            <span>{[task.project, task.list, task.plannedDate ? 'Plan ' + task.plannedDate : 'No planned date', task.deadline ? 'Due ' + task.deadline : ''].filter(Boolean).join(' · ')}</span>
           </button>
           <div><span>{formatDuration(taskRemaining(task, allBlocks))}</span><button onClick={() => onSchedule(task)}>Schedule</button></div>
         </article>)}
         {!tasks.length ? <div className="calendar-empty">No tasks in this source need more clock time.</div> : null}
       </div>
+    </section>
+    <section className="calendar-habit-source" aria-label="Habit progress for selected day">
+      <header><span className="eyebrow">Habits · {selectedDate}</span><button type="button" onClick={onViewHabits}>Manage</button></header>
+      <p>Folio activity entries determine completion; a scheduled habit is not automatically completed.</p>
+      {!habitLoaded ? <span className="calendar-empty">Loading habits…</span> : null}
+      {habitLoaded && !habits.length ? <span className="calendar-empty">No habits scheduled or in progress on this date.</span> : null}
+      <div className="calendar-habit-source__list">
+        {habits.map((habit) => <div key={habit.id} className="calendar-habit-row">
+          <div className="calendar-habit-row__meta"><strong>{habit.title}</strong><span>{habit.paused ? 'Paused' : habit.skipped ? 'Rest day' : habit.completed ? 'Completed' : habit.progress ?? habit.periodProgress ?? 'Not yet completed'}</span></div>
+          <div className="calendar-habit-row__actions">
+            <button type="button" disabled={habit.paused || !onHabitToggle} onClick={() => onHabitToggle?.(habit.id, selectedDate)} aria-label={(habit.completed ? 'Clear completion for ' : 'Complete ') + habit.title}>{habit.completed ? 'Undo' : 'Done'}</button>
+            {habit.kind !== 'check' ? <button type="button" disabled={habit.paused || !onHabitIncrement} onClick={() => onHabitIncrement?.(habit.id, habit.kind === 'duration' ? 15 : 1, selectedDate)} aria-label={'Add progress to ' + habit.title}>+{habit.kind === 'duration' ? '15m' : '1'}</button> : null}
+            <button type="button" disabled={habit.paused || !onHabitSkip} onClick={() => onHabitSkip?.(habit.id, selectedDate)}>{habit.skipped ? 'Rest ✓' : 'Rest'}</button>
+          </div>
+        </div>)}
+      </div>
+    </section>
+    <section className="calendar-provider-status" aria-label="Calendar connection status">
+      <strong>Sources</strong>
+      <span>Folio · Local planning ready</span>
+      <span>Google Calendar · Not connected</span>
+      <span>KLIPS iCal · Not connected</span>
+      <small>Imported ICS events are local snapshots, not live subscriptions. External synchronization is not enabled in C1.</small>
     </section>
   </aside>
 }

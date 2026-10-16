@@ -14,6 +14,7 @@ const destinationGroups: Array<{ label: string; items: Destination[] }> = [
     { view: 'habits', label: 'Habits', note: 'Rhythms, flexible schedules and weekly adherence', icon: 'habit' },
   ]},
   { label: 'Plan & review', items: [
+    { view: 'planner', label: 'Planner', note: 'Daily and weekly capacity, forecasts and work planning', icon: 'calendar' },
     { view: 'matrix', label: 'Matrix', note: 'Urgency, importance, deadlines and countdowns', icon: 'matrix' },
     { view: 'analytics', label: 'Analytics', note: 'Trends, workload, focus, habits and reports', icon: 'analytics' },
     { view: 'review', label: 'Review', note: 'Planning feedback and weekly review', icon: 'review' },

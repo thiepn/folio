@@ -837,3 +837,22 @@
     display: none;
   }
 }
+
+
+/* Calendar C1 — Folio-authoritative habit activity and explicit provider status */
+.calendar-habit-source,.calendar-provider-status{border:1px solid var(--line);padding:12px;min-width:0;background:var(--surface);display:grid;gap:8px}
+.calendar-habit-source>header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.calendar-habit-source>header button{background:transparent;border:0;color:var(--text-soft);text-decoration:underline;cursor:pointer}
+.calendar-habit-source>p,.calendar-provider-status>small{font-size:11px;line-height:1.5;color:var(--muted);margin:0}
+.calendar-habit-source__list{display:grid;gap:0;max-height:290px;overflow:auto}
+.calendar-habit-row{padding:9px 0;display:grid;gap:7px;border-top:1px solid var(--line)}
+.calendar-habit-row__meta{display:grid;gap:3px;min-width:0}
+.calendar-habit-row__meta strong{font-size:12px;overflow-wrap:anywhere}
+.calendar-habit-row__meta span,.calendar-provider-status>span{font-size:11px;color:var(--muted)}
+.calendar-habit-row__actions{display:flex;flex-wrap:wrap;gap:6px}
+.calendar-habit-row__actions button{min-height:34px;padding:6px 10px;border:1px solid var(--line);background:var(--surface-input);color:var(--text);cursor:pointer}
+.calendar-habit-row__actions button:disabled{opacity:.5;cursor:not-allowed}
+.calendar-habit-row__actions button:focus-visible,.calendar-habit-source>header button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.calendar-provider-status>strong{font-size:12px}
+@media(max-width:900px){.calendar-v2-sidebar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.calendar-provider-status{grid-column:1/-1}}
+@media(max-width:760px){.calendar-v2-sidebar{grid-template-columns:1fr}.calendar-provider-status{grid-column:auto}.calendar-habit-row__actions button{min-height:44px}}
