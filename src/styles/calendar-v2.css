@@ -869,3 +869,22 @@
 .calendar-c2-preview{display:grid;gap:6px;border:1px solid var(--accent-line);padding:8px}
 .calendar-c2-sources .calendar-c2-error,.calendar-c2-sources .calendar-c2-danger{color:var(--warning)}
 @media(max-width:760px){.calendar-c2-source-controls button{min-height:44px}}
+
+/* Connected-provider workspaces retain Folio's square, compact utility styling. */
+.calendar-google-workspace{border-top:1px solid var(--line);padding-top:12px;display:grid;gap:9px;min-width:0}
+.calendar-google-workspace header{display:grid;gap:5px}
+.calendar-google-workspace header strong{font-size:12px}
+.calendar-google-workspace p,.calendar-google-workspace small{font-size:11px;line-height:1.5;color:var(--muted);margin:0;overflow-wrap:anywhere}
+.calendar-google-workspace label,.calendar-google-workspace__section{display:grid;gap:6px;font-size:11px;min-width:0}
+.calendar-google-workspace__section{border:1px solid var(--line);padding:9px}
+.calendar-google-workspace__section>strong{font-size:12px}
+.calendar-google-workspace__field,.calendar-google-workspace__actions{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.calendar-google-workspace input,.calendar-google-workspace select{background:var(--surface-input);color:var(--text);border:1px solid var(--line);padding:7px;min-width:0;width:100%;font:inherit}
+.calendar-google-workspace__field input{flex:1 1 110px;width:auto}
+.calendar-google-workspace button{min-height:35px;cursor:pointer;padding:7px 10px;color:var(--text);background:var(--surface-input);border:1px solid var(--line);text-align:left}
+.calendar-google-workspace button:disabled{opacity:.5;cursor:not-allowed}
+.calendar-google-workspace button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.calendar-google-workspace__item{display:grid;gap:6px;padding:8px 0;border-top:1px solid var(--line)}
+.calendar-google-workspace__item>span{overflow-wrap:anywhere}
+.calendar-google-workspace [role="alert"]{color:var(--warning)}
+@media(max-width:760px){.calendar-google-workspace button{min-height:44px}}

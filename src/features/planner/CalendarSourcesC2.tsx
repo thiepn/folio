@@ -4,6 +4,7 @@ import { addLocalDays } from '../../domain/date'
 import type { LocalDate } from '../../domain/models'
 import { calendarSubscriptionsC2, type FeedPreviewC2 } from '../../services/calendarSubscriptionsC2'
 import { calendarKlipsSessionC2, type KlipsSessionStateC2 } from '../../services/calendarKlipsSessionC2'
+import { CalendarGoogleWorkspaceC2 } from './CalendarGoogleWorkspaceC2'
 
 /** Real read-only local KLIPS feed updates; no stored capability URL or server proxy. */
 export function CalendarSourcesC2({selectedDate}:{selectedDate:LocalDate}) {
@@ -107,5 +108,6 @@ export function CalendarSourcesC2({selectedDate}:{selectedDate:LocalDate}) {
     <small>Direct browser fetch requires the university to permit CORS. If blocked, paste the ICS feed. Automatic refresh, when enabled, runs only while the current browser tab remains open and can read the feed. A server-scheduled subscription is not active.</small>
     {error?<p role="alert" className="calendar-c2-error">{error}</p>:null}
     {notice?<p role="status">{notice}</p>:null}
+    <CalendarGoogleWorkspaceC2 />
   </section>
 }
