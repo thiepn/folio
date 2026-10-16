@@ -67,4 +67,37 @@ const conflict=await executeReviewedDisciplineCommand(command,{
 assert.equal(conflict.result,'conflict');assert.equal(writes,0)
 console.log('PASS FD1: owner command denial and stale original-record CAS')
 
+// Verify the real same-origin Folio bridge without opening any user records.
+fs.writeFileSync(path.join(services,'fake-folio-db.mjs'),`
+const tables={
+ tasks:[{id:'original-t1',title:'Study',status:'todo',plannedDate:'2026-10-16',priority:'high'}],
+ timeBlocks:[{id:'original-b1',title:'Prayer',start:'2099-01-01T08:00:00.000Z',end:'2099-01-01T08:30:00.000Z'}],
+ notes:[{id:'original-n1',title:'Title only',body:'PRIVATE_JOURNAL_BODY',archived:false,updatedAt:'2026-10-16T10:00:00.000Z'}],
+ habits:[{id:'original-h1',title:'Practice',target:1,archived:false,sortOrder:1}],
+}
+const wrap=(key)=>({toArray:async()=>tables[key]})
+export const db={
+ tasks:wrap('tasks'),timeBlocks:wrap('timeBlocks'),notes:wrap('notes'),
+ habits:wrap('habits'),
+ habitEntries:{where:()=>({equals:()=>({toArray:async()=>[{habitId:'original-h1',value:1,status:'completed'}]})})},
+ transaction:async(...args)=>args.at(-1)(),
+}
+`)
+fs.writeFileSync(path.join(services,'fake-folio-date.mjs'),
+  'export const localDateKey=()=>"2026-10-16"')
+const source=transpile('src/services/folioHubDailyShare.ts')
+  .replace("from '../db/database'","from './fake-folio-db.mjs'")
+  .replace("from '../domain/date'","from './fake-folio-date.mjs'")
+fs.writeFileSync(path.join(services,'folioHubDailyShare.mjs'),source)
+const bridge=await import(pathToFileURL(path.join(services,'folioHubDailyShare.mjs')).href)
+const nonce='0123456789abcdef0123456789abcdef'
+assert.equal(bridge.parseHubShareNonce('?hubBridge='+nonce,'https://thiepn.dev',true),nonce)
+assert.equal(bridge.parseHubShareNonce('?hubBridge='+nonce,'https://evil.example',true),null)
+assert.equal(bridge.parseHubShareNonce('?hubBridge='+nonce,'https://thiepn.dev',false),null)
+const sourceSnapshot=await bridge.readFolioHubDailyShare()
+assert.equal(sourceSnapshot.schema,'thiepn:folio-hub-daily')
+assert.equal(sourceSnapshot.habits[0].id,'original-h1')
+assert.equal(JSON.stringify(sourceSnapshot).includes('PRIVATE_JOURNAL_BODY'),false)
+console.log('PASS FD1: original-source Folio summary, same-origin nonce and no note-body leak')
+
 fs.rmSync(temp,{recursive:true,force:true})
