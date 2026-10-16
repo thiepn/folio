@@ -191,6 +191,42 @@ async function blocks(page){
     await mobile.locator('.calendar-c2-week-strip__days button').nth(1).click()
     if(await mobile.getByLabel('Selected calendar date').inputValue()!=='2026-10-17')
       throw new Error('Mobile seven-day date selection did not navigate.')
+    const recurringSection=mobile.getByRole('region',{name:'Recurring work and flexible habits'})
+    await recurringSection.waitFor()
+    await recurringSection.getByRole('button',{name:'Review seven-day commitments'}).click()
+    await recurringSection.getByRole('region',{name:'Flexible habit targets'}).waitFor()
+    await recurringSection.getByRole('region',{name:'Materialized recurring tasks'}).waitFor()
+    // Native mobile allocation controls: no desktop-only drag dependency.
+    await mobile.evaluate(async()=>{
+      const req=indexedDB.open('folio')
+      const db=await new Promise((res,rej)=>{req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error)})
+      await new Promise((res,rej)=>{
+        const tx=db.transaction('tasks','readwrite')
+        tx.objectStore('tasks').put({
+          id:'c3-mobile-task',title:'Mobile batch task',description:'',status:'todo',
+          priority:'normal',plannedDate:'2026-10-17',deadline:'2026-10-20',
+          estimatedMinutes:120,tags:[],tagIds:[],checklist:[],comments:[],activity:[],
+          progressMode:'manual',progressPercent:0,pinned:false,
+          blockedByTaskIds:[],sortOrder:0,rescheduleCount:0,timelineMilestone:false,
+          createdAt:'2026-10-16T09:00:00.000Z',updatedAt:'2026-10-16T09:00:00.000Z'
+        })
+        tx.oncomplete=res;tx.onerror=()=>rej(tx.error)
+      })
+      db.close()
+    })
+    await mobile.reload({waitUntil:'domcontentloaded'})
+    await mobile.locator('#main-content').waitFor()
+    await mobile.locator('.mobile-nav').getByRole('button',{name:'Calendar'}).click()
+    await mobile.getByLabel('Selected calendar date').fill('2026-10-17')
+    const mobileTask=mobile.locator('.calendar-task-card').filter({hasText:'Mobile batch task'})
+    await mobileTask.waitFor()
+    await mobileTask.getByRole('button',{name:'Spread work'}).click()
+    const mobilePlan=mobile.getByRole('dialog',{name:'Spread task over multiple days'})
+    await mobilePlan.waitFor()
+    await mobilePlan.getByText('2 sessions').waitFor()
+    if(await mobile.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2))
+      throw new Error('C3 mobile allocation dialog overflows viewport.')
+    await mobilePlan.getByRole('button',{name:'Close multi-day planner'}).click()
     const overflow=await mobile.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2)
     if(overflow)throw new Error('Calendar C2 mobile horizontal overflow.')
     if(errors.length)throw new Error('C2 runtime page errors: '+errors.join('; '))
