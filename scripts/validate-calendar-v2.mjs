@@ -108,7 +108,7 @@ check('C1 owner-only calendar port, no remote gateway',calendarPort.includes("co
 check('C1 exact selected-day habit activity uses canonical Folio hook',view.includes('useHabitData(selectedDate)')&&habitHook.includes('habitRepository.listAllEntries()'))
 check('C1 calendar habit operations delegate to existing Folio habit service',calendarPort.includes('habitService.toggleComplete')&&calendarPort.includes('habitService.increment')&&calendarPort.includes('habitService.skip')&&view.includes('onHabitToggle')&&view.includes('onHabitIncrement')&&view.includes('onHabitSkip'))
 check('C1 planned day and hard deadline stay separate in scheduling sidebar',view.includes('Due or overdue by selected date')&&view.includes('No planned work date')&&view.includes("'Due ' + task.deadline")&&view.includes("'Plan ' + task.plannedDate"))
-check('C1/C2 provider capability truthfulness',sourcePanel.includes('Not connected (Account/Core consent')&&sourcePanel.includes('manual local refresh')&&view.includes('<CalendarSourcesC2'))
+check('C1/C2 provider capability truthfulness',sourcePanel.includes('Not connected (Account/Core consent')&&sourcePanel.includes('while this tab is open')&&sourcePanel.includes('Not connected (Account/Core consent')&&view.includes('<CalendarSourcesC2'))
 check('C1 mobile selected-date habits expose keyboard operable controls',view.includes('type="button" disabled={habit.paused')&&css.includes('.calendar-habit-row__actions button:focus-visible'))
 
 check('C2 local KLIPS feed UI supports preview/apply/remove',sourcePanel.includes('Preview timetable refresh')&&sourcePanel.includes('Apply verified refresh')&&sourcePanel.includes('Remove selected source'))

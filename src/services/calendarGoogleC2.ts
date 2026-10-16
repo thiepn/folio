@@ -39,11 +39,15 @@ export class GoogleSyncTokenExpired extends Error {
 const validId = (value: string) => Boolean(value && value.length <= 1024 && !/[\x00-\x1f]/.test(value))
 export function googleSourceKey(calendarId: string) {
   if (!validId(calendarId)) throw new Error('Invalid Google calendar ID.')
-  return 'gcal:' + encodeURIComponent(calendarId)
+  const key='gcal:' + encodeURIComponent(calendarId)
+  if(key.length>200)throw new Error('Google Calendar ID exceeds canonical source identity limits.')
+  return key
 }
 export function googleEventKey(calendarId: string, eventId: string) {
   if (!validId(eventId)) throw new Error('Invalid Google event ID.')
-  return googleSourceKey(calendarId) + ':' + encodeURIComponent(eventId)
+  const key=googleSourceKey(calendarId) + ':' + encodeURIComponent(eventId)
+  if(key.length>500)throw new Error('Google event ID exceeds Folio source identity limits.')
+  return key
 }
 /** A page sequence must complete before its token can be persisted. */
 export async function pullGoogleDelta(transport: GooglePullTransportC2, calendarId: string, syncToken?: string): Promise<GoogleDeltaC2> {
