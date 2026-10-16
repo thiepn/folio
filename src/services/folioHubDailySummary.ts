@@ -21,7 +21,7 @@ export interface FolioHubDailySummary {
 export async function createFolioHubDailySummary(now = new Date()): Promise<FolioHubDailySummary> {
   const today = localDateKey(now);
   const [tasks, planned, blocks, notes, habits, entries] = await db.transaction('r',
-    db.tasks, db.dailyPlanItems, db.timeBlocks, db.notes, db.habits, db.habitEntries,
+    [db.tasks, db.dailyPlanItems, db.timeBlocks, db.notes, db.habits, db.habitEntries],
     async () => Promise.all([
       db.tasks.toArray(), db.dailyPlanItems.where('date').equals(today).toArray(),
       db.timeBlocks.toArray(), db.notes.toArray(), db.habits.toArray(),
