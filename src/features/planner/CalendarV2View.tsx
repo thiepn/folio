@@ -16,6 +16,7 @@ import {
   openMinutesInWindow, remainingTaskMinutes, roundMinute,
 } from './calendarLogic'
 import { TimeBlockModal, type TimeBlockEditorPayload, type TimeBlockEditorState } from './TimeBlockModal'
+import { CalendarSourcesC2 } from './CalendarSourcesC2'
 
 export type CalendarV2Mode = 'agenda' | 'day' | '3day' | 'week' | 'multiweek' | 'month' | 'year'
 
@@ -429,13 +430,7 @@ function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, 
         </div>)}
       </div>
     </section>
-    <section className="calendar-provider-status" aria-label="Calendar connection status">
-      <strong>Sources</strong>
-      <span>Folio · Local planning ready</span>
-      <span>Google Calendar · Not connected</span>
-      <span>KLIPS iCal · Not connected</span>
-      <small>Imported ICS events are local snapshots, not live subscriptions. External synchronization is not enabled in C1.</small>
-    </section>
+    <CalendarSourcesC2 selectedDate={selectedDate} />
   </aside>
 }
 

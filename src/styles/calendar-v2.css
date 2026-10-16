@@ -856,3 +856,16 @@
 .calendar-provider-status>strong{font-size:12px}
 @media(max-width:900px){.calendar-v2-sidebar{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.calendar-provider-status{grid-column:1/-1}}
 @media(max-width:760px){.calendar-v2-sidebar{grid-template-columns:1fr}.calendar-provider-status{grid-column:auto}.calendar-habit-row__actions button{min-height:44px}}
+
+/* Calendar C2 source management */
+.calendar-c2-sources{display:grid;gap:9px;padding:12px;border:1px solid var(--line);background:var(--surface);min-width:0}
+.calendar-c2-sources header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:5px}
+.calendar-c2-sources p,.calendar-c2-sources small{font-size:11px;color:var(--muted);line-height:1.5;margin:0}
+.calendar-c2-source-controls{display:grid;gap:8px}
+.calendar-c2-source-controls label{display:grid;gap:4px;font-size:11px;color:var(--text)}
+.calendar-c2-source-controls input,.calendar-c2-source-controls select,.calendar-c2-source-controls textarea{min-width:0;width:100%;font:inherit;padding:8px;border:1px solid var(--line);background:var(--surface-input);color:var(--text)}
+.calendar-c2-source-controls button{min-height:35px;padding:7px 10px;color:var(--text);background:var(--surface-input);border:1px solid var(--line);text-align:left;cursor:pointer}
+.calendar-c2-source-controls button:disabled{opacity:.55;cursor:not-allowed}
+.calendar-c2-preview{display:grid;gap:6px;border:1px solid var(--accent-line);padding:8px}
+.calendar-c2-sources .calendar-c2-error,.calendar-c2-sources .calendar-c2-danger{color:var(--warning)}
+@media(max-width:760px){.calendar-c2-source-controls button{min-height:44px}}
