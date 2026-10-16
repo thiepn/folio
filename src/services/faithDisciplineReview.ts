@@ -1,4 +1,5 @@
 import type { FocusSessionEntity, HabitEntity, HabitEntryEntity, LocalDate, TimeBlockEntity } from '../domain/models'
+import { localDateKey } from '../domain/date'
 
 /**
  * Read-only, user-selected review over original Folio records. No new progress
@@ -22,7 +23,9 @@ export function faithDisciplineWeek(
   blocks: readonly TimeBlockEntity[],
 ): FaithDisciplineWeek {
   const inRange = (day: string) => day >= from && day <= through
-  const parse = (value:string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value+'T12:00:00Z'))
+  const parse = (value:string) => /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    !Number.isNaN(Date.parse(value+'T12:00:00Z')) &&
+    new Date(value+'T12:00:00Z').toISOString().slice(0,10) === value
   if (!parse(from) || !parse(through) || from > through ||
       Date.parse(through+'T12:00:00Z')-Date.parse(from+'T12:00:00Z')>6*86400000)
     throw new Error('Choose a valid week of no more than seven days.')
@@ -43,7 +46,7 @@ export function faithDisciplineWeek(
   // An explicitly tagged original Folio session is eligible. Untagged time
   // cannot be attributed to faith practices merely from its task title.
   const originalSessions = sessions.filter(s => s.status === 'finished' &&
-    s.tags.includes('faith-discipline') && inRange(s.startedAt.slice(0,10)))
+    s.tags.includes('faith-discipline') && inRange(localDateKey(new Date(s.startedAt))))
   const selectedBlocks = blocks.filter(b => selectedBlockIds.includes(b.id) &&
     b.source !== 'google' && b.source !== 'klips' &&
     b.start.slice(0,10) <= through && b.end.slice(0,10) >= from)
