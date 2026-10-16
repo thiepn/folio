@@ -32,6 +32,7 @@ import { MatrixCountdownView } from '../features/matrix/MatrixCountdownView'
 import { TemplatesAutomationView } from '../features/automation/TemplatesAutomationView'
 import { CollaborationView } from '../features/collaboration/CollaborationView'
 import { ExternalIntegrationsView } from '../features/integrations/ExternalIntegrationsView'
+import { FolioHubSharePrompt } from '../features/integrations/FolioHubSharePrompt'
 import { SyncView } from '../features/sync/SyncView'
 import { ReviewWorkflowModal } from '../features/review/ReviewWorkflowModal'
 import { ReviewRecordModal } from '../features/review/ReviewRecordModal'
@@ -931,6 +932,7 @@ function AppContent() {
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{viewAnnouncement} view</div>
       <Sidebar active={view} inboxCount={data.inboxTasks.length} favoriteProjects={data.favoriteProjects} favoriteLists={data.favoriteLists} favoriteTags={data.favoriteTags} pinnedSmartViews={data.pinnedSmartViews} onNavigate={navigate} onOpenProject={(id) => { navigate('projects'); setSelectedProjectId(id) }} onOpenList={(id) => { navigate('lists'); setSelectedListId(id) }} onOpenTag={(id) => { navigate('lists'); setSelectedListId('__tag__:'+id) }} onOpenSmartView={(id) => { navigate('lists'); setSelectedListId('__smart__:'+id) }} onAppearance={() => setAppearanceOpen(true)} onData={() => setDataOpen(true)} />
       <div className="workspace">
+        <FolioHubSharePrompt />
         <div className="mobile-topbar">
           <span>{`Folio · ${viewAnnouncement}`}</span>
           <div className="mobile-topbar__actions"><button className={reminderData?.dueCount ? 'mobile-reminder-button has-reminders' : 'mobile-reminder-button'} onClick={() => setReminderCenterOpen(true)}>Alerts{reminderData?.dueCount ? ` ${reminderData.dueCount}` : ''}</button><button className="mobile-command-button" onClick={() => setPaletteOpen(true)}>Search</button>{focusData?.activeSession ? <button className="is-focus-active" onClick={() => openFocus()}>Resume focus</button> : <button onClick={() => openFocus()}>Focus</button>}</div>
