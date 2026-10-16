@@ -131,6 +131,55 @@ async function blocks(page){
     await panel.getByRole('button',{name:'Cancel unsent'}).click()
     await panel.getByText(/Unsent operation cancelled/).waitFor()
     await panel.getByText(/0 unsent operations/).waitFor()
+    // C3: original TimeBlock store, review-first multi-day allocation and guarded undo.
+    await page.evaluate(async()=>{
+      const req=indexedDB.open('folio')
+      const db=await new Promise((res,rej)=>{req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error)})
+      const stamp='2026-10-16T09:00:00.000Z'
+      await new Promise((res,rej)=>{
+        const tx=db.transaction(['tasks','timeBlocks'],'readwrite')
+        tx.objectStore('tasks').put({
+          id:'browser-c3-study',title:'C3 coursework allocation',description:'',status:'todo',
+          priority:'high',plannedDate:'2026-10-17',deadline:'2026-10-20',
+          estimatedMinutes:180,tags:[],tagIds:[],checklist:[],comments:[],activity:[],
+          progressMode:'manual',progressPercent:0,sourceUrl:undefined,location:undefined,
+          pinned:false,blockedByTaskIds:[],sortOrder:0,rescheduleCount:0,timelineMilestone:false,
+          createdAt:stamp,updatedAt:stamp
+        })
+        tx.objectStore('timeBlocks').put({
+          id:'browser-c3-occupied',kind:'event',title:'C3 imported class',
+          source:'klips',sourceCalendar:'klips:browser-synthetic',
+          sourceUid:'external:class',start:'2026-10-17T07:00:00.000Z',
+          end:'2026-10-17T08:00:00.000Z',createdAt:stamp,updatedAt:stamp
+        })
+        tx.oncomplete=res;tx.onerror=()=>rej(tx.error)
+      })
+      db.close()
+    })
+    await page.reload({waitUntil:'domcontentloaded'})
+    await page.locator('#main-content').waitFor()
+    await page.locator('.sidebar').getByRole('button',{name:'Calendar'}).click()
+    await page.getByLabel('Selected calendar date').fill('2026-10-17')
+    const c3task=page.locator('.calendar-task-card').filter({hasText:'C3 coursework allocation'})
+    await c3task.waitFor()
+    await c3task.getByRole('button',{name:'Spread work'}).click()
+    const c3dialog=page.getByRole('dialog',{name:'Spread task over multiple days'})
+    await c3dialog.waitFor()
+    await c3dialog.getByText('3 sessions').waitFor()
+    const proposed=await c3dialog.locator('.calendar-c3-spread__item').allTextContents()
+    if(proposed.length!==3||!proposed[0].includes('10:00'))
+      throw new Error('C3 proposal did not respect imported class occupancy or daily distribution: '+proposed.join('; '))
+    if((await blocks(page)).filter(b=>b.taskId==='browser-c3-study').length)
+      throw new Error('C3 preview wrote time blocks without confirmation.')
+    await c3dialog.getByRole('button',{name:'Confirm all sessions'}).click()
+    await page.locator('.calendar-c3-receipt').getByText(/3 work sessions created/).waitFor()
+    const allocated=(await blocks(page)).filter(b=>b.taskId==='browser-c3-study')
+    if(allocated.length!==3||new Set(allocated.map(b=>b.start.slice(0,10))).size!==3)
+      throw new Error('C3 batch commit not atomic/unique across days.')
+    await page.locator('.calendar-c3-receipt').getByRole('button',{name:'Undo allocation'}).click()
+    await page.locator('.calendar-c3-receipt').waitFor({state:'detached'})
+    if((await blocks(page)).some(b=>b.taskId==='browser-c3-study'))
+      throw new Error('C3 undo did not remove all created sessions.')
     const mobile=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true})
     await mobile.goto(origin,{waitUntil:'domcontentloaded'})
     await mobile.locator('#main-content').waitFor()
