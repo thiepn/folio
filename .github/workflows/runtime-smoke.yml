@@ -140,3 +140,4 @@ jobs:
           })
           NODE
           node .folio-smoke.cjs
+          node scripts/c2-browser.cjs

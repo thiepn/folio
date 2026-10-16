@@ -363,7 +363,7 @@ export interface TimeBlockEntity {
   kind: TimeBlockKind
   allDay?: boolean
   timeZone?: string
-  source?: 'folio' | 'ics'
+  source?: 'folio' | 'ics' | 'google' | 'klips'
   sourceCalendar?: string
   sourceUid?: string
   start: IsoDateTime

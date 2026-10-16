@@ -8,10 +8,15 @@ import { CalendarV2View } from './CalendarV2View'
 import { AdvancedPlanningView } from './AdvancedPlanningView'
 import { AgendaPlanner, DayPlanner, MonthPlanner, WeekPlannerV14 } from './PlannerOverhaulViews'
 
-type PlannerTab = 'agenda' | 'day' | 'week' | 'month' | 'calendar' | 'advanced'
+export type PlannerTab = 'agenda' | 'day' | 'week' | 'month' | 'calendar' | 'advanced'
 
 interface PlannerViewProps {
   today: LocalDate
+  initialTab?: PlannerTab
+  onHabitToggle?: (id: string, date: LocalDate) => void | Promise<void>
+  onHabitIncrement?: (id: string, amount: number, date: LocalDate) => void | Promise<void>
+  onHabitSkip?: (id: string, date: LocalDate) => void | Promise<void>
+  onViewHabits?: () => void
   onToggle?: (id: string) => void
   onOpen?: (id: string) => void
   onMoveDate: (id: string, date?: LocalDate) => void
@@ -26,8 +31,9 @@ interface PlannerViewProps {
   onDuplicateBlock: (id: string, date?: LocalDate, startMinute?: number, timeZone?: string) => void | Promise<void>
 }
 
-export function PlannerView({ today, onToggle, onOpen, onMoveDate, onSetCapacity, onAddForDate, onCreateTaskBlock, onCreateEvent, onUpdateBlock, onUpdateEvent, onResizeBlock, onDeleteBlock, onDuplicateBlock }: PlannerViewProps) {
-  const [tab, setTab] = useState<PlannerTab>('agenda')
+export function PlannerView({ today, initialTab = 'agenda', onHabitToggle, onHabitIncrement, onHabitSkip, onViewHabits, onToggle, onOpen, onMoveDate, onSetCapacity, onAddForDate, onCreateTaskBlock, onCreateEvent, onUpdateBlock, onUpdateEvent, onResizeBlock, onDeleteBlock, onDuplicateBlock }: PlannerViewProps) {
+  const [tab, setTab] = useState<PlannerTab>(initialTab)
+  useEffect(() => { setTab(initialTab) }, [initialTab])
   const [selectedDate, setSelectedDate] = useState<LocalDate>(today)
   const [weekStart, setWeekStart] = useState(() => startOfLocalWeek(today))
   const data = usePlannerData(weekStart, today, selectedDate)
@@ -128,6 +134,10 @@ export function PlannerView({ today, onToggle, onOpen, onMoveDate, onSetCapacity
 
     {tab === 'calendar' ? <CalendarV2View
       today={today}
+      onHabitToggle={onHabitToggle}
+      onHabitIncrement={onHabitIncrement}
+      onHabitSkip={onHabitSkip}
+      onViewHabits={onViewHabits}
       anchorDate={selectedDate}
       onSelectedDateChange={setSelectedDate}
       onOpenTask={onOpen}

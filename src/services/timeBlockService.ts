@@ -5,6 +5,12 @@ import { timeBlockRepository } from '../repositories/timeBlockRepository'
 import type { UndoableMutation } from './undo'
 import { clampMinute } from '../features/planner/calendarLogic'
 
+function assertWritable(block: TimeBlockEntity) {
+  if (block.source === 'klips' || block.source === 'google') {
+    throw new Error('External calendar events are source-owned. Edit at the provider or duplicate into Folio.')
+  }
+}
+
 function normalizedDuration(minutes: number) {
   if (!Number.isFinite(minutes)) throw new Error('Invalid block duration.')
   return Math.max(15, Math.min(16 * 60, Math.round(minutes / 15) * 15))
@@ -55,6 +61,7 @@ export const timeBlockService = {
   async updateTiming(id: string, date: LocalDate, startMinute: number, durationMinutes: number, timeZone?: string): Promise<UndoableMutation> {
     const before = await timeBlockRepository.get(id)
     if (!before) throw new Error('Time block not found.')
+    assertWritable(before)
     const zone = timeZone ?? before.timeZone ?? 'local'
     await timeBlockRepository.update(id, { ...timing(date, startMinute, durationMinutes, zone), timeZone: zone, allDay: false })
     return { message: 'Time block moved', undo: () => timeBlockRepository.replace(before) }
@@ -63,6 +70,7 @@ export const timeBlockService = {
   async updateEvent(id: string, title: string, date: LocalDate, startMinute: number, durationMinutes: number, details?: { description?: string; location?: string; allDay?: boolean; endDateExclusive?: LocalDate; timeZone?: string }): Promise<UndoableMutation> {
     const before = await timeBlockRepository.get(id)
     if (!before) throw new Error('Time block not found.')
+    assertWritable(before)
     const timeZone = details?.timeZone ?? before.timeZone ?? 'local'
     const when = details?.allDay
       ? allDayTiming(date, details.endDateExclusive ?? addLocalDays(date, 1), timeZone)
@@ -74,6 +82,7 @@ export const timeBlockService = {
   async resize(id: string, durationMinutes: number): Promise<UndoableMutation> {
     const before = await timeBlockRepository.get(id)
     if (!before) throw new Error('Time block not found.')
+    assertWritable(before)
     if (before.allDay) throw new Error('Resize an all-day event by editing its dates.')
     const zone = before.timeZone ?? 'local'
     const localDate = dateKeyInTimeZone(before.start, zone)
@@ -122,6 +131,7 @@ export const timeBlockService = {
   async remove(id: string): Promise<UndoableMutation> {
     const before = await timeBlockRepository.get(id)
     if (!before) throw new Error('Time block not found.')
+    assertWritable(before)
     await timeBlockRepository.remove(id)
     return { message: 'Time block removed', undo: () => timeBlockRepository.replace(before) }
   },
