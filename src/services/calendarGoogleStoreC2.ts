@@ -281,6 +281,35 @@ export const calendarGoogleStoreC2={
   async pending(calendarId:string):Promise<GooglePendingC2[]>{
     return Object.values((await saved(calendarId)).pending)
   },
+  /** Disconnect only this device's local mirror. Does NOT revoke upstream OAuth.
+   * Provider grants must be revoked by a future trusted Account/Core gateway.
+   */
+  async disconnectLocal(calendarId:string,mode:'preserve-as-folio'|'remove-mirror',
+    expectedRevision:number){
+    return db.transaction('rw',db.settings,db.timeBlocks,async()=>{
+      const state=await saved(calendarId)
+      if(state.revision!==expectedRevision)throw new Error('Calendar mirror changed; review before disconnecting.')
+      if(Object.keys(state.pending).length)
+        throw new Error('Cancel all pending Google operations before removing this local mirror.')
+      const owned=await blocks(calendarId), now=new Date().toISOString()
+      if(owned.some(item=>!item.sourceUid||state.baselines[item.sourceUid]?.blockId!==item.id||
+        state.baselines[item.sourceUid]?.valueHash!==googleBlockHash(item)))
+        throw new Error('Locally changed Google records need conflict resolution before disconnecting.')
+      let retained=0
+      for(const item of owned) {
+        if(mode==='preserve-as-folio'){
+          // A new identity preserves the original event as a native copy; no
+          // external provider identity or remote ETag is carried into Folio.
+          await db.timeBlocks.put({...item,id:crypto.randomUUID(),source:'folio',
+            sourceCalendar:undefined,sourceUid:undefined,createdAt:now,updatedAt:now})
+          retained++
+        }
+        await db.timeBlocks.delete(item.id)
+      }
+      await db.settings.delete(settingKey(calendarId))
+      return {removed:owned.length,retained,remoteAccessRevoked:false}
+    })
+  },
   async cancelPending(calendarId:string,id:string) {
     await db.transaction('rw',db.settings,async()=>{
       const state=await saved(calendarId)
