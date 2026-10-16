@@ -18,7 +18,7 @@ const clone=()=>[new Map([...settings].map(([k,v])=>[k,structuredClone(v)])),
   new Map([...blocks].map(([k,v])=>[k,structuredClone(v)]))]
 export const db={
  settings:{get:async id=>settings.get(id),put:async v=>{settings.set(v.key,structuredClone(v))}},
- timeBlocks:{get:async id=>blocks.get(id),toArray:async()=>[...blocks.values()].map(structuredClone),
+ timeBlocks:{get:async id=>blocks.get(id),toArray:async()=>[...blocks.values()].map(row=>structuredClone(row)),
    put:async v=>{blocks.set(v.id,structuredClone(v))},delete:async id=>{blocks.delete(id)}},
  transaction:async (...args)=>{const action=args.at(-1),before=clone()
    try{return await action()}catch(error){settings.clear();blocks.clear()
