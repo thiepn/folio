@@ -14,7 +14,7 @@ try {
     ['src/features/interop/icsLogic.ts','ics.mjs',[["../../domain/date","./date.mjs"]]],
     ['src/services/calendarFeedC2.ts','feed.mjs',[["../domain/date","./date.mjs"],["../features/interop/icsLogic","./ics.mjs"]]],
     ['src/services/calendarGoogleC2.ts','google.mjs',[["../domain/date","./date.mjs"]]],
-    ['src/features/planner/calendarC2Cases.ts','cases.mjs',[["../services/calendarFeedC2","./feed.mjs"],["../services/calendarGoogleC2","./google.mjs"]]],
+    ['src/features/planner/calendarC2Cases.ts','cases.mjs',[["../../services/calendarFeedC2","./feed.mjs"],["../../services/calendarGoogleC2","./google.mjs"]]],
   ]
   for(const [file,name,replacements] of files){
     let source=read(file)

@@ -1,5 +1,5 @@
-import { parseSubscribedIcs } from '../services/calendarFeedC2'
-import { normalizeGoogleEvent, pullGoogleDelta, googleEventKey, authorizeGoogleWrite, GoogleSyncTokenExpired } from '../services/calendarGoogleC2'
+import { parseSubscribedIcs } from '../../services/calendarFeedC2'
+import { normalizeGoogleEvent, pullGoogleDelta, googleEventKey, authorizeGoogleWrite, GoogleSyncTokenExpired } from '../../services/calendarGoogleC2'
 
 const assert=(condition:unknown,message:string)=>{if(!condition)throw new Error(message)}
 const base=['BEGIN:VCALENDAR','VERSION:2.0','X-WR-CALNAME:KLIPS Test',
