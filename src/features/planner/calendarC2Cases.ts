@@ -1,5 +1,6 @@
 import { parseSubscribedIcs } from '../../services/calendarFeedC2'
 import { normalizeGoogleEvent, pullGoogleDelta, googleEventKey, authorizeGoogleWrite, GoogleSyncTokenExpired } from '../../services/calendarGoogleC2'
+import { planGoogleMerge, googleBlockHash, proposeGoogleCreate } from '../../services/calendarGoogleReconcileC2'
 
 const assert=(condition:unknown,message:string)=>{if(!condition)throw new Error(message)}
 const base=['BEGIN:VCALENDAR','VERSION:2.0','X-WR-CALNAME:KLIPS Test',
@@ -68,6 +69,29 @@ export async function validateCalendarC2Cases():Promise<string[]> {
     let expired=false
     try{await pullGoogleDelta({list:async()=>{throw new GoogleSyncTokenExpired()}},'primary','old')}catch(e){expired=e instanceof GoogleSyncTokenExpired}
     assert(expired,'410 token recovery signal lost')
+  })
+  await check('Google full snapshot and incremental conflicts',()=>{
+    const remote={id:'key-a',etag:'"etag-1"',status:'confirmed' as const,summary:'Lecture',start:{dateTime:'2026-10-16T09:00:00+02:00'},end:{dateTime:'2026-10-16T10:00:00+02:00'}}
+    const full=planGoogleMerge({calendarId:'primary',mode:'full',events:[remote],nextSyncToken:'s1'},[],{})
+    assert(full.actions.length===1&&full.actions[0].kind==='insert','Google full sync did not plan one insert')
+    const value=normalizeGoogleEvent('primary',remote)!
+    const existing={...value,id:'local-1'}
+    const baseline={[googleEventKey('primary',remote.id)]:{blockId:'local-1',etag:'"etag-1"',valueHash:googleBlockHash(existing)}}
+    const update={...remote,etag:'"etag-2"',summary:'Changed'}
+    const incremental=planGoogleMerge({calendarId:'primary',mode:'incremental',events:[update],nextSyncToken:'s2'},[existing],baseline)
+    assert(incremental.actions[0].kind==='update','Remote update not planned')
+    const pending=planGoogleMerge({calendarId:'primary',mode:'incremental',events:[update],nextSyncToken:'s2'},[existing],baseline,new Set([googleEventKey('primary',remote.id)]))
+    assert(pending.actions[0].kind==='conflict','Pending local write was overwritten')
+    const deleted=planGoogleMerge({calendarId:'primary',mode:'full',events:[],nextSyncToken:'s3'},[existing],baseline)
+    assert(deleted.actions[0].kind==='delete','Full sync did not detect removed event')
+  })
+  await check('Google outbound create keeps original Folio authority',()=>{
+    const original={id:'folio-1',source:'folio' as const,kind:'event' as const,title:'Personal event',
+      start:'2026-10-16T07:00:00.000Z',end:'2026-10-16T08:00:00.000Z',
+      createdAt:'2026-10-16T00:00:00.000Z',updatedAt:'2026-10-16T00:00:00.000Z'}
+    const intent=proposeGoogleCreate(original,'primary','calendar-c2-unique-12345')
+    assert(intent.event.summary==='Personal event'&&intent.operation==='create','Outbound create intent invalid')
+    assert(original.source==='folio'&&original.id==='folio-1','Original Folio event mutated')
   })
   return failures
 }
