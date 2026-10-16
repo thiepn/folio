@@ -29,6 +29,8 @@ export interface GooglePendingC2 {
   folioBlockId?: string
   providerKey?: string
   baseEtag?: string
+  /** Only approved fields are staged; source event stays unchanged until gateway ack. */
+  patch?: { summary?: string; description?: string; location?: string; start?: GoogleEventC2['start']; end?: GoogleEventC2['end'] }
   createdAt: string
   /** Explicit queue only; no browser-side credential or silent dispatch. */
   status: 'awaiting-gateway'
@@ -209,6 +211,71 @@ export const calendarGoogleStoreC2={
       state.pending[id]=pending;state.revision++
       await db.settings.put({key:settingKey(calendarId),value:state,updatedAt:new Date().toISOString()})
       return intent
+    })
+  },
+  async queueChange(calendarId:string,blockId:string,operation:'update'|'delete',
+    patch?:GooglePendingC2['patch']) {
+    return db.transaction('rw',db.settings,db.timeBlocks,async()=>{
+      const state=await saved(calendarId)
+      const block=await db.timeBlocks.get(blockId)
+      if(!block||block.source!=='google'||block.sourceCalendar!==googleSourceKey(calendarId)||!block.sourceUid)
+        throw new Error('Only a matched source-owned Google event may be queued.')
+      const baseline=state.baselines[block.sourceUid]
+      if(!baseline||baseline.blockId!==block.id||baseline.valueHash!==googleBlockHash(block)||
+        !baseline.etag)throw new Error('Google source baseline changed; refresh or resolve conflict first.')
+      if(state.conflicts[block.sourceUid]||Object.values(state.pending).some(p=>p.providerKey===block.sourceUid))
+        throw new Error('A conflicting or pending change already exists for this Google event.')
+      if(operation==='update'){
+        const keys=Object.keys(patch??{})
+        if(!keys.length||keys.some(k=>!['summary','description','location','start','end'].includes(k))||
+          (patch?.summary!==undefined&&(!patch.summary.trim()||patch.summary.length>300))||
+          (patch?.description!==undefined&&patch.description.length>4000)||
+          (patch?.location!==undefined&&patch.location.length>500))
+          throw new Error('Invalid or empty provider event update.')
+      }else if(patch!==undefined)throw new Error('Delete cannot contain an event patch.')
+      const id=crypto.randomUUID()
+      const pending:GooglePendingC2={id,operation,providerKey:block.sourceUid,baseEtag:baseline.etag,
+        patch:operation==='update'?patch:undefined,createdAt:new Date().toISOString(),status:'awaiting-gateway'}
+      state.pending[id]=pending;state.revision++
+      await db.settings.put({key:settingKey(calendarId),value:state,updatedAt:new Date().toISOString()})
+      return pending
+    })
+  },
+  /** Acknowledgement is only called by a future gateway adapter after server-verification.
+   * No optimistic local changes or credentials are used to generate an acknowledgement.
+   */
+  async acknowledge(calendarId:string,id:string,event:GoogleEventC2|null) {
+    return db.transaction('rw',db.settings,db.timeBlocks,async()=>{
+      const state=await saved(calendarId), pending=state.pending[id]
+      if(!pending)throw new Error('Google write acknowledgement is no longer pending.')
+      const source=googleSourceKey(calendarId)
+      const current=pending.providerKey?(await blocks(calendarId)).find(b=>b.sourceUid===pending.providerKey):undefined
+      const now=new Date().toISOString()
+      if(pending.operation==='delete'){
+        if(event&&event.status!=='cancelled')throw new Error('Delete acknowledgement must confirm cancellation.')
+        if(!current||!pending.providerKey)throw new Error('Deleted Google event is not locally recorded.')
+        const baseline=state.baselines[pending.providerKey]
+        if(!baseline||baseline.blockId!==current.id||baseline.etag!==pending.baseEtag)
+          throw new Error('Google baseline changed while deletion was pending.')
+        await db.timeBlocks.delete(current.id)
+        delete state.baselines[pending.providerKey]
+      }else{
+        if(!event||event.status==='cancelled'||!event.etag)
+          throw new Error('Google write must return a confirmed event with ETag.')
+        const mapped=normalizeGoogleEvent(calendarId,event)
+        if(!mapped||mapped.sourceCalendar!==source)throw new Error('Acknowledged event has invalid source.')
+        if(pending.operation==='update'&&(!current||pending.providerKey!==mapped.sourceUid))
+          throw new Error('Updated Google event changed identity.')
+        if(pending.operation==='create'&&(!pending.folioBlockId||!(await db.timeBlocks.get(pending.folioBlockId))))
+          throw new Error('Original Folio event no longer exists; reconcile before acknowledgement.')
+        const previous=current??(await blocks(calendarId)).find(b=>b.sourceUid===mapped.sourceUid)
+        const accepted={...mapped,id:previous?.id??crypto.randomUUID(),createdAt:previous?.createdAt??now,updatedAt:now}
+        await db.timeBlocks.put(accepted)
+        state.baselines[mapped.sourceUid]={blockId:accepted.id,etag:event.etag,valueHash:googleBlockHash(accepted)}
+      }
+      delete state.pending[id];state.revision++
+      await db.settings.put({key:settingKey(calendarId),value:state,updatedAt:now})
+      return {acknowledged:true,operation:pending.operation}
     })
   },
   async pending(calendarId:string):Promise<GooglePendingC2[]>{
