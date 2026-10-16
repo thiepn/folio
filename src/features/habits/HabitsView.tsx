@@ -1,4 +1,5 @@
 import { Button } from '../../components/ui/Button'
+import { FaithDisciplineReviewPanel } from './FaithDisciplineReviewPanel'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Panel } from '../../components/ui/Panel'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -49,6 +50,7 @@ export function HabitsView({ habits, groups, weeklyAdherence, dueToday, longestS
 
     {faithGroup ? <Panel title="Faith & discipline" meta={`${faithHabits.length} selected practice${faithHabits.length === 1 ? '' : 's'}`}>
       <p>Practices belong to your original Folio habits. Paused and rest-day entries remain neutral; consistency is not a measure of holiness.</p>
+      {faithHabits.length ? <FaithDisciplineReviewPanel habitIds={faithHabits.map(habit=>habit.id)} /> : null}
       {faithHabits.length ? faithHabits.map(habit => <div className="habit-master-row" key={habit.id}>
         <button className="habit-master-row__body" type="button" onClick={() => onOpen(habit.id)}><strong>{habit.title}</strong><span>{habit.paused ? 'Paused' : habit.skipped ? 'Rest day' : habit.completed ? 'Marked complete in Folio' : 'Open practice'} · {habit.periodProgress ?? habit.weeklyProgress}</span></button>
       </div>) : <p>Add practices to this group through the existing habit editor, or choose an opt-in template.</p>}
