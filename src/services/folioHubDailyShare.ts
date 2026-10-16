@@ -15,7 +15,7 @@ export function parseHubShareNonce(search:string, origin:string, hasOpener:boole
 }
 export async function readFolioHubDailyShare(){
   const date=localDateKey(),generatedAt=new Date().toISOString()
-  return db.transaction('r',db.tasks,db.timeBlocks,db.notes,db.habits,db.habitEntries,async()=>{
+  return db.transaction('r',[db.tasks,db.timeBlocks,db.notes,db.habits,db.habitEntries],async()=>{
     const [tasks,events,notes,habits,entries]=await Promise.all([
       db.tasks.toArray(),db.timeBlocks.toArray(),db.notes.toArray(),
       db.habits.toArray(),db.habitEntries.where('date').equals(date).toArray()
