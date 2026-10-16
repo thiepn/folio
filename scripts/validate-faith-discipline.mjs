@@ -46,4 +46,25 @@ assert.throws(()=>faithDisciplineWeek(date,'2026-11-18',[],[],[],[],[],[]),/vali
 assert.throws(()=>faithDisciplineWeek(date,'2026-10-18',['x','x'],[],[],[],[],[]),/Duplicate/)
 console.log('PASS FD1: owner IDs, explicit entries, neutral rest, tagged focus, read-only external blocks')
 
+fs.writeFileSync(path.join(services,'disciplineCommandGate.mjs'),
+  transpile('src/services/disciplineCommandGate.ts'))
+const {validateDisciplineCommand,executeReviewedDisciplineCommand} =
+  await import(pathToFileURL(path.join(services,'disciplineCommandGate.mjs')).href)
+const command={idempotencyKey:'0123456789abcdef0123456789abcdef',
+  operation:'habit.complete',resourceId:'original-habit-id',
+  expectedUpdatedAt:'2026-10-16T10:00:00.000Z'}
+assert.equal(validateDisciplineCommand({...command,resourceId:'../other-owner'}),null)
+let writes=0
+const denied=await executeReviewedDisciplineCommand(command,{
+  approve:async()=>false,readUpdatedAt:async()=>command.expectedUpdatedAt,
+  originalServiceAction:async()=>{writes++;return 'applied'}
+})
+assert.equal(denied.result,'denied');assert.equal(writes,0)
+const conflict=await executeReviewedDisciplineCommand(command,{
+  approve:async()=>true,readUpdatedAt:async()=>new Date().toISOString(),
+  originalServiceAction:async()=>{writes++;return 'applied'}
+})
+assert.equal(conflict.result,'conflict');assert.equal(writes,0)
+console.log('PASS FD1: owner command denial and stale original-record CAS')
+
 fs.rmSync(temp,{recursive:true,force:true})
