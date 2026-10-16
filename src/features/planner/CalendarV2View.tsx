@@ -17,6 +17,7 @@ import {
 } from './calendarLogic'
 import { TimeBlockModal, type TimeBlockEditorPayload, type TimeBlockEditorState } from './TimeBlockModal'
 import { CalendarSourcesC2 } from './CalendarSourcesC2'
+import { suggestFreeCalendarSlots, type CalendarSlotC2 } from './calendarSlotSuggestionsC2'
 
 function isRemoteCalendarBlock(block: TimeBlockEntity) { return block.source === 'klips' || block.source === 'google' }
 
@@ -60,6 +61,10 @@ export function CalendarV2View({
   const [taskSource, setTaskSource] = useState('day')
   const [taskSearch, setTaskSearch] = useState('')
   const [editor, setEditor] = useState<TimeBlockEditorState | null>(null)
+  const [slotTask, setSlotTask] = useState<TaskPreview | null>(null)
+  const [slotMinutes, setSlotMinutes] = useState(60)
+  const [slotStart, setSlotStart] = useState(9)
+  const [slotEnd, setSlotEnd] = useState(19)
 
   const range = useMemo(() => calendarRangeForMode(mode, selectedDate), [mode, selectedDate])
   const data = useCalendarData(range.from, range.through, timeZone)
@@ -143,6 +148,16 @@ export function CalendarV2View({
   function resetToday() {
     setSelectedDate(today)
   }
+
+  const suggestedSlots = useMemo(()=>{
+    if(!slotTask||!data)return [] as CalendarSlotC2[]
+    const remaining=taskRemaining(slotTask,data.allTaskBlocks)
+    const minutes=Math.min(slotMinutes,remaining,240)
+    return suggestFreeCalendarSlots(data.blocks,{from:selectedDate,
+      deadline:slotTask.deadline,timeZone,minutes,dailyStart:slotStart*60,
+      dailyEnd:slotEnd*60,through:addLocalDays(selectedDate,6),limit:5,
+      afterIso:selectedDate===today?new Date().toISOString():undefined})
+  },[data,selectedDate,slotTask,slotMinutes,slotStart,slotEnd,timeZone,today])
 
   function scheduleTask(task: TaskPreview, date = selectedDate, startMinute = 9 * 60) {
     setEditor({ type: 'new-task', task, date, startMinute, durationMinutes: taskRemaining(task, data?.allTaskBlocks ?? []), timeZone })
@@ -278,6 +293,7 @@ export function CalendarV2View({
           onSearch={setTaskSearch}
           onOpenTask={onOpenTask}
           onSchedule={scheduleTask}
+          onFindTime={(task)=>{setSlotTask(task);setSlotMinutes(Math.min(60,taskRemaining(task,data.allTaskBlocks)))}}
           compact={compact}
           habits={habitData?.todayHabits ?? []}
           habitLoaded={Boolean(habitData)}
@@ -350,6 +366,35 @@ export function CalendarV2View({
         </main>
       </div>
 
+      {slotTask?<section className="calendar-slot-overlay" role="dialog" aria-modal="true" aria-label="Find time for task">
+        <div className="calendar-slot-modal">
+          <header><strong>Find free time</strong><button type="button" onClick={()=>setSlotTask(null)} aria-label="Close free time suggestions">Close</button></header>
+          <p><b>{slotTask.title}</b> · {formatDuration(taskRemaining(slotTask,data.allTaskBlocks))} work left
+            {slotTask.deadline?' · Deadline '+slotTask.deadline:''}</p>
+          <div className="calendar-slot-options">
+            <label>Session length <select aria-label="Suggested session length" value={slotMinutes} onChange={e=>setSlotMinutes(Number(e.target.value))}>
+              {[30,60,90,120,180,240].map(v=><option key={v} value={v}>{v} minutes maximum</option>)}
+            </select></label>
+            <label>From hour <select aria-label="Daily start hour" value={slotStart} onChange={e=>setSlotStart(Number(e.target.value))}>
+              {Array.from({length:18},(_,i)=>i+5).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}:00</option>)}
+            </select></label>
+            <label>Until hour <select aria-label="Daily end hour" value={slotEnd} onChange={e=>setSlotEnd(Number(e.target.value))}>
+              {Array.from({length:16},(_,i)=>i+9).map(v=><option key={v} value={v}>{String(v).padStart(2,'0')}:00</option>)}
+            </select></label>
+          </div>
+          <p>Available slots from the selected date through the next seven days, bounded by the task deadline. Existing Folio and imported events count as busy; all-day events block their dates. Nothing is scheduled without confirmation.</p>
+          <div className="calendar-slot-results">
+            {suggestedSlots.map(slot=><button type="button" key={slot.start} onClick={()=>{
+              setSlotTask(null);setSelectedDate(slot.date);scheduleTask(slotTask,slot.date,slot.startMinute)
+            }}>
+              <strong>{formatLocalDate(slot.date,{weekday:'short',month:'short',day:'numeric'})}</strong>
+              <span>{formatClockMinute(slot.startMinute)}–{formatClockMinute(slot.startMinute+slot.durationMinutes)} · {slot.durationMinutes} min</span>
+              <small>Review time block</small>
+            </button>)}
+            {!suggestedSlots.length?<p>No free slot found within these hours and deadline. Adjust hours or choose another date.</p>:null}
+          </div>
+        </div>
+      </section>:null}
       <TimeBlockModal
         editor={editor}
         onClose={() => setEditor(null)}
@@ -362,7 +407,7 @@ export function CalendarV2View({
   )
 }
 
-function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, taskSource, onTaskSource, smartViews, search, onSearch, onOpenTask, onSchedule, compact, habits, habitLoaded, onHabitToggle, onHabitIncrement, onHabitSkip, onViewHabits }: {
+function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, taskSource, onTaskSource, smartViews, search, onSearch, onOpenTask, onSchedule, onFindTime, compact, habits, habitLoaded, onHabitToggle, onHabitIncrement, onHabitSkip, onViewHabits }: {
   today: LocalDate
   selectedDate: LocalDate
   onSelectDate: (date: LocalDate) => void
@@ -375,6 +420,7 @@ function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, 
   onSearch: (value: string) => void
   onOpenTask?: (id: string) => void
   onSchedule: (task: TaskPreview, date?: LocalDate, startMinute?: number) => void
+  onFindTime: (task: TaskPreview) => void
   compact: boolean
   habits: HabitPreview[]
   habitLoaded: boolean
@@ -411,7 +457,9 @@ function CalendarSidebar({ today, selectedDate, onSelectDate, tasks, allBlocks, 
             <strong>{task.title}</strong>
             <span>{[task.project, task.list, task.plannedDate ? 'Plan ' + task.plannedDate : 'No planned date', task.deadline ? 'Due ' + task.deadline : ''].filter(Boolean).join(' · ')}</span>
           </button>
-          <div><span>{formatDuration(taskRemaining(task, allBlocks))}</span><button onClick={() => onSchedule(task)}>Schedule</button></div>
+          <div><span>{formatDuration(taskRemaining(task, allBlocks))}</span>
+            <button type="button" onClick={() => onFindTime(task)}>Find time</button>
+            <button type="button" onClick={() => onSchedule(task)}>Schedule</button></div>
         </article>)}
         {!tasks.length ? <div className="calendar-empty">No tasks in this source need more clock time.</div> : null}
       </div>
