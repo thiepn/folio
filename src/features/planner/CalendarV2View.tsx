@@ -113,6 +113,15 @@ export function CalendarV2View({
        ({critical:0,high:1,normal:2}[a.priority]-{critical:0,high:1,normal:2}[b.priority]))
   },[data,selectedDate])
   const habitDue=(habitData?.todayHabits??[]).filter(h=>h.scheduledToday&&!h.completed&&!h.skipped&&!h.paused).length
+  const nextSevenDays=useMemo(()=>{
+    if(!data||!weekBlocks)return []
+    return localDateRange(selectedDate,7).map(date=>{
+      const due=data.tasks.filter(t=>!t.completed&&(t.status==='todo'||t.status==='inbox')&&t.deadline===date).length
+      const planned=data.tasks.filter(t=>!t.completed&&t.status==='todo'&&t.plannedDate===date).length
+      const free=openMinutesInWindow(weekBlocks,date,6*60,22*60,timeZone)
+      return {date,free,due,planned}
+    })
+  },[data,weekBlocks,selectedDate,timeZone])
 
   const sourceIds = useMemo(() => {
     if (!data || !taskSource.startsWith('smart:')) return undefined
@@ -315,6 +324,19 @@ export function CalendarV2View({
         <span className={conflictCount ? 'is-warning' : ''}><b>{conflictCount}</b> conflict{conflictCount === 1 ? '' : 's'}</span>
       </section>
 
+      <section className="calendar-c2-week-strip" aria-label="Upcoming seven days">
+        <div className="calendar-c2-week-strip__header"><strong>Next seven days</strong><small>Free time 06–22 · all calendars count toward availability</small></div>
+        <div className="calendar-c2-week-strip__days">
+          {nextSevenDays.map(day=><button type="button" key={day.date}
+            aria-current={selectedDate===day.date?'date':undefined}
+            onClick={()=>{setSelectedDate(day.date);setMode('day')}}>
+            <strong>{formatLocalDate(day.date,{weekday:'short',month:'short',day:'numeric'})}</strong>
+            <span>{formatDuration(day.free)} free</span>
+            <small>{day.planned} planned · {day.due} due</small>
+          </button>)}
+          {!nextSevenDays.length?<span className="calendar-empty">Loading the seven-day schedule…</span>:null}
+        </div>
+      </section>
       <section className="calendar-c2-day-brief" aria-label="Selected day overview">
         <div className="calendar-c2-day-brief__heading">
           <div><span className="eyebrow">Selected day</span>
