@@ -343,8 +343,8 @@ export function CalendarV2View({
           <div className="calendar-c2-day-brief__column calendar-c2-day-brief__habits">
             <strong>Habits <small>{habitDue} due</small></strong>
             {(habitData?.todayHabits??[]).filter(h=>h.scheduledToday).slice(0,4).map(h=>
-              <button key={h.id} type="button" disabled={h.paused||!onHabitToggle}
-                onClick={()=>onHabitToggle?.(h.id,selectedDate)}>
+              <button key={h.id} type="button" disabled={h.paused||(h.kind==='check'?!onHabitToggle:!onViewHabits)}
+                onClick={()=>h.kind==='check'?onHabitToggle?.(h.id,selectedDate):onViewHabits?.()}>
                 <span>{h.completed?'Completed':h.skipped?'Rest day':h.paused?'Paused':'Not completed'}</span>
                 <b>{h.title}</b><small>{h.kind==='check'?'Toggle completion':'See progress in Habits'}</small>
               </button>)}
