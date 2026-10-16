@@ -23,6 +23,7 @@ import { suggestFreeCalendarSlots, type CalendarSlotC2 } from './calendarSlotSug
 import { calendarSourceGroups, visibleCalendarBlocks } from './calendarSourceGroupsC2'
 import { planMultiDayTaskC3,type AllocationOptionsC3 } from './calendarMultiSessionC3'
 import { calendarBatchAllocationC3 } from '../../services/calendarBatchAllocationC3'
+import { useCalendarCommitmentsC3 } from './useCalendarCommitmentsC3'
 import type { UndoableMutation } from '../../services/undo'
 
 function isRemoteCalendarBlock(block: TimeBlockEntity) { return block.source === 'klips' || block.source === 'google' }
@@ -77,6 +78,7 @@ export function CalendarV2View({
   const [spreadMax,setSpreadMax] = useState<30|45|60|90|120>(60)
   const [spreadPerDay,setSpreadPerDay] = useState<1|2>(1)
   const [spreadBusy,setSpreadBusy] = useState(false)
+  const [showCommitmentDetails,setShowCommitmentDetails] = useState(false)
   const [spreadError,setSpreadError] = useState('')
   const [allocationReceipt,setAllocationReceipt] = useState<{message:string;undo:UndoableMutation}|null>(null)
   const [undoingAllocation,setUndoingAllocation] = useState(false)
@@ -84,6 +86,7 @@ export function CalendarV2View({
   const range = useMemo(() => calendarRangeForMode(mode, selectedDate), [mode, selectedDate])
   const data = useCalendarData(range.from, range.through, timeZone)
   const habitData = useHabitData(selectedDate)
+  const commitments=useCalendarCommitmentsC3(selectedDate,data?.taskEntities??[])
   const weekBlocks = useLiveQuery(()=>timeBlockRepository.listBetween(selectedDate,addLocalDays(selectedDate,13),timeZone),[selectedDate,timeZone])
 
   useEffect(() => {
@@ -376,9 +379,43 @@ export function CalendarV2View({
             <strong>{formatLocalDate(day.date,{weekday:'short',month:'short',day:'numeric'})}</strong>
             <span>{formatDuration(day.free)} free</span>
             <small>{day.planned} planned · {day.due} due</small>
+            {commitments?.summary.find(x=>x.date===day.date)?<small>
+              {commitments.summary.find(x=>x.date===day.date)!.completed}/
+              {commitments.summary.find(x=>x.date===day.date)!.due} fixed habits ·
+              {commitments.summary.find(x=>x.date===day.date)!.recurring} repeat tasks
+            </small>:null}
           </button>)}
           {!nextSevenDays.length?<span className="calendar-empty">Loading the seven-day schedule…</span>:null}
         </div>
+      </section>
+      <section className="calendar-c3-commitments" aria-label="Recurring work and flexible habits">
+        <header>
+          <div><strong>Habit targets & recurring work</strong>
+            <small>Original Folio records · flexible habits have no assigned day</small></div>
+          <button type="button" aria-expanded={showCommitmentDetails} onClick={()=>setShowCommitmentDetails(v=>!v)}>
+            {showCommitmentDetails?'Hide details':'Review seven-day commitments'}
+          </button>
+        </header>
+        {showCommitmentDetails?<div className="calendar-c3-commitments__details">
+          <section aria-label="Flexible habit targets">
+            <strong>Flexible habit targets</strong>
+            {!commitments?.quotas.length?<p>No flexible targets in this period.</p>:null}
+            {commitments?.quotas.map(h=><div key={h.id} className="calendar-c3-commitments__row">
+              <span>{h.title}</span><small>{h.completed} of {h.target} · this {h.period}</small>
+              <button type="button" onClick={()=>onViewHabits?.()} disabled={!onViewHabits}>Open Habits</button>
+            </div>)}
+          </section>
+          <section aria-label="Materialized recurring tasks">
+            <strong>Recurring task occurrences</strong>
+            {!commitments?.occurring.length?<p>No materialized recurring task occurrences in the next seven days. Recurring series are managed in Folio Tasks.</p>:null}
+            {commitments?.occurring.map(({task,series})=><div key={task.id} className="calendar-c3-commitments__row">
+              <span><b>{task.recurrenceDate}</b> · {task.title}
+                <small>{series?.status==='paused'?'Series paused':series?.title??'Folio recurring task'} · {task.status}</small></span>
+              <button type="button" onClick={()=>onOpenTask?.(task.id)} disabled={!onOpenTask}>Open task</button>
+            </div>)}
+          </section>
+          <p>Only actual, materialized occurrences appear here. Pausing, editing or skipping a series uses the original Folio task recurrence controls.</p>
+        </div>:null}
       </section>
       <section className="calendar-c2-day-brief" aria-label="Selected day overview">
         <div className="calendar-c2-day-brief__heading">

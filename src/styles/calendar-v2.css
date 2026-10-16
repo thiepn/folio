@@ -965,3 +965,19 @@
 .calendar-c3-receipt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border:1px solid var(--line);font-size:12px}
 .calendar-c3-receipt button{border:1px solid var(--line);padding:8px;cursor:pointer;background:var(--surface-input);color:var(--text)}
 @media(max-width:760px){.calendar-c3-receipt{flex-direction:column;align-items:stretch}.calendar-c3-receipt button{min-height:44px}}
+
+/* C3 source-owned weekly habits and materialized recurrence projection */
+.calendar-c3-commitments{border:1px solid var(--line);padding:10px 12px;display:grid;gap:9px}
+.calendar-c3-commitments>header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px}
+.calendar-c3-commitments>header>div{display:grid;gap:3px}
+.calendar-c3-commitments small,.calendar-c3-commitments p{font-size:11px;color:var(--muted);line-height:1.45;margin:0}
+.calendar-c3-commitments button{background:var(--surface-input);color:var(--text);border:1px solid var(--line);padding:7px 10px;cursor:pointer}
+.calendar-c3-commitments button:disabled{opacity:.5;cursor:not-allowed}
+.calendar-c3-commitments button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.calendar-c3-commitments__details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.calendar-c3-commitments__details>section{min-width:0;display:grid;gap:7px;align-content:start}
+.calendar-c3-commitments__details strong{font-size:12px}
+.calendar-c3-commitments__row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12px;flex-wrap:wrap}
+.calendar-c3-commitments__row>span{min-width:0;overflow-wrap:anywhere}
+.calendar-c3-commitments__row>span>small{display:block;margin-top:3px}
+@media(max-width:760px){.calendar-c3-commitments__details{grid-template-columns:minmax(0,1fr)}.calendar-c3-commitments button{min-height:44px}}
