@@ -110,9 +110,7 @@ export function parseSubscribedIcs(text:string, from:LocalDate, through:LocalDat
     try {
       const rule=recurrenceFields(ruleProp.value)
       const baseDay=localDayOf(startProp.value)
-      const masterStart=entry.base.start
-      const masterEnd=entry.base.end
-      const maxWindowDay=through
+            const maxWindowDay=through
       for(const prop of entry.properties.filter(x=>x.name==='EXDATE')){
         for(const rawDate of prop.value.split(','))excluded.add(parseIcsDate(rawDate,prop.params))
       }
@@ -128,7 +126,7 @@ export function parseSubscribedIcs(text:string, from:LocalDate, through:LocalDat
         const dateValue=translateCompact(startProp.value,date)
         const start=parseIcsDate(dateValue,startProp.params)
         if(rule.until){
-          if(rule.until.length===8?date>localDayOf(rule.until):Date.parse(start)>Date.parse(parseIcsDate(rule.until,{...startProp.params,TZID:rule.until.endsWith('Z')?undefined:startProp.params.TZID})))break
+          if(rule.until.length===8?date>localDayOf(rule.until):Date.parse(start)>Date.parse(parseIcsDate(rule.until,rule.until.endsWith('Z')?{}:startProp.params)))break
         }
         if(excluded.has(start)||suppressed.has(entry.uid+'#'+start))continue
         const endDate=addLocalDays(localDayOf(endProp.value),offset)
@@ -142,7 +140,7 @@ export function parseSubscribedIcs(text:string, from:LocalDate, through:LocalDat
         if(emitted.size>5000)throw new Error('Too many expanded events.')
       }
       if(numberOfDays(baseDay,maxWindowDay)>2000)warnings.push(entry.uid+': recurrence expansion horizon limited to 2000 days.')
-      if(!generated && masterStart!==masterEnd)warnings.push(entry.uid+': no occurrences materialized in this window.')
+      // A series may be valid but have no occurrences inside the requested window.
     } catch(error){warnings.push(entry.uid+': '+(error instanceof Error?error.message:String(error)))}
   }
   return {calendarName:parseIcs(text.replace(/^RRULE:.*$/gm,'')).calendarName,
