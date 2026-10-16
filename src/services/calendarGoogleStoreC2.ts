@@ -27,6 +27,7 @@ export interface GooglePendingC2 {
   id: string
   operation: 'create' | 'update' | 'delete'
   folioBlockId?: string
+  folioHash?: string
   providerKey?: string
   baseEtag?: string
   /** Only approved fields are staged; source event stays unchanged until gateway ack. */
@@ -203,10 +204,12 @@ export const calendarGoogleStoreC2={
     return db.transaction('rw',db.settings,db.timeBlocks,async()=>{
       const block=await db.timeBlocks.get(blockId)
       if(!block)throw new Error('Folio event no longer exists.')
+      if(Object.values((await saved(calendarId)).pending).some(p=>p.operation==='create'&&p.folioBlockId===blockId))
+        throw new Error('An unsent export for this Folio event already exists.')
       const id=crypto.randomUUID()
       const intent=proposeGoogleCreate(block,calendarId,id)
       const state=await saved(calendarId)
-      const pending:GooglePendingC2={id,operation:'create',folioBlockId:blockId,
+      const pending:GooglePendingC2={id,operation:'create',folioBlockId:blockId,folioHash:googleBlockHash(block),
         createdAt:new Date().toISOString(),status:'awaiting-gateway'}
       state.pending[id]=pending;state.revision++
       await db.settings.put({key:settingKey(calendarId),value:state,updatedAt:new Date().toISOString()})
@@ -266,8 +269,17 @@ export const calendarGoogleStoreC2={
         if(!mapped||!mapped.sourceUid||mapped.sourceCalendar!==source)throw new Error('Acknowledged event has invalid source.')
         if(pending.operation==='update'&&(!current||pending.providerKey!==mapped.sourceUid))
           throw new Error('Updated Google event changed identity.')
-        if(pending.operation==='create'&&(!pending.folioBlockId||!(await db.timeBlocks.get(pending.folioBlockId))))
-          throw new Error('Original Folio event no longer exists; reconcile before acknowledgement.')
+        if(pending.operation==='create'){
+          const owned=pending.folioBlockId?await db.timeBlocks.get(pending.folioBlockId):undefined
+          if(!owned||owned.source!=='folio'||!pending.folioHash||googleBlockHash(owned)!==pending.folioHash)
+            throw new Error('Folio event changed since export preparation. Resolve the proposal before accepting provider acknowledgement.')
+        }
+        if(pending.operation==='update'){
+          const baseline=pending.providerKey?state.baselines[pending.providerKey]:undefined
+          if(!current||baseline?.blockId!==current.id||baseline?.etag!==pending.baseEtag||
+            baseline?.valueHash!==googleBlockHash(current))
+            throw new Error('Google event changed since update preparation. Conflict resolution required.')
+        }
         const previous=current??(await blocks(calendarId)).find(b=>b.sourceUid===mapped.sourceUid)
         const accepted={...mapped,id:previous?.id??crypto.randomUUID(),createdAt:previous?.createdAt??now,updatedAt:now}
         await db.timeBlocks.put(accepted)
