@@ -1,4 +1,5 @@
 import { StrictMode } from 'react'
+import { FolioHubBridge } from './hub/FolioHubBridge'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import { AppErrorBoundary } from './components/system/AppErrorBoundary'
@@ -24,7 +25,7 @@ async function bootstrap() {
   void pwaService.register()
   try {
     await initializeDatabase()
-    root.render(<StrictMode><AppErrorBoundary><App /></AppErrorBoundary></StrictMode>)
+    root.render(<StrictMode><AppErrorBoundary><App /><FolioHubBridge /></AppErrorBoundary></StrictMode>)
     void runStartupMaintenance()
   } catch (error) {
     console.error('Database initialization failed', error)
