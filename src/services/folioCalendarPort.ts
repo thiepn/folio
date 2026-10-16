@@ -18,7 +18,7 @@ export interface FolioCalendarDaySnapshotV1 {
   date: LocalDate
   timeZone: string
   tasks: Array<{ id: string; title: string; status: string; plannedDate?: LocalDate; deadline?: LocalDate; estimatedMinutes?: number }>
-  timeBlocks: Array<{ id: string; taskId?: string; title: string; start: string; end: string; kind: 'event' | 'task'; allDay: boolean; source: 'folio' | 'ics' }>
+  timeBlocks: Array<{ id: string; taskId?: string; title: string; start: string; end: string; kind: 'event' | 'task'; allDay: boolean; source: 'folio' | 'ics' | 'google' | 'klips' }>
   habits: Array<{ id: string; title: string; kind: 'check' | 'quantity' | 'duration'; target: number; loggedValue: number; entryStatus: 'open' | 'completed' | 'skipped' }>
 }
 

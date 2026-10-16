@@ -49,7 +49,7 @@ check('D7 remains schema-compatible',Number(database.match(/DATABASE_SCHEMA_VERS
 
 check('TimeBlock model supports all-day metadata',models.includes('allDay?: boolean')&&models.includes("source?: 'folio' | 'ics'"))
 check('TimeBlock model stores timezone and external provenance',models.includes('timeZone?: string')&&models.includes('sourceCalendar?: string')&&models.includes('sourceUid?: string'))
-check('runtime TimeBlock schema validates D7 metadata',schemas.includes("source: z.enum(['folio','ics']).default('folio')")&&schemas.includes('allDay: z.boolean().default(false)'))
+check('runtime TimeBlock schema validates D7 metadata',schemas.includes("source: z.enum(['folio','ics','google','klips']).default('folio')")&&schemas.includes('allDay: z.boolean().default(false)'))
 check('backup schema preserves D7 metadata',backupSchemas.includes("source: z.enum(['folio','ics']).default('folio')")&&backupSchemas.includes('sourceCalendar: z.string().optional()'))
 
 check('date helpers expose timezone-aware minute display',date.includes('minuteOfDayInTimeZone')&&date.includes('formatTimeInZone'))
