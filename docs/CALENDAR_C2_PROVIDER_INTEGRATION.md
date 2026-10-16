@@ -82,3 +82,29 @@ are local and explanatory, not externally imported mastery or resource claims.
 Open-tab KLIPS refresh remains private-URL-in-memory, without network
 credentials or server scheduling. Native provider operations are device-local
 until production review; no production changes are implied by these files.
+
+## C2 continued: coherent native calendar completion batch
+
+The native Calendar now has owner-aware source selection drawn from actual
+TimeBlock provenance. Source groups are Folio tasks, Folio events, imported ICS
+snapshots, individual KLIPS local feeds and Google local mirrors. A source
+checkbox affects **visibility only** across agenda, day, multiweek, month and
+year views. No source filtering can change canonical Folio records, the
+availability calculation, the seven-day workload outlook or the scheduling
+solver. KLIPS and Google sources are explicitly labeled as read-only local
+copies rather than falsely connected provider calendars.
+
+The selected-day glance uses the existing task/due-date projection,
+scheduled event blocks, and canonical habit entry progress, with direct
+navigation to the original task/event records and existing habit actions.
+The seven-day workload strip shows actual free working-window time from all
+time blocks plus due/planned task counts, and links to the selected day. The
+Calendar remains Folio-owned: no shadow task/habit/grading scheduler was
+created. Filtering, dates and selected views do not write to source data.
+
+The source-group helper has runnable Node acceptance; exact-branch desktop
+Chromium exercises KLIPS visibility toggles and confirms retained records
+and unchanged availability, and mobile Chromium checks seven-day navigation.
+Live Google Account/Core calendar grant and trusted provider gateway remain
+blocked, along with remote KLIPS unattended refresh. This is a draft-only,
+implementation-first batch; no release/merge/deploy/migration executed.
