@@ -48,3 +48,37 @@ unrelated D18 cloud sync, including outbound snapshot/individual operations
 and incoming mirror creation/deletion, until a specific provider sharing
 boundary is reviewed. Explicit user-created Folio copies remain Folio-owned
 and retain ordinary sync behavior. No production grants were altered.
+
+## C2 feature-first completion batch: local operations and genuine scheduling
+
+Folio Calendar now provides a native user-visible **Google local workspace** to
+inspect a target calendar identity's local mirror status, prepare but **not send**
+Folio-created events, stage source-owned edit/delete requests, cancel unsent
+operations, resolve mirror conflicts (accept remote or preserve a Folio-owned
+copy), and explicitly disconnect local mirrors. Disconnect refuses outstanding
+pending writes and locally divergent records. It copies or removes only the
+source-owned local mirror; it does **not** revoke OAuth scopes or the upstream
+Google connector. A real reconnect action remains unavailable until a trusted
+Account/Core Calendar gateway exists.
+
+The in-repository `calendarGatewayContractC2.ts` defines a dormant typed
+Account/Core transport, read/event operations and revocation result, with an
+explicit request context, expected Folio source hash, idempotency key and
+conditional source ETag. No credential exchange, public endpoint or unapproved
+OAuth flow is implemented. Treat all browser context as untrusted; server-side
+identity, permission, calendar ACL, revisions, retries and scopes are mandatory
+independent authorizers. Staged create operations are tied to the original
+Folio event's content hash to prevent outdated exports; duplicate pending
+exports are rejected.
+
+The Calendar task backlog now has **Find time**, proposing up to five next-week
+free slots, respecting hard deadlines, source-owned and Folio busy blocks,
+all-day occupancy, custom start/end work hours, current time, timezone/DST and
+session duration. It uses Folio's canonical time blocks and opens the
+existing scheduling editor for explicit confirmation; it adds no new
+scheduler, task authority, AI planning engine or implicit writes. The suggestions
+are local and explanatory, not externally imported mastery or resource claims.
+
+Open-tab KLIPS refresh remains private-URL-in-memory, without network
+credentials or server scheduling. Native provider operations are device-local
+until production review; no production changes are implied by these files.

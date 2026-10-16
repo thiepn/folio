@@ -17,7 +17,7 @@ const fakeDB=`const settings=new Map(),blocks=new Map()
 const clone=()=>[new Map([...settings].map(([k,v])=>[k,structuredClone(v)])),
   new Map([...blocks].map(([k,v])=>[k,structuredClone(v)]))]
 export const db={
- settings:{get:async id=>settings.get(id),put:async v=>{settings.set(v.key,structuredClone(v))}},
+ settings:{get:async id=>settings.get(id),put:async v=>{settings.set(v.key,structuredClone(v))},delete:async key=>{settings.delete(key)}},
  timeBlocks:{get:async id=>blocks.get(id),toArray:async()=>[...blocks.values()].map(row=>structuredClone(row)),
    put:async v=>{blocks.set(v.id,structuredClone(v))},delete:async id=>{blocks.delete(id)}},
  transaction:async (...args)=>{const action=args.at(-1),before=clone()
@@ -111,6 +111,25 @@ const run=async()=>{
   assert(![...inspect().blocks.values()].some(b=>b.source==='google'),'acknowledged deletion failed')
   assert(!(await store.pending(source)).length,'deletion queue retained')
   assert([...inspect().blocks.values()].some(b=>b.source==='folio'),'Google delete removed native Folio copy')
+  const oldNative=[...inspect().blocks.values()].find(b=>b.source==='folio')
+  const proposal=await store.queueCreate(oldNative.id,source)
+  let duplicateExportBlocked=false
+  try{await store.queueCreate(oldNative.id,source)}catch{duplicateExportBlocked=true}
+  assert(duplicateExportBlocked,'Duplicate unsent Folio export allowed.')
+  let disconnectedPending=false
+  try{await store.disconnectLocal(source,'remove-mirror',(await store.status(source)).revision)}catch{disconnectedPending=true}
+  assert(disconnectedPending,'Disconnected despite unreviewed pending exports.')
+  await store.cancelPending(source,proposal.clientMutationId)
+  const again2=await store.prepare({calendarId:source,mode:'full',events:[example('c','"5"','Provider-only')],nextSyncToken:'c6'})
+  await store.apply(again2)
+  let staleDisconnect=false
+  try{await store.disconnectLocal(source,'preserve-as-folio',0)}catch{staleDisconnect=true}
+  assert(staleDisconnect,'Stale local disconnect revision accepted.')
+  const cleared=await store.disconnectLocal(source,'preserve-as-folio',(await store.status(source)).revision)
+  assert(cleared.removed===1&&cleared.retained===1&&cleared.remoteAccessRevoked===false,'Local disconnect did not preserve Folio copies accurately.')
+  assert([ ...inspect().blocks.values()].every(b=>b.source==='folio'),'Provider mirror still present after local disconnect.')
+  assert(!(await store.status(source)).hasCursor,'Local cursor survived disconnect.')
+
 
   console.log('C2_STORE_PASS atomic mirror apply/cursor, stable IDs, stale CAS, conflict copy, deletion, queued create, 410 recovery')
 }
