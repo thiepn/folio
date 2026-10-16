@@ -144,7 +144,7 @@ export const calendarGoogleStoreC2={
     })
   },
   async pull(transport:GooglePullTransportC2,calendarId:string) {
-    if(typeof navigator!=='undefined'&&!navigator.onLine)throw new Error('Offline: Google calendar mirror remains unchanged.')
+    if(typeof navigator!=='undefined'&&navigator.onLine===false)throw new Error('Offline: Google calendar mirror remains unchanged.')
     const state=await saved(calendarId)
     let delta:GoogleDeltaC2
     try {delta=await pullGoogleDelta(transport,calendarId,state.phase==='needs-full-sync'?undefined:state.cursor)}
