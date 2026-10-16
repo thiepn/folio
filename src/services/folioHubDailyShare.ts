@@ -40,7 +40,7 @@ export async function readFolioHubDailyShare(){
         kind:e.taskId?'task' as const:'event' as const,allDay:Boolean(e.allDay)
       })),
       notes:notes.filter(n=>!n.archived).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt))
-        .slice(0,5).map(n=>({id:n.id,title:n.title,updatedAt:n.updatedAt})),
+        .slice(0,5).map(n=>({id:n.id,title:n.title.trim()||'Untitled',updatedAt:n.updatedAt})),
       habits:habits.filter(h=>!h.archived).sort((a,b)=>a.sortOrder-b.sortOrder)
         .slice(0,10).map(h=>{
           const entry=byHabit.get(h.id)
