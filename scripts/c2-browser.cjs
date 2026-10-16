@@ -24,6 +24,7 @@ async function blocks(page){
     await page.locator('.sidebar').getByRole('button',{name:'Calendar'}).click()
     const section=page.locator('.calendar-c2-sources')
     await section.waitFor()
+    await section.getByRole('button',{name:'Manage connections'}).click()
     await section.getByRole('button',{name:'Add KLIPS source'}).click()
     await section.getByLabel('From').fill('2026-10-12')
     await section.getByLabel('Through').fill('2026-10-20')
@@ -40,6 +41,7 @@ async function blocks(page){
     await page.locator('#main-content').waitFor()
     await page.locator('.sidebar').getByRole('button',{name:'Calendar'}).click()
     await page.locator('.calendar-c2-sources').waitFor()
+    await page.locator('.calendar-c2-sources').getByRole('button',{name:'Manage connections'}).click()
     rows=(await blocks(page)).filter(b=>b.source==='klips')
     if(rows.length!==1||rows[0].id!==retainedId)throw new Error('KLIPS source identity lost on reload.')
     // Source filtering changes only the visible calendar, never event storage.
@@ -105,6 +107,7 @@ async function blocks(page){
     await page.locator('#main-content').waitFor()
     await page.locator('.sidebar').getByRole('button',{name:'Calendar'}).click()
     await page.locator('.calendar-c2-sources').waitFor()
+    await page.locator('.calendar-c2-sources').getByRole('button',{name:'Manage connections'}).click()
     if(await page.getByText(/Open-tab subscription: active/).count())throw new Error('Private source session survived reload.')
     // Real native event -> unsent Google intent -> cancel, without OAuth or network.
     await page.getByRole('button',{name:'+ Event'}).click()
@@ -133,6 +136,7 @@ async function blocks(page){
     await mobile.locator('#main-content').waitFor()
     await mobile.locator('.mobile-nav').getByRole('button',{name:'Calendar'}).click()
     await mobile.locator('.calendar-c2-sources').waitFor()
+    await mobile.locator('.calendar-c2-sources').getByRole('button',{name:'Manage connections'}).click()
     if(await mobile.locator('.calendar-c2-week-strip__days button').count()!==7)
       throw new Error('Mobile seven-day navigation not available.')
     await mobile.locator('.calendar-c2-week-strip__days button').nth(1).click()

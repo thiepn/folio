@@ -22,6 +22,7 @@ export function CalendarSourcesC2({selectedDate}:{selectedDate:LocalDate}) {
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
   const [notice,setNotice]=useState('')
+  const [manageOpen,setManageOpen]=useState(false)
   const current=selected||sources[0]?.id||''
   useEffect(()=>{
     let active=true
@@ -49,6 +50,9 @@ export function CalendarSourcesC2({selectedDate}:{selectedDate:LocalDate}) {
   return <section className="calendar-c2-sources" aria-label="Calendar sources">
     <header><span className="eyebrow">Connected sources</span><strong>{sources.length} local feeds</strong></header>
     <p><strong>Folio</strong> · Live on this device. <strong>Google Calendar</strong> · Not connected (Account/Core consent and proxy required).</p>
+    <button type="button" className="calendar-c2-manage-button" onClick={()=>setManageOpen(prev=>!prev)}
+      aria-expanded={manageOpen} aria-controls="calendar-c2-connection-editor">{manageOpen?'Hide connections':'Manage connections'}</button>
+    {manageOpen?<div id="calendar-c2-connection-editor" className="calendar-c2-connection-editor">
     <p>KLIPS read-only timetable. The generated iCal address may act like a password; it is never saved or sent to THIEPN servers by this screen.</p>
     <div className="calendar-c2-source-controls">
       <label>New source name <input value={label} maxLength={90} onChange={event=>setLabel(event.target.value)} /></label>
@@ -109,5 +113,6 @@ export function CalendarSourcesC2({selectedDate}:{selectedDate:LocalDate}) {
     {error?<p role="alert" className="calendar-c2-error">{error}</p>:null}
     {notice?<p role="status">{notice}</p>:null}
     <CalendarGoogleWorkspaceC2 />
+    </div>:null}
   </section>
 }

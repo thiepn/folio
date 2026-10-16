@@ -950,3 +950,9 @@
 .calendar-c2-week-strip__days button small{font-size:10px;color:var(--muted)}
 @media(max-width:960px){.calendar-c2-week-strip__days{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:600px){.calendar-c2-week-strip__days{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}.calendar-c2-week-strip__days button{flex:0 0 126px;min-height:80px;scroll-snap-align:start}}
+
+/* Native Calendar stays usable without expanding provider connection forms. */
+.calendar-c2-manage-button{padding:8px 10px;min-height:36px;background:var(--surface-input);border:1px solid var(--line);text-align:left;color:var(--text);cursor:pointer}
+.calendar-c2-manage-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.calendar-c2-connection-editor{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:10px;min-width:0}
+@media(max-width:760px){.calendar-c2-manage-button{min-height:44px}}
