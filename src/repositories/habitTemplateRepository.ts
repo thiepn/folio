@@ -11,6 +11,12 @@ export const BUILTIN_HABIT_TEMPLATES: HabitTemplateEntity[] = [
   {id:'builtin-read-pages',name:'Read 10 pages',description:'Track a measurable reading target.',kind:'quantity',target:10,unit:'pages',schedule:{type:'daily'},countsTowardCapacity:false,builtin:true,createdAt:BUILTIN_STAMP,updatedAt:BUILTIN_STAMP},
   {id:'builtin-language',name:'Language practice',description:'Twenty minutes of deliberate language exposure.',kind:'duration',target:20,schedule:{type:'daily'},countsTowardCapacity:true,builtin:true,createdAt:BUILTIN_STAMP,updatedAt:BUILTIN_STAMP},
   {id:'builtin-strength',name:'Strength training',description:'Three flexible sessions each week.',kind:'check',target:1,schedule:{type:'times-per-week',timesPerWeek:3},countsTowardCapacity:false,builtin:true,createdAt:BUILTIN_STAMP,updatedAt:BUILTIN_STAMP},
+  // Opt-in discipleship practices, never installed automatically or interpreted as holiness scores.
+  {id:'builtin-faith-scripture',name:'Scripture reading',description:'Read attentively; mark only what you intentionally practiced. Reading completion remains in your Bible application.',kind:'duration',target:10,schedule:{type:'daily'},countsTowardCapacity:false,builtin:true,createdAt:BUILTIN_STAMP,updatedAt:BUILTIN_STAMP},
+  {id:'builtin-faith-prayer',name:'Intentional prayer',description:'A voluntary daily prayer rhythm; this tracks a personal practice, not spiritual worth.',kind:'duration',target:10,schedule:{type:'daily'},countsTowardCapacity:false,builtin:true,createdAt:BUILTIN_STAMP,updatedAt:BUILTIN_STAMP},
+  {id:'builtin-faith-memorization',name:'Scripture memorization',description:'Practice as desired. TMS60 remains the authority for actual verse reviews.',kind:'check',target:1,schedule:{type:'weekdays'},countsTowardCapacity:false,builtin:true,createdAt:BUILTIN_STAMP,updatedAt:BUILTIN_STAMP},
+  {id:'builtin-faith-reflection',name:'Evening reflection',description:'Make time to reflect privately; the original devotional journal owns your writing.',kind:'check',target:1,schedule:{type:'daily'},countsTowardCapacity:false,builtin:true,createdAt:BUILTIN_STAMP,updatedAt:BUILTIN_STAMP},
+  {id:'builtin-faith-sabbath',name:'Weekly rest and worship',description:'Optional weekly rhythm for rest, worship, and fellowship. Choose your actual schedule.',kind:'check',target:1,schedule:{type:'times-per-week',timesPerWeek:1},countsTowardCapacity:false,builtin:true,createdAt:BUILTIN_STAMP,updatedAt:BUILTIN_STAMP},
 ]
 
 export const habitTemplateRepository = {

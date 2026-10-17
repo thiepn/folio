@@ -159,6 +159,15 @@ export function FocusOverlay({ open, activeSession, tasks, preferredTaskId, task
           <label className="field"><span>Session intention <small>optional</small></span><input maxLength={240} value={intention} onChange={(event)=>setIntention(event.target.value)} placeholder="What does a good session accomplish?" /></label>
           <div className="form-grid"><label className="field"><span>Context <small>optional</small></span><input maxLength={120} value={context} onChange={(event)=>setContext(event.target.value)} placeholder="Library, deep work, study…" /></label><label className="field"><span>Tags <small>comma separated</small></span><input value={tagText} onChange={(event)=>setTagText(event.target.value)} placeholder="research, exam, coding" /></label></div>
 
+          <label className="field" style={{display:'flex',alignItems:'center',gap:'.6rem'}}>
+            <input type="checkbox" checked={tagsFromText(tagText).includes('faith-discipline')} onChange={event=>{
+              const next=tagsFromText(tagText).filter(tag=>tag!=='faith-discipline')
+              if(event.target.checked)next.push('faith-discipline')
+              setTagText(next.join(', '))
+            }}/>
+            <span>Include this session in my private Faith &amp; Discipline review <small>(optional original Folio tag; no task or spiritual score is created)</small></span>
+          </label>
+
           <div className="focus-mode-switch focus-mode-switch--v2" role="group" aria-label="Focus mode">
             <button className={mode==='stopwatch'?'is-active':''} onClick={()=>setMode('stopwatch')}><strong>Open</strong><span>Track freely</span></button>
             <button className={mode==='countdown'?'is-active':''} onClick={()=>{setMode('countdown');const s=suggestFocusMinutes(selected,previous);setTargetMinutes(s);setPlannedMinutes(s)}}><strong>Countdown</strong><span>One timed block</span></button>
