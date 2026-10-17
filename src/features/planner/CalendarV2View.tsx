@@ -373,7 +373,7 @@ export function CalendarV2View({
       <section className="calendar-c2-week-strip" aria-label="Upcoming seven days">
         <div className="calendar-c2-week-strip__header"><strong>Next seven days</strong><small>Free time 06–22 · all calendars count toward availability</small></div>
         <div className="calendar-c2-week-strip__days">
-          {nextSevenDays.map(day=><button type="button" key={day.date}
+          {nextSevenDays.map(day=><button type="button" key={day.date} data-date={day.date}
             aria-current={selectedDate===day.date?'date':undefined}
             onClick={()=>{setSelectedDate(day.date);setMode('day')}}>
             <strong>{formatLocalDate(day.date,{weekday:'short',month:'short',day:'numeric'})}</strong>
