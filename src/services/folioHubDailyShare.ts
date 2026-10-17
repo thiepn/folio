@@ -45,6 +45,7 @@ export async function readFolioHubDailyShare(){
         .slice(0,10).map(h=>{
           const entry=byHabit.get(h.id)
           return {id:h.id,title:h.title,target:h.target,value:entry?.value??0,
+            updatedAt:entry?.updatedAt??h.updatedAt,
             status:entry?.status==='completed'?'completed' as const:
               entry?.status==='skipped'?'skipped' as const:'open' as const}
         })

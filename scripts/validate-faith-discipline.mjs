@@ -67,6 +67,17 @@ const conflict=await executeReviewedDisciplineCommand(command,{
 assert.equal(conflict.result,'conflict');assert.equal(writes,0)
 console.log('PASS FD1: owner command denial and stale original-record CAS')
 
+// Ensure the native owner approval is a user-click path, not a background write.
+const ownerComponent=fs.readFileSync(new URL('../src/features/integrations/FolioHubActionPrompt.tsx',import.meta.url),'utf8')
+const ownerPreview=fs.readFileSync(new URL('../src/services/folioHubActionPreview.ts',import.meta.url),'utf8')
+assert.match(ownerComponent,/onClick=\{\(\)=>void respond\(true\)\}/)
+assert.match(ownerComponent,/event\.source!==window\.opener/)
+assert.match(ownerComponent,/event\.origin!==HUB/)
+assert.match(ownerComponent,/readFolioHubActionPreview\(command\)/)
+assert.match(ownerPreview,/db\.habitEntries\.get/)
+assert.doesNotMatch(ownerComponent,/location\.searchParams\.set\('resourceId'/)
+console.log('PASS FD1: native one-time owner approval, original CAS preview and zero resource IDs in URL')
+
 // Verify the real same-origin Folio bridge without opening any user records.
 fs.writeFileSync(path.join(services,'fake-folio-db.mjs'),`
 const tables={
