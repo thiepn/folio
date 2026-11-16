@@ -133,6 +133,44 @@ jobs:
             console.log('FOLIO_HUB_CONSENT_PASS=' + JSON.stringify({taskCount:reply.snapshot.tasks.length,notesCount:reply.snapshot.notes.length}))
             await popup.close()
             await opener.close()
+
+            // The Hub Tasks route must be explicitly allowed, but other same-origin
+            // paths must not silently acquire the ability to request Folio data.
+            const tasksOpener=await browser.newPage()
+            await tasksOpener.goto('http://127.0.0.1:4173/home/tasks/', {waitUntil:'domcontentloaded'})
+            await tasksOpener.evaluate(()=>{
+              window.__folioTestReply=null
+              window.addEventListener('message',event=>{
+                if(event.origin===location.origin)window.__folioTestReply=event.data
+              })
+            })
+            const tasksPopupWait=tasksOpener.waitForEvent('popup')
+            await tasksOpener.evaluate(nonce=>window.open('/?hubBridge='+nonce,'_blank'),'b'.repeat(32))
+            const tasksPopup=await tasksPopupWait
+            await tasksPopup.getByRole('dialog',{name:'Share today’s Folio summary?'}).waitFor()
+            if(await tasksOpener.evaluate(()=>window.__folioTestReply)!==null)throw new Error('Tasks route shared without approval')
+            await tasksPopup.getByRole('button',{name:'Share summary once'}).click()
+            await tasksOpener.waitForFunction(()=>Boolean(window.__folioTestReply))
+            const tasksReply=await tasksOpener.evaluate(()=>window.__folioTestReply)
+            if(tasksReply.type!=='thiepn:folio-hub-daily:v1'||tasksReply.nonce!=='b'.repeat(32)){
+              throw new Error('Approved Hub Tasks bridge failed')
+            }
+            await tasksPopup.close()
+            await tasksOpener.close()
+
+            const forbiddenOpener=await browser.newPage()
+            await forbiddenOpener.goto('http://127.0.0.1:4173/home/settings/',{waitUntil:'domcontentloaded'})
+            const forbiddenWait=forbiddenOpener.waitForEvent('popup')
+            await forbiddenOpener.evaluate(nonce=>window.open('/?hubBridge='+nonce,'_blank'),'c'.repeat(32))
+            const forbiddenPopup=await forbiddenWait
+            await forbiddenPopup.waitForLoadState('domcontentloaded')
+            await forbiddenPopup.waitForTimeout(500)
+            if(await forbiddenPopup.getByRole('dialog',{name:'Share today’s Folio summary?'}).count()){
+              throw new Error('Unapproved same-origin opener acquired Folio share dialog')
+            }
+            await forbiddenPopup.close()
+            await forbiddenOpener.close()
+            console.log('FOLIO_HUB_TASK_ROUTE_PASS=true')
             await browser.close()
           })().catch((error) => {
             console.error(error)
