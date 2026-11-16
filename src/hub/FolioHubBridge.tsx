@@ -3,6 +3,14 @@ import { createFolioHubDailySummary, FOLIO_HUB_DEVICE_MESSAGE } from '../service
 import './folioHubBridge.css';
 
 const REQUEST = /^[0-9a-f]{32}$/;
+
+/** Exact Hub routes permitted to request the existing one-time source summary.
+ * No wildcard pathname matching or cross-origin grants. */
+function approvedHubOpener(): boolean {
+  if (!window.opener || window.opener === window) return false;
+  return window.opener.location.origin === window.location.origin &&
+    (window.opener.location.pathname === '/' || window.opener.location.pathname === '/home/tasks/');
+}
 function bridgeRequest(): string | null {
   try {
     const url = new URL(window.location.href);
@@ -12,8 +20,7 @@ function bridgeRequest(): string | null {
     // No private request token in browser history, Referer or service worker caches.
     history.replaceState(history.state, '', url.pathname + url.search + url.hash);
     if (location.origin !== 'https://thiepn.dev' && !['localhost', '127.0.0.1'].includes(location.hostname)) return null;
-    if (!window.opener || window.opener === window) return null;
-    if (window.opener.location.origin !== location.origin || window.opener.location.pathname !== '/') return null;
+    if (!approvedHubOpener()) return null;
     return request;
   } catch { return null; }
 }
@@ -29,8 +36,7 @@ export function FolioHubBridge() {
     setStatus('busy');
     try {
       const snapshot = await createFolioHubDailySummary();
-      if (!window.opener || window.opener.closed || window.opener.location.origin !== window.location.origin ||
-          window.opener.location.pathname !== '/') throw new Error('Hub is no longer available.');
+      if (!window.opener || window.opener.closed || !approvedHubOpener()) throw new Error('Hub is no longer available.');
       window.opener.postMessage({
         type: FOLIO_HUB_DEVICE_MESSAGE, nonce: request, snapshot,
       }, window.location.origin);
