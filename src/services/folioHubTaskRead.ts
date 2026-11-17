@@ -27,6 +27,9 @@ export interface FolioHubTaskRead {
   counts: Record<FolioHubTaskBucket,number>
   truncated: boolean
   tasks: FolioHubTaskRow[]
+  /** Separate bounded recently completed list for explicit reopen controls.
+   * It never alters active bucket totals or v1 read semantics. */
+  recentCompleted: {id:string;title:string;updatedAt:string;completedAt?:string;priority:'normal'|'high'|'critical';plannedDate?:string}[]
 }
 function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set<string>): FolioHubTaskRow {
   const bucket: FolioHubTaskBucket = (task.deadline && task.deadline <= today) ||
@@ -61,6 +64,14 @@ export async function createFolioHubTaskRead(now = new Date()):Promise<FolioHubT
       priority[a.priority]-priority[b.priority] ||
       (a.deadline||a.plannedDate||'9999-12-31').localeCompare(b.deadline||b.plannedDate||'9999-12-31') ||
       a.title.localeCompare(b.title) || a.id.localeCompare(b.id))
+  const recentCompleted=tasks.filter(task=>!task.deletedAt && task.status==='completed')
+    .sort((a,b)=>(b.completedAt||b.updatedAt).localeCompare(a.completedAt||a.updatedAt))
+    .slice(0,20).map(task=>({
+      id:task.id,title:task.title.slice(0,160),updatedAt:task.updatedAt,
+      ...(task.completedAt?{completedAt:task.completedAt}:{}),
+      priority:task.priority,
+      ...(task.plannedDate?{plannedDate:task.plannedDate}:{})
+    }))
   const counts:Record<FolioHubTaskBucket,number>={today:0,inbox:0,upcoming:0,later:0}
   for (const row of rows) counts[row.bucket]++
   const snapshot:FolioHubTaskRead={
@@ -68,6 +79,7 @@ export async function createFolioHubTaskRead(now = new Date()):Promise<FolioHubT
     date:today,generatedAt:now.toISOString(),totalCount:rows.length,counts,
     truncated:rows.length>FOLIO_HUB_TASK_READ_LIMIT,
     tasks:rows.slice(0,FOLIO_HUB_TASK_READ_LIMIT),
+    recentCompleted,
   }
   if(JSON.stringify(snapshot).length>80_000)throw new Error('Folio task read is too large')
   return snapshot
