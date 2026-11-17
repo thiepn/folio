@@ -98,10 +98,12 @@ export class FolioHubTaskActions {
       let mutation:UndoableMutation
       if(action.kind==='complete'||action.kind==='reopen'){
         mutation=await taskService.setCompleted(action.taskId,action.kind==='complete')
-      } else {
+      } else if(action.kind==='reschedule') {
         if(current.status!=='todo'&&current.status!=='inbox')
           return {ok:false,code:'conflict',message:'Only open tasks can be rescheduled'}
         mutation=await taskService.reschedule(action.taskId,action.plannedDate??undefined)
+      } else {
+        return {ok:false,code:'invalid',message:'Unknown task action'}
       }
       const updated=await taskRepository.get(action.taskId)
       if(!updated)throw Error('Task disappeared after update')
