@@ -1,4 +1,6 @@
 import { createFolioHubTaskRead, FOLIO_HUB_TASK_READ_MESSAGE, FOLIO_HUB_LIVE_GRANT_KEY } from '../services/folioHubTaskRead'
+import { FOLIO_HUB_TASK_ACTION_MESSAGE, FOLIO_HUB_TASK_WRITE_GRANT_KEY,
+  FolioHubTaskActions, type HubTaskActionResult } from '../services/folioHubTaskActions'
 
 const NONCE=/^[0-9a-f]{32}$/
 const REQUEST=/^[a-zA-Z0-9-]{1,64}$/
@@ -57,6 +59,65 @@ export function mountFolioHubTaskReader():void {
     }).catch(()=>{
       parent.postMessage({type:FOLIO_HUB_TASK_READ_MESSAGE+':error',nonce,requestId},location.origin)
     }).finally(()=>{busy=false})
+  })
+  const taskActions=new FolioHubTaskActions()
+  const seen=new Map<string,{input:string;result:HubTaskActionResult}>()
+  const pending=new Set<string>()
+  let actionBusy=false
+  function approvedWriteGrant(provided:unknown):boolean {
+    if(typeof provided!=='string'||!NONCE.test(provided)||!approvedGrant())return false
+    try {
+      const saved=JSON.parse(sessionStorage.getItem(FOLIO_HUB_TASK_WRITE_GRANT_KEY)||'null')
+      return saved?.grant===provided && saved?.readGrant===nonce &&
+        typeof saved.expiresAt==='number' && Number.isFinite(saved.expiresAt) &&
+        Date.now()<saved.expiresAt
+    }catch{return false}
+  }
+  function reply(id:string,writeGrant:string,result:HubTaskActionResult){
+    parent.postMessage({
+      type:FOLIO_HUB_TASK_ACTION_MESSAGE+':result',nonce,writeGrant,requestId:id,result,
+    },location.origin)
+  }
+  window.addEventListener('message',event=>{
+    const data=event.data
+    if(event.origin!==location.origin||event.source!==parent||!data||
+       data.type!==FOLIO_HUB_TASK_ACTION_MESSAGE+':request'||data.nonce!==nonce||
+       typeof data.requestId!=='string'||!REQUEST.test(data.requestId)||
+       !approvedWriteGrant(data.writeGrant))return
+    let openerValid=false
+    try {openerValid=parent.location.origin===location.origin&&parent.location.pathname==='/home/tasks/'}catch{}
+    if(!openerValid)return
+    const requestId=data.requestId as string
+    let serialized:string
+    try {serialized=JSON.stringify(data.action)}catch{return}
+    if(!serialized||serialized.length>2_000)return
+    const previous=seen.get(requestId)
+    if(previous){
+      reply(requestId,data.writeGrant,previous.input===serialized?previous.result:{
+        ok:false,code:'invalid',message:'Request ID was reused with different contents',
+      })
+      return
+    }
+    if(pending.has(requestId))return // In-flight duplicate cannot execute twice
+    if(actionBusy){
+      reply(requestId,data.writeGrant,{ok:false,code:'unavailable',message:'A Folio action is already running'})
+      return
+    }
+    pending.add(requestId)
+    actionBusy=true
+    void taskActions.execute(data.action).then(result=>{
+      seen.set(requestId,{input:serialized,result})
+      if(seen.size>80)seen.delete(seen.keys().next().value!)
+      reply(requestId,data.writeGrant,result)
+    }).catch(()=>{
+      const result:HubTaskActionResult={ok:false,code:'unavailable',
+        message:'Outcome uncertain. Open Folio before retrying'}
+      seen.set(requestId,{input:serialized,result})
+      reply(requestId,data.writeGrant,result)
+    }).finally(()=>{
+      pending.delete(requestId)
+      actionBusy=false
+    })
   })
   parent.postMessage({type:FOLIO_HUB_TASK_READ_MESSAGE+':ready',nonce},location.origin)
 }
