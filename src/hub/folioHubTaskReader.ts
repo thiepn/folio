@@ -12,8 +12,16 @@ export function isFolioHubTaskReaderRequest():boolean {
 }
 export function mountFolioHubTaskReader():void {
   const url=new URL(location.href)
-  const nonce=url.searchParams.get('hubTasksRead')
+  const requested=url.searchParams.get('hubTasksRead')
   url.searchParams.delete('hubTasksRead')
+  // Do not expose the approved grant in a URL, Referer, or server access log.
+  // It remains only in Folio-issued, same-tab session storage.
+  let nonce:string|null=null
+  try {
+    const saved=JSON.parse(sessionStorage.getItem(FOLIO_HUB_LIVE_GRANT_KEY)||'null')
+    if(saved && typeof saved.grant==='string' && NONCE.test(saved.grant) &&
+       typeof saved.expiresAt==='number' && Date.now()<saved.expiresAt)nonce=saved.grant
+  } catch { /* Fail closed. */ }
   history.replaceState(history.state,'',url.pathname+url.search+url.hash)
   function approvedGrant():boolean {
     if(!nonce)return false
@@ -26,7 +34,7 @@ export function mountFolioHubTaskReader():void {
   }
   let approved=false
   try {
-    approved=!!nonce && NONCE.test(nonce) && window.parent!==window &&
+    approved=requested==='1' && !!nonce && NONCE.test(nonce) && window.parent!==window &&
       (location.origin==='https://thiepn.dev' || ['localhost','127.0.0.1'].includes(location.hostname)) &&
       parent.location.origin===location.origin && parent.location.pathname==='/home/tasks/' &&
       approvedGrant()
