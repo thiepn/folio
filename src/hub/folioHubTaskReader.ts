@@ -2,6 +2,7 @@ import { createFolioHubTaskRead, FOLIO_HUB_TASK_READ_MESSAGE, FOLIO_HUB_LIVE_GRA
 import { FOLIO_HUB_TASK_ACTION_MESSAGE, FOLIO_HUB_TASK_WRITE_GRANT_KEY,
   FolioHubTaskActions, type HubTaskActionResult } from '../services/folioHubTaskActions'
 import { claimFolioTaskCommand, recordFolioTaskCommand } from '../services/folioHubTaskReceipts'
+import { createFolioHubTaskQuery, FOLIO_HUB_TASK_QUERY_MESSAGE } from '../services/folioHubTaskQuery'
 
 const NONCE=/^[0-9a-f]{32}$/
 const REQUEST=/^[a-zA-Z0-9-]{1,64}$/
@@ -60,6 +61,31 @@ export function mountFolioHubTaskReader():void {
     }).catch(()=>{
       parent.postMessage({type:FOLIO_HUB_TASK_READ_MESSAGE+':error',nonce,requestId},location.origin)
     }).finally(()=>{busy=false})
+  })
+  // On-demand read-only pages. Every request is independently consent
+  // checked, bounded, and tied to the same approved reader iframe.
+  let activeQueries=0
+  window.addEventListener('message',event=>{
+    const data=event.data
+    if(event.origin!==location.origin||event.source!==parent||!data||
+       data.type!==FOLIO_HUB_TASK_QUERY_MESSAGE+':read'||data.nonce!==nonce||
+       typeof data.requestId!=='string'||!REQUEST.test(data.requestId))return
+    let parentValid=false
+    try{parentValid=parent.location.origin===location.origin&&parent.location.pathname==='/home/tasks/'}catch{}
+    if(!parentValid||!approvedGrant())return
+    const requestId=data.requestId as string
+    if(activeQueries>=3){
+      parent.postMessage({type:FOLIO_HUB_TASK_QUERY_MESSAGE+':error',nonce,requestId},location.origin)
+      return
+    }
+    activeQueries++
+    void createFolioHubTaskQuery(data.query).then(result=>{
+      if(approvedGrant())parent.postMessage({
+        type:FOLIO_HUB_TASK_QUERY_MESSAGE+':result',nonce,requestId,result,
+      },location.origin)
+    }).catch(()=>{
+      parent.postMessage({type:FOLIO_HUB_TASK_QUERY_MESSAGE+':error',nonce,requestId},location.origin)
+    }).finally(()=>{activeQueries--})
   })
   const taskActions=new FolioHubTaskActions()
   const seen=new Map<string,{input:string;result:HubTaskActionResult}>()
