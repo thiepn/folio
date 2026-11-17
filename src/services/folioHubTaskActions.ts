@@ -8,7 +8,7 @@ export const FOLIO_HUB_TASK_ACTION_MESSAGE = 'thiepn:folio-hub-task-actions:v1' 
 export const FOLIO_HUB_TASK_WRITE_GRANT_KEY = 'folio:hub:task-write-consent:v1' as const
 
 export type HubTaskAction =
-  | {kind:'create';title:string;status:'todo'|'inbox';priority:'normal'|'high'|'critical';plannedDate?:string}
+  | {kind:'create';title:string;status:'todo'|'inbox';priority:'normal'|'high'|'critical';plannedDate?:string;projectId?:string;listId?:string}
   | {kind:'complete'|'reopen';taskId:string;expectedUpdatedAt:string}
   | {kind:'reschedule';taskId:string;expectedUpdatedAt:string;plannedDate:string|null}
   | {kind:'undo';undoId:string}
@@ -30,10 +30,14 @@ export function parseHubTaskAction(value:unknown):HubTaskAction {
   if(x.kind==='create'){
     if(!text(x.title,160)||!['todo','inbox'].includes(String(x.status))||
       !priorities.includes(String(x.priority))||
-      (x.plannedDate!==undefined&&!day(x.plannedDate)))throw Error('Invalid create task request')
+      (x.plannedDate!==undefined&&!day(x.plannedDate))||
+      (x.projectId!==undefined&&!id(x.projectId))||
+      (x.listId!==undefined&&!id(x.listId)))throw Error('Invalid create task request')
     return {kind:'create',title:x.title.trim(),status:x.status as 'todo'|'inbox',
       priority:x.priority as 'normal'|'high'|'critical',
-      ...(x.plannedDate?{plannedDate:x.plannedDate as string}:{})}
+      ...(x.plannedDate?{plannedDate:x.plannedDate as string}:{}),
+      ...(x.projectId?{projectId:x.projectId as string}:{}),
+      ...(x.listId?{listId:x.listId as string}:{})}
   }
   if(x.kind==='complete'||x.kind==='reopen'){
     if(!id(x.taskId)||!iso(x.expectedUpdatedAt))throw Error('Invalid task version')
@@ -96,9 +100,23 @@ export class FolioHubTaskActions {
       }
       if(action.kind==='create'){
         if(!action.title.trim())return {ok:false,code:'invalid',message:'Enter a task title'}
+        // Folio owns the entity identities. Do not trust a Hub supplied
+        // project/list id without checking the source tables and archive state.
+        if(action.projectId){
+          const project=await db.projects.get(action.projectId)
+          if(!project||project.archived)return {ok:false,code:'invalid',
+            message:'Project is unavailable in Folio. Refresh and choose another'}
+        }
+        if(action.listId){
+          const list=await db.lists.get(action.listId)
+          if(!list||list.archived)return {ok:false,code:'invalid',
+            message:'List is unavailable in Folio. Refresh and choose another'}
+        }
         const created=await taskService.createUndoable({
           title:action.title,status:action.status,priority:action.priority,
           ...(action.status==='todo'&&action.plannedDate?{plannedDate:action.plannedDate}:{}),
+          ...(action.projectId?{projectId:action.projectId}:{}),
+          ...(action.listId?{listId:action.listId}:{}),
         })
         const committed=await taskRepository.get(created.task.id)
         if(!committed)throw Error('Created source task could not be reloaded')
