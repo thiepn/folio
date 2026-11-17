@@ -41,6 +41,7 @@ import { PatchPlanModal } from '../features/patch/PatchPlanModal'
 import { InteroperabilityModal } from '../features/interop/InteroperabilityModal'
 import { RecurrenceEditorModal, type RecurrenceEditorValue } from '../features/recurrence/RecurrenceEditorModal'
 import { TaskInspector } from '../features/tasks/TaskInspector'
+import { consumeFolioHubTaskLink } from '../hub/folioHubTaskLink'
 import { TrashDrawer } from '../features/tasks/TrashDrawer'
 import { UndoToast } from '../features/tasks/UndoToast'
 import { FocusOverlay } from '../features/focus/FocusOverlay'
@@ -165,6 +166,7 @@ function AppContent() {
   const [reviewRecordKind, setReviewRecordKind] = useState<ReviewKind>('daily')
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [hubTaskNotice, setHubTaskNotice] = useState<string | null>(null)
   const [searchNoteId, setSearchNoteId] = useState<string | undefined>(undefined)
   const [integrationIntent, setIntegrationIntent] = useState<IntegrationIntent | null>(null)
   const [undoAction, setUndoAction] = useState<UndoableMutation | null>(null)
@@ -201,6 +203,22 @@ function AppContent() {
   const editingHabit = useMemo(() => habitData?.habitEntities.find((habit) => habit.id === editingHabitId) ?? null, [habitData?.habitEntities, editingHabitId])
   const editingReview = useMemo(() => historyData?.reviewRecords.find((record) => record.id === editingReviewId) ?? null, [historyData?.reviewRecords, editingReviewId])
   const currentWeeklyReview = useMemo(() => reviewData ? historyData?.reviewRecords.find((record) => record.kind === 'weekly' && record.periodStart === reviewData.weekStart) ?? null : null, [historyData?.reviewRecords, reviewData])
+
+  // On a normal Folio page only (never the headless bridge), resolve the
+  // one-time link against Folio's actual task collection before opening the
+  // existing inspector. Do not invent or duplicate a task-detail route.
+  useEffect(() => {
+    if (!data) return
+    const linkedId=consumeFolioHubTaskLink()
+    if (!linkedId) return
+    const task=[...data.allTasks,...data.subtasks].find(t=>t.id===linkedId)
+    if (!task || task.deletedAt || task.status==='cancelled') {
+      setHubTaskNotice('Task not found in this local Folio. Check the source task or device.')
+      return
+    }
+    setHubTaskNotice(null)
+    setSelectedTaskId(task.id)
+  }, [data?.allTasks, data?.subtasks])
 
   useEffect(() => applyAppearance(appearance), [appearance])
 
@@ -1309,6 +1327,7 @@ function AppContent() {
         onDelete={async (id) => { registerUndo(await reviewRecordService.remove(id)) }}
       />
 
+      {hubTaskNotice ? <p className="folio-hub-task-notice" role="status" data-folio-hub-task-notice>{hubTaskNotice}</p> : null}
       <TaskInspector
         task={selectedTask}
         subtasks={selectedSubtasks}
