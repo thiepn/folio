@@ -1,3 +1,5 @@
+import { db } from '../db/database'
+import type { TaskEntity } from '../domain/models'
 import { taskRepository } from '../repositories/taskRepository'
 import { taskService } from './taskService'
 import type { UndoableMutation } from './undo'
@@ -50,7 +52,23 @@ export function parseHubTaskAction(value:unknown):HubTaskAction {
   throw Error('Unknown task action')
 }
 
-type SavedUndo={id:string;taskId:string;updatedAt:string;expiresAt:number;undo:UndoableMutation['undo']}
+type SavedUndo={id:string;taskId:string;fingerprint:string;expiresAt:number;undo:UndoableMutation['undo']}
+function fingerprint(task:TaskEntity):string{
+  // Compare all source fields, not just millisecond timestamps. Another tab
+  // can edit different fields in the same millisecond.
+  return JSON.stringify(task)
+}
+async function hasSubtasks(taskId:string):Promise<boolean>{
+  return (await db.tasks.where('parentTaskId').equals(taskId).count())>0
+}
+function safeUndo(task:TaskEntity, message:string, hasChildren:boolean):boolean{
+  // Source undo closures may replace descendants or remove a newly spawned
+  // recurrence occurrence. Do not expose a dangerous partial "undo".
+  return !hasChildren && !task.seriesId && !task.recurrenceDate &&
+    !message.includes('automation applied') &&
+    !message.includes('next occurrence created')
+}
+
 export class FolioHubTaskActions {
   private previous:SavedUndo|null=null
   private busy=false
@@ -69,8 +87,8 @@ export class FolioHubTaskActions {
         if(!prior||prior.id!==action.undoId||Date.now()>=prior.expiresAt)
           return {ok:false,code:'conflict',message:'Undo expired. Check the task in Folio'}
         const current=await taskRepository.get(prior.taskId)
-        if(!current||current.updatedAt!==prior.updatedAt)
-          return {ok:false,code:'conflict',message:'The task changed. Open Folio to review before undoing'}
+        if(!current||fingerprint(current)!==prior.fingerprint||await hasSubtasks(prior.taskId))
+          return {ok:false,code:'conflict',message:'Task or subtasks changed. Review in Folio; undo was blocked'}
         this.previous=null
         await prior.undo()
         return {ok:true,message:'Last Folio action undone',taskId:prior.taskId,
@@ -82,10 +100,14 @@ export class FolioHubTaskActions {
           title:action.title,status:action.status,priority:action.priority,
           ...(action.status==='todo'&&action.plannedDate?{plannedDate:action.plannedDate}:{}),
         })
-        this.previous={id:crypto.randomUUID(),taskId:created.task.id,updatedAt:created.task.updatedAt,
-          expiresAt:Date.now()+90_000,undo:created.undo.undo}
-        return {ok:true,message:created.undo.message,taskId:created.task.id,
-          updatedAt:created.task.updatedAt,undoId:this.previous.id}
+        const committed=await taskRepository.get(created.task.id)
+        if(!committed)throw Error('Created source task could not be reloaded')
+        this.previous=safeUndo(committed,created.undo.message,false)?
+          {id:crypto.randomUUID(),taskId:committed.id,fingerprint:fingerprint(committed),
+            expiresAt:Date.now()+90_000,undo:created.undo.undo}:null
+        return {ok:true,message:created.undo.message+
+          (this.previous?'':' · undo in Folio only'),taskId:committed.id,
+          updatedAt:committed.updatedAt,...(this.previous?{undoId:this.previous.id}:{})}
       }
       const current=await taskRepository.get(action.taskId)
       if(!current||current.deletedAt||current.status==='cancelled')
@@ -95,6 +117,10 @@ export class FolioHubTaskActions {
       if(action.kind==='complete'&&current.status==='completed'||
          action.kind==='reopen'&&current.status!=='completed')
         return {ok:false,code:'conflict',message:'Task status changed. Refresh first'}
+      // A parent completion can cascade into every descendant, and a
+      // recurring task can create new occurrences through Folio services.
+      // Let Folio do that correctly, but do not offer the simple Hub undo.
+      const complex=await hasSubtasks(action.taskId)
       let mutation:UndoableMutation
       if(action.kind==='complete'||action.kind==='reopen'){
         mutation=await taskService.setCompleted(action.taskId,action.kind==='complete')
@@ -107,10 +133,12 @@ export class FolioHubTaskActions {
       }
       const updated=await taskRepository.get(action.taskId)
       if(!updated)throw Error('Task disappeared after update')
-      this.previous={id:crypto.randomUUID(),taskId:updated.id,updatedAt:updated.updatedAt,
-        expiresAt:Date.now()+90_000,undo:mutation.undo}
-      return {ok:true,message:mutation.message,taskId:updated.id,
-        updatedAt:updated.updatedAt,undoId:this.previous.id}
+      this.previous=safeUndo(updated,mutation.message,complex)?
+        {id:crypto.randomUUID(),taskId:updated.id,fingerprint:fingerprint(updated),
+          expiresAt:Date.now()+90_000,undo:mutation.undo}:null
+      return {ok:true,message:mutation.message+
+        (this.previous?'':' · complex task: review changes in Folio'),taskId:updated.id,
+        updatedAt:updated.updatedAt,...(this.previous?{undoId:this.previous.id}:{})}
     } catch {
       // The source may have written before a downstream automation threw.
       // Never suggest a blind retry when completion cannot be proven.
