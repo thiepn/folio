@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
-import { FolioHubBridge } from './hub/FolioHubBridge'
+import { FolioHubBridge, FolioHubWriteConsent } from './hub/FolioHubBridge'
+import { isFolioHubTaskReaderRequest, mountFolioHubTaskReader } from './hub/folioHubTaskReader'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import { AppErrorBoundary } from './components/system/AppErrorBoundary'
@@ -13,6 +14,8 @@ import { installGlobalRuntimeIssueHandlers } from './services/runtimeIssueServic
 import './styles/index.css'
 
 async function bootstrap() {
+  // Strictly read-only iframe path: no full App, startup maintenance, or PWA registration.
+  if (isFolioHubTaskReaderRequest()) { mountFolioHubTaskReader(); return }
   const root = createRoot(document.getElementById('root')!)
   root.render(<StrictMode><StartupState /></StrictMode>)
   installGlobalRuntimeIssueHandlers()
@@ -25,7 +28,7 @@ async function bootstrap() {
   void pwaService.register()
   try {
     await initializeDatabase()
-    root.render(<StrictMode><AppErrorBoundary><App /><FolioHubBridge /></AppErrorBoundary></StrictMode>)
+    root.render(<StrictMode><AppErrorBoundary><App /><FolioHubBridge /><FolioHubWriteConsent /></AppErrorBoundary></StrictMode>)
     void runStartupMaintenance()
   } catch (error) {
     console.error('Database initialization failed', error)
