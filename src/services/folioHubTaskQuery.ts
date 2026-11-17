@@ -44,7 +44,7 @@ export function parseFolioTaskQueryInput(input:unknown):FolioHubTaskQueryInput {
     search:(value.search as string).trim(),projectId:value.projectId as string,
     page:value.page as number}
 }
-const due=(t:FolioHubTaskQueryRow)=>t.deadline||t.plannedDate||'9999-12-31'
+const due=(t:FolioHubQueryRow)=>t.deadline||t.plannedDate||'9999-12-31'
 /** No task, identity, account or backup writes. Every request reads all
  * matching source records in a single readonly transaction, then pages them. */
 export async function createFolioHubTaskQuery(raw:unknown, now=new Date()):Promise<FolioHubTaskQueryResult> {
