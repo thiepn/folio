@@ -40,7 +40,7 @@ export interface FolioHubTaskRead {
    * It never alters active bucket totals or v1 read semantics. */
   recentCompleted: {id:string;title:string;updatedAt:string;completedAt?:string;priority:'normal'|'high'|'critical';plannedDate?:string}[]
 }
-function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set<string>,
+export function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set<string>,
   parents: Set<string>, projects: Map<string,string>, lists: Map<string,string>): FolioHubTaskRow {
   const bucket: FolioHubTaskBucket = (task.deadline && task.deadline <= today) ||
     (task.plannedDate && task.plannedDate <= today) || plan.has(task.id) ? 'today' :
@@ -60,8 +60,8 @@ function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set
     ...(task.deadline ? {deadline:task.deadline} : {}),
   }
 }
-const order: Record<FolioHubTaskBucket,number> = {today:0,inbox:1,upcoming:2,later:3}
-const priority: Record<FolioHubTaskRow['priority'],number> = {critical:0,high:1,normal:2}
+export const order: Record<FolioHubTaskBucket,number> = {today:0,inbox:1,upcoming:2,later:3}
+export const priority: Record<FolioHubTaskRow['priority'],number> = {critical:0,high:1,normal:2}
 
 /** Reads task, daily-plan and context tables in one Dexie readonly transaction; never writes. */
 export async function createFolioHubTaskRead(now = new Date()):Promise<FolioHubTaskRead> {
