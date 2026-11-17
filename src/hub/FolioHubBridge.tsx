@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createFolioHubDailySummary, FOLIO_HUB_DEVICE_MESSAGE } from '../services/folioHubDailySummary';
+import { FOLIO_HUB_LIVE_GRANT_KEY } from '../services/folioHubTaskRead';
 import './folioHubBridge.css';
 
 const REQUEST = /^[0-9a-f]{32}$/;
@@ -38,9 +39,19 @@ export function FolioHubBridge() {
     try {
       const snapshot = await createFolioHubDailySummary();
       if (!window.opener || window.opener.closed || !approvedHubOpener()) throw new Error('Hub is no longer available.');
+      let liveGrant: string | null = null;
+      if(mode === 'live' && tasksOpener) {
+        // Only the Folio-approved click can provision an ephemeral task-read
+        // capability. The source iframe independently validates this marker.
+        liveGrant = Array.from(crypto.getRandomValues(new Uint8Array(16)),
+          byte => byte.toString(16).padStart(2,'0')).join('');
+        window.opener.sessionStorage.setItem(FOLIO_HUB_LIVE_GRANT_KEY,JSON.stringify({
+          grant:liveGrant,expiresAt:Date.now()+2*60*60_000,
+        }));
+      }
       window.opener.postMessage({
         type: FOLIO_HUB_DEVICE_MESSAGE, nonce: request, snapshot,
-        ...(mode === 'live' && tasksOpener ? {liveTasks:true} : {}),
+        ...(liveGrant ? {liveTasks:true,liveGrant} : {}),
       }, window.location.origin);
       setStatus('sent');
     } catch (cause) {
