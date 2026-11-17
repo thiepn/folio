@@ -30,7 +30,8 @@ export function FolioHubBridge() {
   const [status, setStatus] = useState<'ready' | 'busy' | 'sent'>('ready');
   const [error, setError] = useState('');
   if (!request) return null;
-  async function share() {
+  const tasksOpener = (() => { try { return window.opener?.location.pathname === '/home/tasks/' } catch { return false } })();
+  async function share(mode: 'once' | 'live') {
     if (status !== 'ready') return;
     setError('');
     setStatus('busy');
@@ -39,6 +40,7 @@ export function FolioHubBridge() {
       if (!window.opener || window.opener.closed || !approvedHubOpener()) throw new Error('Hub is no longer available.');
       window.opener.postMessage({
         type: FOLIO_HUB_DEVICE_MESSAGE, nonce: request, snapshot,
+        ...(mode === 'live' && tasksOpener ? {liveTasks:true} : {}),
       }, window.location.origin);
       setStatus('sent');
     } catch (cause) {
@@ -52,11 +54,13 @@ export function FolioHubBridge() {
       <h1 id="folio-hub-title">Share today’s Folio summary?</h1>
       <p>Only the titles and basic status of today's tasks, upcoming time blocks, recent note titles, and habit check-ins will be shared with the Hub tab.</p>
       <p><strong>Not shared:</strong> note bodies, attachments, descriptions, comments, passwords, tokens, cloud records, grading history or entire exports.</p>
-      <p>The snapshot remains in the current Hub tab only. It does not enable automatic cloud access or write anything to Folio.</p>
+      <p>The one-time snapshot remains in the Hub tab only. It does not enable cloud access or write to Folio.</p>
+      {tasksOpener && <p>Optional: allow Hub to read task titles and dates from this device again while this Hub tab stays open. Hub refreshes automatically; revoke with “Disconnect” in Hub. Closing the tab ends the live connection. No cloud synchronization or task edits.</p>}
       {error && <p role="alert" className="folio-hub-error">{error}</p>}
       {status === 'sent' ? <p role="status">Summary sent. You can close this tab and return to Hub.</p> :
         <div className="folio-hub-actions">
-          <button type="button" disabled={status === 'busy'} onClick={() => void share()}>
+          {tasksOpener && <button type="button" disabled={status === 'busy'} onClick={() => void share('live')}>Keep Hub tasks updated in this tab</button>}
+          <button type="button" disabled={status === 'busy'} onClick={() => void share('once')}>
             {status === 'busy' ? 'Reading Folio…' : 'Share summary once'}
           </button>
           <button type="button" className="folio-hub-secondary" onClick={() => window.close()}>Cancel</button>
