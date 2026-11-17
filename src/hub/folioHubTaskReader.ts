@@ -35,7 +35,6 @@ export function mountFolioHubTaskReader():void {
   const root=document.getElementById('root')
   if(root) root.textContent='Folio read-only task source'
   let busy=false
-  let lastRead=0
   window.addEventListener('message',event=>{
     if(event.origin!==location.origin || event.source!==parent || !event.data ||
       event.data.type!==FOLIO_HUB_TASK_READ_MESSAGE+':read' || event.data.nonce!==nonce ||
@@ -44,8 +43,6 @@ export function mountFolioHubTaskReader():void {
     try {originStillValid=parent.location.origin===location.origin && parent.location.pathname==='/home/tasks/'}catch{}
     if(!originStillValid||!approvedGrant())return
     const requestId=event.data.requestId as string
-    if(Date.now()-lastRead<900)return
-    lastRead=Date.now()
     busy=true
     void createFolioHubTaskRead().then(snapshot=>{
       parent.postMessage({type:FOLIO_HUB_TASK_READ_MESSAGE+':result',nonce,requestId,snapshot},location.origin)
