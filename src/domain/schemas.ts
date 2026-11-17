@@ -258,7 +258,7 @@ export const timeBlockCreateSchema = z.object({
   kind: timeBlockKindSchema,
   allDay: z.boolean().default(false),
   timeZone: z.string().trim().min(1).max(100).optional(),
-  source: z.enum(['folio','ics']).default('folio'),
+  source: z.enum(['folio','ics','google','klips']).default('folio'),
   sourceCalendar: z.string().trim().max(200).optional(),
   sourceUid: z.string().trim().max(500).optional(),
   start: isoDateTime,

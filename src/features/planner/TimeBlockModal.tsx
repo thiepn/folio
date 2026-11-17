@@ -106,6 +106,18 @@ export function TimeBlockModal({ editor, onClose, onSave, onDelete, onDuplicate,
 
   const taskId = editor.type === 'new-task' ? editor.task.id : editor.type === 'edit' ? editor.block.taskId : undefined
   const imported = editor.type === 'edit' && editor.block.source === 'ics'
+  const remotelyOwned = editor.type === 'edit' && (editor.block.source === 'klips' || editor.block.source === 'google')
+  if (remotelyOwned) return <Modal open title="External calendar event · read-only" onClose={onClose}
+    className="time-block-modal" footer={<>
+      {onDuplicate ? <Button type="button" onClick={() => void onDuplicate(editor.block.id)}>Copy into Folio</Button> : null}
+      <Button type="button" variant="outline" onClick={onClose}>Close</Button>
+    </>}>
+    <p><strong>{editor.block.title}</strong></p>
+    <p>{new Date(editor.block.start).toLocaleString()} – {new Date(editor.block.end).toLocaleString()}</p>
+    <p>{editor.block.description}</p>
+    <p>Source: {editor.block.source === 'klips' ? 'KLIPS (read-only)' : 'Google Calendar (gateway permission required)'}. Edit in the source application or copy into Folio. Imported identity is preserved.</p>
+  </Modal>
+
 
   return (
     <Modal

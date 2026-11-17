@@ -8,6 +8,7 @@ const navGroups: Array<{ label: string; items: Array<{ view: NavView; label: str
   { label: 'Daily', items: [
     { view: 'today', label: 'Today', icon: 'home' },
     { view: 'inbox', label: 'Inbox', icon: 'inbox' },
+    { view: 'calendar', label: 'Calendar', icon: 'calendar' },
     { view: 'planner', label: 'Planner', icon: 'calendar' },
   ]},
   { label: 'Workspace', items: [

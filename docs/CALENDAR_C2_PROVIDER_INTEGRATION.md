@@ -1,0 +1,148 @@
+# THIEPN Calendar C2 — Provider synchronization (draft PR #23)
+
+## Work actually implemented
+
+The native Calendar route remains Folio-backed. C2 adds:
+
+- A KLIPS read-only calendar source manager inside the actual Calendar sidebar: local registration, optional same-tab HTTPS request to `*.uni-koeln.de` when CORS permits, alternative pasted iCal, bounded period selection, change preview, explicit commit, durable reload, removal and source status.
+- Weekly and daily RRULE materialization, supported BYDAY, COUNT, UNTIL, EXDATE, cancelled detached occurrences, and separate modified occurrences. Unsupported RRULE variants reject replacement rather than silently deleting classes. Not a general RFC5545 recurrence engine.
+- Stable external `UID#occurrence` references, optimistic revision and baseline comparisons, conflict fail-closed, single IndexedDB transaction for source changes, and no background credentials, URLs or ICS bytes persisted. `storage.*` metadata is explicitly excluded from D18 cloud sync.
+- External provenance on Folio TimeBlock includes `klips` and `google` alongside historical `folio` and `ics`. External blocks can be copied into Folio but cannot be silently dragged, resized, edited or deleted as if locally owned.
+- Google Calendar v3 protocol: paginated `nextSyncToken`, `singleEvents=true`, deletions and 410-expired token signaling, event normalization, stable source keys, full vs incremental reconciliation and pending-write conflict planning, proposed native event exports, conditional patch/delete with ETags, and strict scope/capability prerequisites. Protocol has no direct Google network access and does not read Account sign-in tokens.
+- Focused real Node cases are added to the release validator; the automatic Chromium preview workflow now exercises real timetable preview/apply/reload/update and mobile Calendar navigation.
+
+## What is NOT connected
+
+No Google Calendar OAuth client, event scope, refresh token, Core proxy routes, production Google Calendar sync, or push notifications were created. THIEPN Account's existing Google sign-in is **not** permission to access Calendar events. `authorizeGoogleWrite()` only validates a proposed call, never grants permission. Future Core must independently verify Account identity, registered consent, target calendar ownership, and an If-Match ETag before any upstream mutation.
+
+KLIPS addresses are capability secrets. The UI holds them only in memory while explicitly refreshing and does not store the URL in Folio sync/settings/backup; thus C2 is manual or browser-CORS refresh, not reliable server-scheduled synchronization. A future server-owned, allowlisted, token-isolated KLIPS fetch path remains blocked on the reviewed Core/Account managed authorization gates.
+
+## Required future backend contract
+
+The proposed Core gateway should expose authenticated endpoints for calendar source enumeration, OAuth connect/disconnect, Google paged deltas, and individual conditional writes. Core must validate OAuth scopes independently, store upstream credentials encrypted and inaccessible to browsers, restrict CORS exact origins, bound requests, support idempotency keys, sanitize errors, handle revoked consent and cursor expiry, and reconcile after unacknowledged writes. It must never return upstream OAuth secrets or KLIPS subscription URLs to Hub.
+
+## Verification policy
+
+Do not mark live Google two-way or automatic KLIPS polling as PASS until a reviewed Account/Core route, granted calendar scope, disposable provider account, real timetable feed and browser/device acceptance have been demonstrated. Source TypeScript, unit/regression cases and local Chromium acceptance can PASS independently. Main, production, hosted migrations and other apps remain unchanged.
+
+## C2 extension — durable mirror ledger and open-tab KLIPS refresh
+
+`calendarGoogleStoreC2` holds Google cursors, baseline ETags, outstanding outbound
+create/update/delete intents, and remote conflict candidates in local-only `storage.*`
+settings. A completed remote page sequence is reconciled with Folio's existing
+TimeBlock entries in one IndexedDB transaction together with the new cursor.
+Concurrent/stale previews fail closed. Conflicts retain the remote candidate so
+the cursor may advance without silently losing provider changes; choosing
+**Keep local copy** creates a new Folio-owned event and then accepts the provider
+event. Google create/update/delete are locally staged only; they cannot dispatch
+until a reviewed Account/Core OAuth Calendar gateway is present. An ETag and
+provider identity must be checked by the gateway, not merely by browser code.
+
+`calendarKlipsSessionC2` permits optional read-only refresh during an active tab,
+with an in-memory source URL, bounded intervals, offline recovery and backoff.
+It stops upon local-source conflicts. Reloading closes the session. No private
+feed URL is saved or automatically synchronized to another app.
+
+Provider-owned `google` and `klips` TimeBlocks are excluded from Folio's
+unrelated D18 cloud sync, including outbound snapshot/individual operations
+and incoming mirror creation/deletion, until a specific provider sharing
+boundary is reviewed. Explicit user-created Folio copies remain Folio-owned
+and retain ordinary sync behavior. No production grants were altered.
+
+## C2 feature-first completion batch: local operations and genuine scheduling
+
+Folio Calendar now provides a native user-visible **Google local workspace** to
+inspect a target calendar identity's local mirror status, prepare but **not send**
+Folio-created events, stage source-owned edit/delete requests, cancel unsent
+operations, resolve mirror conflicts (accept remote or preserve a Folio-owned
+copy), and explicitly disconnect local mirrors. Disconnect refuses outstanding
+pending writes and locally divergent records. It copies or removes only the
+source-owned local mirror; it does **not** revoke OAuth scopes or the upstream
+Google connector. A real reconnect action remains unavailable until a trusted
+Account/Core Calendar gateway exists.
+
+The in-repository `calendarGatewayContractC2.ts` defines a dormant typed
+Account/Core transport, read/event operations and revocation result, with an
+explicit request context, expected Folio source hash, idempotency key and
+conditional source ETag. No credential exchange, public endpoint or unapproved
+OAuth flow is implemented. Treat all browser context as untrusted; server-side
+identity, permission, calendar ACL, revisions, retries and scopes are mandatory
+independent authorizers. Staged create operations are tied to the original
+Folio event's content hash to prevent outdated exports; duplicate pending
+exports are rejected.
+
+The Calendar task backlog now has **Find time**, proposing up to five next-week
+free slots, respecting hard deadlines, source-owned and Folio busy blocks,
+all-day occupancy, custom start/end work hours, current time, timezone/DST and
+session duration. It uses Folio's canonical time blocks and opens the
+existing scheduling editor for explicit confirmation; it adds no new
+scheduler, task authority, AI planning engine or implicit writes. The suggestions
+are local and explanatory, not externally imported mastery or resource claims.
+
+Open-tab KLIPS refresh remains private-URL-in-memory, without network
+credentials or server scheduling. Native provider operations are device-local
+until production review; no production changes are implied by these files.
+
+## C2 continued: coherent native calendar completion batch
+
+The native Calendar now has owner-aware source selection drawn from actual
+TimeBlock provenance. Source groups are Folio tasks, Folio events, imported ICS
+snapshots, individual KLIPS local feeds and Google local mirrors. A source
+checkbox affects **visibility only** across agenda, day, multiweek, month and
+year views. No source filtering can change canonical Folio records, the
+availability calculation, the seven-day workload outlook or the scheduling
+solver. KLIPS and Google sources are explicitly labeled as read-only local
+copies rather than falsely connected provider calendars.
+
+The selected-day glance uses the existing task/due-date projection,
+scheduled event blocks, and canonical habit entry progress, with direct
+navigation to the original task/event records and existing habit actions.
+The seven-day workload strip shows actual free working-window time from all
+time blocks plus due/planned task counts, and links to the selected day. The
+Calendar remains Folio-owned: no shadow task/habit/grading scheduler was
+created. Filtering, dates and selected views do not write to source data.
+
+The source-group helper has runnable Node acceptance; exact-branch desktop
+Chromium exercises KLIPS visibility toggles and confirms retained records
+and unchanged availability, and mobile Chromium checks seven-day navigation.
+Live Google Account/Core calendar grant and trusted provider gateway remain
+blocked, along with remote KLIPS unattended refresh. This is a draft-only,
+implementation-first batch; no release/merge/deploy/migration executed.
+
+## C3 implementation: coherent task allocation and real commitments
+
+**Multi-day task scheduling (Folio owner):** the Calendar sidebar's *Spread
+work* control is a review-before-commit allocator for the original Folio task.
+It shows 7/14-day options, one/two sessions per day, 30–120-minute maximum
+session sizes, work-hour limits, a full proposal, the total time covered and
+any time still unscheduled. It respects every locally mirrored event, even
+when its source is hidden from the presentation. Original task deadlines
+are hard cutoffs; the distinct planned date and recurrence template are
+not silently edited. Free time is not treated as a task-completion grade.
+
+**Atomic acceptance and undo:** `calendarBatchAllocationC3` recomputes
+`planMultiDayTaskC3` over the latest original `tasks` and `timeBlocks`
+inside a single IndexedDB transaction. Stale task revisions or conflicting
+time blocks cancel the whole allocation; all created sessions use
+`timeBlockRepository.create`, the existing Folio schema and IDs. The
+in-session undo deletes only unchanged blocks that this batch itself created,
+and fails closed after user edits. It is not a cross-device reservation, nor
+an automated scheduler; stale cross-device changes require ordinary Folio
+sync review.
+
+**Recurring work and habit continuity:** the Calendar seven-day view adds
+counts for scheduled fixed habits, completed entries and *materialized*
+recurring task occurrences from Folio's authoritative models. The expandable
+section shows flexible weekly/monthly quotas without manufacturing specific
+due dates, a record of generated recurring occurrences, and navigation into
+the original Habits/Tasks editors. Pauses, recurrence exceptions, content
+rights and original grading are unchanged. A series with no materialized
+occurrences is not presented as already scheduled.
+
+**Qualification:** C3's scheduling calculations run in the existing
+`validate:calendar-c2-slots` release-source gate. Automatic Chromium
+desktop acceptance verifies preview-only, one-transaction creation,
+collision avoidance and guarded undo; mobile Chromium checks the
+seven-day habit/recurrence panel and responsive multi-day review. Provider
+Authorization remains blocked exactly as in C2. No hosted migrations,
+provider scopes, managed tasks, publication or deployment were performed.
