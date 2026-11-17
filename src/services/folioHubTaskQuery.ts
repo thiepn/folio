@@ -18,6 +18,7 @@ export interface FolioHubTaskQueryInput {
   search:string
   projectId:string
   page:number
+  expectedRevision?:string
 }
 export interface FolioHubTaskQueryResult extends FolioHubTaskQueryInput {
   schema:'thiepn:folio-hub-task-query'
@@ -26,11 +27,16 @@ export interface FolioHubTaskQueryResult extends FolioHubTaskQueryInput {
   date:string
   generatedAt:string
   pageSize:40
+  revision:string
   total:number
   hasMore:boolean
   rows:FolioHubQueryRow[]
 }
 const filters:readonly string[]=['today','inbox','upcoming','later','all','completed']
+const revisionFormat=/^[0-9a-f]{64}$/
+export class FolioHubTaskRevisionChangedError extends Error {
+  constructor(){super('The Folio task listing changed; restart at the first page')}
+}
 const text=(x:unknown,max:number)=>typeof x==='string'&&x.length<=max&&!/[\u0000-\u001f]/.test(x)
 const normalized=(s:string)=>s.normalize('NFKD').toLocaleLowerCase().replace(/[\u0300-\u036f]/g,'').trim()
 export function parseFolioTaskQueryInput(input:unknown):FolioHubTaskQueryInput {
@@ -38,11 +44,14 @@ export function parseFolioTaskQueryInput(input:unknown):FolioHubTaskQueryInput {
   const value=input as Record<string,unknown>
   if(!filters.includes(String(value.filter))||!text(value.search,100)||
      !text(value.projectId,128)||!value.projectId||
-     !Number.isSafeInteger(value.page)||Number(value.page)<0||Number(value.page)>9999)
+     !Number.isSafeInteger(value.page)||Number(value.page)<0||Number(value.page)>9999||
+     (value.expectedRevision!==undefined&&
+       (typeof value.expectedRevision!=='string'||!revisionFormat.test(value.expectedRevision))))
     throw Error('Invalid task query')
   return {filter:value.filter as FolioHubQueryFilter,
     search:(value.search as string).trim(),projectId:value.projectId as string,
-    page:value.page as number}
+    page:value.page as number,
+    ...(value.expectedRevision?{expectedRevision:value.expectedRevision as string}:{})}
 }
 const due=(t:FolioHubQueryRow)=>t.deadline||t.plannedDate||'9999-12-31'
 /** No task, identity, account or backup writes. Every request reads all
@@ -91,10 +100,18 @@ export async function createFolioHubTaskQuery(raw:unknown, now=new Date()):Promi
       priority[a.priority]-priority[b.priority] || due(a).localeCompare(due(b)) ||
       a.title.localeCompare(b.title) || a.id.localeCompare(b.id)
   })
+  // Snapshot guard: hash every ordered source projection, including titles,
+  // dates, status and IDs. A later page cannot silently move past an insert,
+  // completion or reorder made since the first page.
+  const sourceBytes=new TextEncoder().encode(JSON.stringify(matched))
+  const digest=await crypto.subtle.digest('SHA-256',sourceBytes)
+  const revision=Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('')
+  if(query.expectedRevision&&query.expectedRevision!==revision)
+    throw new FolioHubTaskRevisionChangedError()
   const start=query.page*FOLIO_HUB_TASK_PAGE_SIZE
   const result:FolioHubTaskQueryResult={
     schema:'thiepn:folio-hub-task-query',version:1,source:'folio-local-device',
-    date:today,generatedAt:now.toISOString(),...query,pageSize:40,
+    date:today,generatedAt:now.toISOString(),...query,pageSize:40,revision,
     total:matched.length,hasMore:start+FOLIO_HUB_TASK_PAGE_SIZE<matched.length,
     rows:matched.slice(start,start+FOLIO_HUB_TASK_PAGE_SIZE)
   }
