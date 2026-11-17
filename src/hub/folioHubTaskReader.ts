@@ -1,4 +1,4 @@
-import { createFolioHubTaskRead, FOLIO_HUB_TASK_READ_MESSAGE } from '../services/folioHubTaskRead'
+import { createFolioHubTaskRead, FOLIO_HUB_TASK_READ_MESSAGE, FOLIO_HUB_LIVE_GRANT_KEY } from '../services/folioHubTaskRead'
 
 const NONCE=/^[0-9a-f]{32}$/
 const REQUEST=/^[a-zA-Z0-9-]{1,64}$/
@@ -15,11 +15,21 @@ export function mountFolioHubTaskReader():void {
   const nonce=url.searchParams.get('hubTasksRead')
   url.searchParams.delete('hubTasksRead')
   history.replaceState(history.state,'',url.pathname+url.search+url.hash)
+  function approvedGrant():boolean {
+    if(!nonce)return false
+    try {
+      const grant=JSON.parse(sessionStorage.getItem(FOLIO_HUB_LIVE_GRANT_KEY)||'null') as
+        {grant?:unknown;expiresAt?:unknown}|null
+      return !!grant && grant.grant===nonce && typeof grant.expiresAt==='number' &&
+        Number.isFinite(grant.expiresAt) && Date.now()<grant.expiresAt
+    } catch {return false}
+  }
   let approved=false
   try {
     approved=!!nonce && NONCE.test(nonce) && window.parent!==window &&
       (location.origin==='https://thiepn.dev' || ['localhost','127.0.0.1'].includes(location.hostname)) &&
-      parent.location.origin===location.origin && parent.location.pathname==='/home/tasks/'
+      parent.location.origin===location.origin && parent.location.pathname==='/home/tasks/' &&
+      approvedGrant()
   } catch { approved=false }
   if(!approved || !nonce) return
   const root=document.getElementById('root')
@@ -32,7 +42,7 @@ export function mountFolioHubTaskReader():void {
       typeof event.data.requestId!=='string' || !REQUEST.test(event.data.requestId) || busy) return
     let originStillValid=false
     try {originStillValid=parent.location.origin===location.origin && parent.location.pathname==='/home/tasks/'}catch{}
-    if(!originStillValid)return
+    if(!originStillValid||!approvedGrant())return
     const requestId=event.data.requestId as string
     if(Date.now()-lastRead<900)return
     lastRead=Date.now()
