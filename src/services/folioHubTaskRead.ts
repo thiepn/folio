@@ -16,6 +16,8 @@ export interface FolioHubTaskRow {
   deadline?: string
   updatedAt: string
   bucket: FolioHubTaskBucket
+  recurring?: boolean
+  hasSubtasks?: boolean
 }
 export interface FolioHubTaskRead {
   schema: 'thiepn:folio-hub-tasks'
@@ -31,7 +33,8 @@ export interface FolioHubTaskRead {
    * It never alters active bucket totals or v1 read semantics. */
   recentCompleted: {id:string;title:string;updatedAt:string;completedAt?:string;priority:'normal'|'high'|'critical';plannedDate?:string}[]
 }
-function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set<string>): FolioHubTaskRow {
+function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set<string>,
+  parents: Set<string>): FolioHubTaskRow {
   const bucket: FolioHubTaskBucket = (task.deadline && task.deadline <= today) ||
     (task.plannedDate && task.plannedDate <= today) || plan.has(task.id) ? 'today' :
     task.status === 'inbox' ? 'inbox' :
@@ -40,6 +43,8 @@ function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set
   return {
     id: task.id, title: task.title.slice(0,160), status: task.status as 'todo' | 'inbox',
     priority: task.priority, updatedAt: task.updatedAt, bucket,
+    ...(task.seriesId ? {recurring:true} : {}),
+    ...(parents.has(task.id) ? {hasSubtasks:true} : {}),
     ...(task.plannedDate ? {plannedDate:task.plannedDate} : {}),
     ...(task.deadline ? {deadline:task.deadline} : {}),
   }
@@ -55,9 +60,10 @@ export async function createFolioHubTaskRead(now = new Date()):Promise<FolioHubT
     db.tasks.toArray(), db.dailyPlanItems.where('date').equals(today).toArray(),
   ]))
   const plannedIds=new Set(planned.map(row=>row.taskId))
+  const parents=new Set(tasks.filter(task=>!task.deletedAt&&task.parentTaskId).map(task=>task.parentTaskId!))
   const rows=tasks
     .filter(task=>!task.deletedAt && (task.status==='todo' || task.status==='inbox'))
-    .map(task=>projectTask(task,today,horizon,plannedIds))
+    .map(task=>projectTask(task,today,horizon,plannedIds,parents))
     .sort((a,b)=>order[a.bucket]-order[b.bucket] ||
       (a.bucket==='today' && a.deadline && a.deadline<today ? -1 : 0) -
       (b.bucket==='today' && b.deadline && b.deadline<today ? -1 : 0) ||
