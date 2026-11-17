@@ -1,5 +1,5 @@
 import { StrictMode } from 'react'
-import { FolioHubBridge } from './hub/FolioHubBridge'
+import { FolioHubBridge, FolioHubWriteConsent } from './hub/FolioHubBridge'
 import { isFolioHubTaskReaderRequest, mountFolioHubTaskReader } from './hub/folioHubTaskReader'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
@@ -28,7 +28,7 @@ async function bootstrap() {
   void pwaService.register()
   try {
     await initializeDatabase()
-    root.render(<StrictMode><AppErrorBoundary><App /><FolioHubBridge /></AppErrorBoundary></StrictMode>)
+    root.render(<StrictMode><AppErrorBoundary><App /><FolioHubBridge /><FolioHubWriteConsent /></AppErrorBoundary></StrictMode>)
     void runStartupMaintenance()
   } catch (error) {
     console.error('Database initialization failed', error)
