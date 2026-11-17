@@ -18,6 +18,10 @@ export interface FolioHubTaskRow {
   bucket: FolioHubTaskBucket
   recurring?: boolean
   hasSubtasks?: boolean
+  projectId?: string
+  projectName?: string
+  listId?: string
+  listName?: string
 }
 export interface FolioHubTaskRead {
   schema: 'thiepn:folio-hub-tasks'
@@ -29,12 +33,15 @@ export interface FolioHubTaskRead {
   counts: Record<FolioHubTaskBucket,number>
   truncated: boolean
   tasks: FolioHubTaskRow[]
+  availableProjects?: {id:string;name:string}[]
+  availableLists?: {id:string;name:string}[]
+  contextTruncated?: boolean
   /** Separate bounded recently completed list for explicit reopen controls.
    * It never alters active bucket totals or v1 read semantics. */
   recentCompleted: {id:string;title:string;updatedAt:string;completedAt?:string;priority:'normal'|'high'|'critical';plannedDate?:string}[]
 }
 function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set<string>,
-  parents: Set<string>): FolioHubTaskRow {
+  parents: Set<string>, projects: Map<string,string>, lists: Map<string,string>): FolioHubTaskRow {
   const bucket: FolioHubTaskBucket = (task.deadline && task.deadline <= today) ||
     (task.plannedDate && task.plannedDate <= today) || plan.has(task.id) ? 'today' :
     task.status === 'inbox' ? 'inbox' :
@@ -45,6 +52,10 @@ function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set
     priority: task.priority, updatedAt: task.updatedAt, bucket,
     ...(task.seriesId ? {recurring:true} : {}),
     ...(parents.has(task.id) ? {hasSubtasks:true} : {}),
+    ...(task.projectId ? {projectId:task.projectId} : {}),
+    ...(task.projectId && projects.has(task.projectId) ? {projectName:projects.get(task.projectId)} : {}),
+    ...(task.listId ? {listId:task.listId} : {}),
+    ...(task.listId && lists.has(task.listId) ? {listName:lists.get(task.listId)} : {}),
     ...(task.plannedDate ? {plannedDate:task.plannedDate} : {}),
     ...(task.deadline ? {deadline:task.deadline} : {}),
   }
@@ -52,18 +63,24 @@ function projectTask(task: TaskEntity, today: string, horizon: string, plan: Set
 const order: Record<FolioHubTaskBucket,number> = {today:0,inbox:1,upcoming:2,later:3}
 const priority: Record<FolioHubTaskRow['priority'],number> = {critical:0,high:1,normal:2}
 
-/** Reads task and daily-plan tables in one Dexie readonly transaction; never writes. */
+/** Reads task, daily-plan and context tables in one Dexie readonly transaction; never writes. */
 export async function createFolioHubTaskRead(now = new Date()):Promise<FolioHubTaskRead> {
   const today = localDateKey(now)
   const horizon = addLocalDays(today,7)
-  const [tasks, planned] = await db.transaction('r',[db.tasks,db.dailyPlanItems],()=>Promise.all([
-    db.tasks.toArray(), db.dailyPlanItems.where('date').equals(today).toArray(),
-  ]))
+  const [tasks, planned, projectRows, listRows] = await db.transaction('r',
+    [db.tasks,db.dailyPlanItems,db.projects,db.lists],()=>Promise.all([
+      db.tasks.toArray(), db.dailyPlanItems.where('date').equals(today).toArray(),
+      db.projects.toArray(), db.lists.toArray(),
+    ]))
+  const projectNames=new Map(projectRows.map(row=>[row.id,row.name.slice(0,120)]))
+  const listNames=new Map(listRows.map(row=>[row.id,row.name.slice(0,120)]))
+  const activeProjects=projectRows.filter(p=>!p.archived).sort((a,b)=>a.name.localeCompare(b.name))
+  const activeLists=listRows.filter(l=>!l.archived).sort((a,b)=>a.name.localeCompare(b.name))
   const plannedIds=new Set(planned.map(row=>row.taskId))
   const parents=new Set(tasks.filter(task=>!task.deletedAt&&task.parentTaskId).map(task=>task.parentTaskId!))
   const rows=tasks
     .filter(task=>!task.deletedAt && (task.status==='todo' || task.status==='inbox'))
-    .map(task=>projectTask(task,today,horizon,plannedIds,parents))
+    .map(task=>projectTask(task,today,horizon,plannedIds,parents,projectNames,listNames))
     .sort((a,b)=>order[a.bucket]-order[b.bucket] ||
       (a.bucket==='today' && a.deadline && a.deadline<today ? -1 : 0) -
       (b.bucket==='today' && b.deadline && b.deadline<today ? -1 : 0) ||
@@ -85,6 +102,9 @@ export async function createFolioHubTaskRead(now = new Date()):Promise<FolioHubT
     date:today,generatedAt:now.toISOString(),totalCount:rows.length,counts,
     truncated:rows.length>FOLIO_HUB_TASK_READ_LIMIT,
     tasks:rows.slice(0,FOLIO_HUB_TASK_READ_LIMIT),
+    availableProjects:activeProjects.slice(0,80).map(p=>({id:p.id,name:p.name.slice(0,120)})),
+    availableLists:activeLists.slice(0,80).map(l=>({id:l.id,name:l.name.slice(0,120)})),
+    contextTruncated:activeProjects.length>80||activeLists.length>80,
     recentCompleted,
   }
   if(JSON.stringify(snapshot).length>80_000)throw new Error('Folio task read is too large')
