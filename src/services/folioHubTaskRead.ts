@@ -5,6 +5,7 @@ import type { TaskEntity } from '../domain/models'
 /** Owner-created read-only task projection. No Hub imports, cloud, or task mutation. */
 export const FOLIO_HUB_TASK_READ_LIMIT = 160
 export const FOLIO_HUB_TASK_READ_MESSAGE = 'thiepn:folio-hub-tasks-read:v1' as const
+export const FOLIO_HUB_LIVE_GRANT_KEY = 'folio:hub:task-read-consent:v1' as const
 export type FolioHubTaskBucket = 'today' | 'inbox' | 'upcoming' | 'later'
 export interface FolioHubTaskRow {
   id: string
