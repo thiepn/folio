@@ -2,7 +2,8 @@ import { createFolioHubTaskRead, FOLIO_HUB_TASK_READ_MESSAGE, FOLIO_HUB_LIVE_GRA
 import { FOLIO_HUB_TASK_ACTION_MESSAGE, FOLIO_HUB_TASK_WRITE_GRANT_KEY,
   FolioHubTaskActions, type HubTaskActionResult } from '../services/folioHubTaskActions'
 import { claimFolioTaskCommand, recordFolioTaskCommand } from '../services/folioHubTaskReceipts'
-import { createFolioHubTaskQuery, FOLIO_HUB_TASK_QUERY_MESSAGE } from '../services/folioHubTaskQuery'
+import { createFolioHubTaskQuery, FOLIO_HUB_TASK_QUERY_MESSAGE,
+  FolioHubTaskRevisionChangedError } from '../services/folioHubTaskQuery'
 
 const NONCE=/^[0-9a-f]{32}$/
 const REQUEST=/^[a-zA-Z0-9-]{1,64}$/
@@ -83,8 +84,10 @@ export function mountFolioHubTaskReader():void {
       if(approvedGrant())parent.postMessage({
         type:FOLIO_HUB_TASK_QUERY_MESSAGE+':result',nonce,requestId,result,
       },location.origin)
-    }).catch(()=>{
-      parent.postMessage({type:FOLIO_HUB_TASK_QUERY_MESSAGE+':error',nonce,requestId},location.origin)
+    }).catch((error:unknown)=>{
+      parent.postMessage({type:FOLIO_HUB_TASK_QUERY_MESSAGE+
+        (error instanceof FolioHubTaskRevisionChangedError?':changed':':error'),
+        nonce,requestId},location.origin)
     }).finally(()=>{activeQueries--})
   })
   const taskActions=new FolioHubTaskActions()
