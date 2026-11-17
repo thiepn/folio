@@ -1,6 +1,7 @@
 import { createFolioHubTaskRead, FOLIO_HUB_TASK_READ_MESSAGE, FOLIO_HUB_LIVE_GRANT_KEY } from '../services/folioHubTaskRead'
 import { FOLIO_HUB_TASK_ACTION_MESSAGE, FOLIO_HUB_TASK_WRITE_GRANT_KEY,
   FolioHubTaskActions, type HubTaskActionResult } from '../services/folioHubTaskActions'
+import { claimFolioTaskCommand, recordFolioTaskCommand } from '../services/folioHubTaskReceipts'
 
 const NONCE=/^[0-9a-f]{32}$/
 const REQUEST=/^[a-zA-Z0-9-]{1,64}$/
@@ -105,16 +106,39 @@ export function mountFolioHubTaskReader():void {
     }
     pending.add(requestId)
     actionBusy=true
-    void taskActions.execute(data.action).then(result=>{
+    const uncertain:HubTaskActionResult={ok:false,code:'unavailable',
+      message:'Outcome uncertain. Check Folio before retrying or reopening this task'}
+    const run=async()=>{
+      // Reader instances in different same-origin tabs cooperate through Web Locks
+      // when available. Native Folio UI code does not use this lock, so the
+      // source version and side-effect guards remain mandatory.
+      let claim:Awaited<ReturnType<typeof claimFolioTaskCommand>>
+      try{claim=await claimFolioTaskCommand(data.writeGrant,requestId,data.action)}
+      catch{reply(requestId,data.writeGrant,{ok:false,code:'unavailable',
+        message:'Safe command receipts are unavailable. Nothing was submitted'});return}
+      if(claim.kind!=='new'){
+        reply(requestId,data.writeGrant,claim.result)
+        return
+      }
+      let result:HubTaskActionResult
+      try{result=await taskActions.execute(data.action)}
+      catch{result=uncertain}
+      try{recordFolioTaskCommand(requestId,claim.hash,result)}
+      catch{
+        // A task may have been written, but its receipt was not confirmed.
+        // Never acknowledge success or replay it after this failure.
+        reply(requestId,data.writeGrant,uncertain)
+        return
+      }
       seen.set(requestId,{input:serialized,result})
       if(seen.size>80)seen.delete(seen.keys().next().value!)
       reply(requestId,data.writeGrant,result)
-    }).catch(()=>{
-      const result:HubTaskActionResult={ok:false,code:'unavailable',
-        message:'Outcome uncertain. Open Folio before retrying'}
-      seen.set(requestId,{input:serialized,result})
-      reply(requestId,data.writeGrant,result)
-    }).finally(()=>{
+    }
+    void (async()=>{
+      if(typeof navigator.locks?.request==='function')
+        await navigator.locks.request('folio-hub-task-command-v1',run)
+      else await run()
+    })().catch(()=>reply(requestId,data.writeGrant,uncertain)).finally(()=>{
       pending.delete(requestId)
       actionBusy=false
     })
